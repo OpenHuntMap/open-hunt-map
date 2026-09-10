@@ -1,7 +1,7 @@
 # On-device sanity testing
 
 How to check a change on a real Android device before calling it done, using
-[`tools/devtest/ohm.ps1`](../tools/devtest/ohm.ps1). Optional for human
+[`tools/devtest/owm.ps1`](../tools/devtest/owm.ps1). Optional for human
 contributors; `flutter run` is fine. It exists so an agent can see the app
 rather than guess.
 
@@ -51,14 +51,14 @@ than the newest, so the device is one real users are on.
 ## The loop
 
 ```powershell
-powershell -File tools\devtest\ohm.ps1 doctor      # which device will be used
-powershell -File tools\devtest\ohm.ps1 boot
+powershell -File tools\devtest\owm.ps1 doctor      # which device will be used
+powershell -File tools\devtest\owm.ps1 boot
 cd app; flutter build apk --release --split-per-abi; cd ..
-powershell -File tools\devtest\ohm.ps1 install
-powershell -File tools\devtest\ohm.ps1 grant       # skip to test the permission prompt
-powershell -File tools\devtest\ohm.ps1 gps 45.42 -75.70
-powershell -File tools\devtest\ohm.ps1 launch -Settle 25
-powershell -File tools\devtest\ohm.ps1 shot before-change
+powershell -File tools\devtest\owm.ps1 install
+powershell -File tools\devtest\owm.ps1 grant       # skip to test the permission prompt
+powershell -File tools\devtest\owm.ps1 gps 45.42 -75.70
+powershell -File tools\devtest\owm.ps1 launch -Settle 25
+powershell -File tools\devtest\owm.ps1 shot before-change
 ```
 
 `push <file>` puts a file where the app's own file picker will offer it, which is
@@ -77,7 +77,7 @@ Icon-only buttons are reachable because their tooltips become semantics labels.
 Screenshots and logcat land in `.artifacts/`, which is gitignored. They are
 evidence from one run, not repo content.
 
-`Get-Help tools\devtest\ohm.ps1 -Full` lists the rest.
+`Get-Help tools\devtest\owm.ps1 -Full` lists the rest.
 
 ## Traps that cost real time
 
@@ -86,7 +86,7 @@ evidence from one run, not repo content.
   it still completes the adb handshake and reports state `device`, then fails
   every command with `error: closed`. No adb client version works around it. Its
   adb port also has no emulator console behind it, so `adb emu` calls hang
-  forever instead of failing; `ohm.ps1` reads `ro.boot.qemu.avd_name` instead.
+  forever instead of failing; `owm.ps1` reads `ro.boot.qemu.avd_name` instead.
 - **A minimized `-gpu host` emulator stops producing frames.** `screencap` then
   returns the same stale image indefinitely while the device keeps running: the
   clock inside the capture freezes while `adb shell date` advances. `boot`
@@ -105,10 +105,10 @@ evidence from one run, not repo content.
   thousands of kilometres away while `dumpsys location` shows the gps provider as
   `ProviderRequest[OFF]`. Repeating the fix during an active request does not
   dislodge it. Check what the app actually got with
-  `ohm.ps1 shell "dumpsys location" | Select-String fused` before trusting where
+  `owm.ps1 shell "dumpsys location" | Select-String fused` before trusting where
   you think you are; if it is wrong, revoke the location permission and navigate
   from the province's launch anchor by pan and zoom instead.
-- **Quote shell commands carrying flags:** `ohm.ps1 shell "ping -c 2 8.8.8.8"`.
+- **Quote shell commands carrying flags:** `owm.ps1 shell "ping -c 2 8.8.8.8"`.
   PowerShell binds a bare `-c` to the script's own parameters first.
 - **`tap` used to pick one of several equal matches, silently.** Offline packs
   draws one card per province, so "Import ZIP" and "Delete local pack" each appear
@@ -129,7 +129,7 @@ evidence from one run, not repo content.
   endpoints. MapLibre retries those on a growing backoff, so the download crawls
   instead of failing and reads as stuck at a few megabytes. The same area
   downloads cleanly on a phone. Confirm with
-  `ohm.ps1 logs | Select-String REASON_RATE_LIMIT` before treating a slow
+  `owm.ps1 logs | Select-String REASON_RATE_LIMIT` before treating a slow
   download as a bug.
 
 ## Testing offline honestly
@@ -142,7 +142,7 @@ To test a saved area, pan to part of it that has **never** been on screen. Verif
 the network is actually down rather than reading the status bar:
 
 ```powershell
-powershell -File tools\devtest\ohm.ps1 shell "dumpsys connectivity" | Select-String "Active default network"
+powershell -File tools\devtest\owm.ps1 shell "dumpsys connectivity" | Select-String "Active default network"
 ```
 
 `Active default network: none` is the only acceptable answer.

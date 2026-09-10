@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Creates the `ohm_test` emulator used by tools/devtest/ohm.ps1.
+    Creates the `owm_test` emulator used by tools/devtest/owm.ps1.
 
 .DESCRIPTION
     Run once per machine. Needs the system image first:
@@ -15,7 +15,7 @@
     one real users are on.
 #>
 [CmdletBinding()]
-param([string]$AvdName = 'ohm_test')
+param([string]$AvdName = 'owm_test')
 
 $ErrorActionPreference = 'Stop'
 
@@ -52,7 +52,7 @@ $settings = @{
     'vm.heapSize'       = '512'
     'disk.dataPartition.size' = '8G'
     'hw.keyboard'       = 'yes'
-    # Location fixes are pushed over the console by ohm.ps1 rather than typed
+    # Location fixes are pushed over the console by owm.ps1 rather than typed
     # into the emulator UI.
     'hw.gps'            = 'yes'
 }
@@ -68,4 +68,4 @@ foreach ($key in $settings.Keys) {
 }
 $lines | Set-Content $config
 
-Write-Host "Done. Boot it with: ./tools/devtest/ohm.ps1 boot"
+Write-Host "Done. Boot it with: ./tools/devtest/owm.ps1 boot"

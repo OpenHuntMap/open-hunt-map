@@ -30,7 +30,7 @@ void main() {
   late Directory root;
 
   setUp(() {
-    root = Directory.systemTemp.createTempSync('ohm-waypoints-page');
+    root = Directory.systemTemp.createTempSync('owm-waypoints-page');
     PathProviderPlatform.instance = _Documents(root.path);
   });
 

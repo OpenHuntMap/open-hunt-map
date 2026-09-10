@@ -33,7 +33,7 @@ void main() {
   late File file;
 
   setUp(() {
-    root = Directory.systemTemp.createTempSync('ohm-waypoints');
+    root = Directory.systemTemp.createTempSync('owm-waypoints');
     file = File(p.join(root.path, 'open_woods_map_waypoints.json'));
     PathProviderPlatform.instance = _Documents(root.path);
   });

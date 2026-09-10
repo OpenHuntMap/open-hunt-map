@@ -17,20 +17,20 @@
     Setup, once per machine: tools/devtest/create_avd.ps1
 
 .EXAMPLE
-    ./ohm.ps1 doctor
-    ./ohm.ps1 boot
-    ./ohm.ps1 install
-    ./ohm.ps1 grant
-    ./ohm.ps1 gps 45.42 -75.70
-    ./ohm.ps1 launch -Settle 25
-    ./ohm.ps1 shot startup
-    ./ohm.ps1 tap "Map layers"
-    ./ohm.ps1 net off
+    ./owm.ps1 doctor
+    ./owm.ps1 boot
+    ./owm.ps1 install
+    ./owm.ps1 grant
+    ./owm.ps1 gps 45.42 -75.70
+    ./owm.ps1 launch -Settle 25
+    ./owm.ps1 shot startup
+    ./owm.ps1 tap "Map layers"
+    ./owm.ps1 net off
 
     Quote any shell command that carries flags. PowerShell binds a bare -c to
     this script's own parameters before adb ever sees it:
 
-    ./ohm.ps1 shell "ping -c 2 8.8.8.8"
+    ./owm.ps1 shell "ping -c 2 8.8.8.8"
 #>
 [CmdletBinding()]
 param(
@@ -68,13 +68,13 @@ $Repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Artifacts = Join-Path $Repo '.artifacts'
 $Package = 'ca.openwoodsmap.open_woods_map'
 $Activity = "$Package/.MainActivity"
-$AvdName = 'ohm_test'
+$AvdName = 'owm_test'
 
 # /data/local/tmp, not /sdcard: under scoped storage a file written to /sdcard
 # lands with the media provider's ownership and no read bit for others, so the
 # pull fails even though the capture succeeded.
-$DevShot = '/data/local/tmp/ohm_shot.png'
-$DevDump = '/data/local/tmp/ohm_dump.xml'
+$DevShot = '/data/local/tmp/owm_shot.png'
+$DevDump = '/data/local/tmp/owm_dump.xml'
 
 if (-not (Test-Path $Adb)) { throw "adb not found at $Adb" }
 New-Item -ItemType Directory -Force -Path $Artifacts | Out-Null
@@ -130,8 +130,8 @@ $script:CachedSerial = $null
 
 function Get-Serial {
     if ($script:CachedSerial) { return $script:CachedSerial }
-    if ($env:OHM_SERIAL) {
-        $script:CachedSerial = $env:OHM_SERIAL
+    if ($env:OWM_SERIAL) {
+        $script:CachedSerial = $env:OWM_SERIAL
         return $script:CachedSerial
     }
     $candidates = Get-Candidates
@@ -147,7 +147,7 @@ function Get-Serial {
             return $serial
         }
     }
-    throw "No usable device. Run './ohm.ps1 boot' first, or './ohm.ps1 doctor'."
+    throw "No usable device. Run './owm.ps1 boot' first, or './owm.ps1 doctor'."
 }
 
 # -------------------------------------------------------------------- commands
@@ -250,7 +250,7 @@ function Cmd-Launch {
     if ($Settle -gt 0) { Start-Sleep -Seconds $Settle }
     # $PID is a read-only automatic variable in PowerShell, hence $appPid.
     $appPid = (Invoke-Adb @('shell', 'pidof', $Package) | Out-String).Trim()
-    if (-not $appPid) { throw 'App started but is no longer running: check ./ohm.ps1 logs.' }
+    if (-not $appPid) { throw 'App started but is no longer running: check ./owm.ps1 logs.' }
     "Launched $Package (pid $appPid)."
 }
 
@@ -264,7 +264,7 @@ function Cmd-Clear {
 
 function Cmd-Push {
     if (-not $Rest -or -not $Rest[0]) {
-        throw 'Usage: ohm.ps1 push <local file> [device path]'
+        throw 'Usage: owm.ps1 push <local file> [device path]'
     }
     $local = (Resolve-Path $Rest[0]).Path
     $remote = if ($Rest.Count -ge 2) { $Rest[1] }
@@ -353,7 +353,7 @@ function Cmd-Tap {
         } |
         Sort-Object Rank, @{ Expression = { -not $_.Clickable } }
     $ranked = @($ranked)
-    if (-not $ranked.Count) { throw "No element matching '$needle'. Try './ohm.ps1 dump'." }
+    if (-not $ranked.Count) { throw "No element matching '$needle'. Try './owm.ps1 dump'." }
     # Refuse to guess between equals. Offline packs shows one card per province,
     # so "Import ZIP" and "Delete local pack" each appear as many times as there
     # are provinces, and picking one silently imports a pack into the wrong one.
@@ -365,7 +365,7 @@ function Cmd-Tap {
     if ($best.Count -gt 1) {
         $where = ($best | ForEach-Object { "$($_.X),$($_.Y)" }) -join '  '
         throw ("'$needle' matches $($best.Count) elements equally well at $where. " +
-               "Use tapxy with the one you mean; ohm.ps1 dump shows their order.")
+               "Use tapxy with the one you mean; owm.ps1 dump shows their order.")
     }
     $match = $ranked[0]
     Invoke-Adb @('shell', 'input', 'tap', $match.X, $match.Y) | Out-Null

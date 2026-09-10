@@ -64,7 +64,7 @@ anything. The ones most often violated by accident:
 | `app/lib/weather/` | Open-Meteo client and the deer activity heuristic |
 | `app/lib/waypoints/` | Local waypoint storage and import/export |
 | `tools/gis/` | Python fetch and build scripts, one per source |
-| `tools/devtest/` | Emulator harness for on-device sanity checks (`ohm.ps1`) |
+| `tools/devtest/` | Emulator harness for on-device sanity checks (`owm.ps1`) |
 | `data/{cc}/` | Generated per-province manifest, overlays, policies, seasons |
 | `docs/` | Constraints, architecture, datasets, packs, APK build, devtest |
 | `.agents/skills/` | Agent skills, vendor-neutral location |
@@ -81,10 +81,10 @@ cd app; flutter analyze; flutter test
 # Check a change on a real device. First run needs one-time setup: see
 # docs/devtest.md, which also lists the traps worth knowing before you
 # trust a screenshot.
-powershell -File tools\devtest\ohm.ps1 boot
-powershell -File tools\devtest\ohm.ps1 install
-powershell -File tools\devtest\ohm.ps1 launch -Settle 25
-powershell -File tools\devtest\ohm.ps1 shot before-change
+powershell -File tools\devtest\owm.ps1 boot
+powershell -File tools\devtest\owm.ps1 install
+powershell -File tools\devtest\owm.ps1 launch -Settle 25
+powershell -File tools\devtest\owm.ps1 shot before-change
 
 # Refresh the only bundled asset after editing data/provinces.json
 powershell -File scripts\sync_assets.ps1

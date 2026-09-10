@@ -240,9 +240,9 @@ class OverlayController extends ChangeNotifier {
         visibility: visible || style.alwaysQueryable ? 'visible' : 'none',
       );
 
-  String _sourceId(String id) => 'ohm-source-$id';
-  String _fillId(String id) => 'ohm-fill-$id';
-  String _lineId(String id) => 'ohm-line-$id';
+  String _sourceId(String id) => 'owm-source-$id';
+  String _fillId(String id) => 'owm-fill-$id';
+  String _lineId(String id) => 'owm-line-$id';
 }
 
 class _OverlayStyle {

@@ -216,10 +216,10 @@ class _MapShellState extends State<MapShell> {
     if (map == null || !_styleReady) return;
 
     try {
-      await map.removeLayer('ohm-offline-area-lines');
+      await map.removeLayer('owm-offline-area-lines');
     } catch (_) {}
     try {
-      await map.removeSource('ohm-offline-areas');
+      await map.removeSource('owm-offline-areas');
     } catch (_) {}
     if (_offlineAreas.isEmpty) return;
 
@@ -250,14 +250,14 @@ class _MapShellState extends State<MapShell> {
     }
 
     await map.addSource(
-      'ohm-offline-areas',
+      'owm-offline-areas',
       GeojsonSourceProperties(
         data: {'type': 'FeatureCollection', 'features': features},
       ),
     );
     await map.addLineLayer(
-      'ohm-offline-areas',
-      'ohm-offline-area-lines',
+      'owm-offline-areas',
+      'owm-offline-area-lines',
       // Lime, and solid. Every tenure colour is taken, and dashes are reserved
       // for "this boundary is approximate", which a download footprint is not.
       const LineLayerProperties(
@@ -963,18 +963,18 @@ class _MapShellState extends State<MapShell> {
       ],
     };
     try {
-      await map.removeLayer('ohm-waypoint-circles');
+      await map.removeLayer('owm-waypoint-circles');
     } catch (_) {}
     try {
-      await map.removeSource('ohm-waypoints');
+      await map.removeSource('owm-waypoints');
     } catch (_) {}
     await map.addSource(
-      'ohm-waypoints',
+      'owm-waypoints',
       GeojsonSourceProperties(data: featureCollection),
     );
     await map.addCircleLayer(
-      'ohm-waypoints',
-      'ohm-waypoint-circles',
+      'owm-waypoints',
+      'owm-waypoint-circles',
       const CircleLayerProperties(
         circleRadius: 6,
         circleColor: '#B3261E',
@@ -992,18 +992,18 @@ class _MapShellState extends State<MapShell> {
       _waypoints.items.where((item) => item.track.isNotEmpty),
     );
     try {
-      await map.removeLayer('ohm-saved-track-lines');
+      await map.removeLayer('owm-saved-track-lines');
     } catch (_) {}
     try {
-      await map.removeSource('ohm-saved-tracks');
+      await map.removeSource('owm-saved-tracks');
     } catch (_) {}
     await map.addSource(
-      'ohm-saved-tracks',
+      'owm-saved-tracks',
       GeojsonSourceProperties(data: data),
     );
     await map.addLineLayer(
-      'ohm-saved-tracks',
-      'ohm-saved-track-lines',
+      'owm-saved-tracks',
+      'owm-saved-track-lines',
       const LineLayerProperties(
         lineColor: '#1565C0',
         lineWidth: 4,
@@ -1033,17 +1033,17 @@ class _MapShellState extends State<MapShell> {
       ],
     };
     try {
-      await map.setGeoJsonSource('ohm-active-track', data);
+      await map.setGeoJsonSource('owm-active-track', data);
       return;
     } catch (_) {}
     try {
       await map.addSource(
-        'ohm-active-track',
+        'owm-active-track',
         GeojsonSourceProperties(data: data),
       );
       await map.addLineLayer(
-        'ohm-active-track',
-        'ohm-active-track-line',
+        'owm-active-track',
+        'owm-active-track-line',
         const LineLayerProperties(
           lineColor: '#D32F2F',
           lineWidth: 5,
@@ -1118,7 +1118,7 @@ class _MapShellState extends State<MapShell> {
   ) {
     // Backup path when a fill/line absorbs the tap (even with
     // featureTapsTriggersMapClick). Ignore our own pin/waypoints.
-    if (layerId == 'ohm-identify-circle' || layerId == 'ohm-waypoint-circles') {
+    if (layerId == 'owm-identify-circle' || layerId == 'owm-waypoint-circles') {
       return;
     }
     _identify(point, coordinates);
@@ -1129,10 +1129,10 @@ class _MapShellState extends State<MapShell> {
     final map = _map;
     if (map == null) return;
     try {
-      await map.removeLayer('ohm-identify-circle');
+      await map.removeLayer('owm-identify-circle');
     } catch (_) {}
     try {
-      await map.removeSource('ohm-identify');
+      await map.removeSource('owm-identify');
     } catch (_) {}
   }
 
@@ -1154,18 +1154,18 @@ class _MapShellState extends State<MapShell> {
       ],
     };
     try {
-      await map.removeLayer('ohm-identify-circle');
+      await map.removeLayer('owm-identify-circle');
     } catch (_) {}
     try {
-      await map.removeSource('ohm-identify');
+      await map.removeSource('owm-identify');
     } catch (_) {}
     await map.addSource(
-      'ohm-identify',
+      'owm-identify',
       GeojsonSourceProperties(data: featureCollection),
     );
     await map.addCircleLayer(
-      'ohm-identify',
-      'ohm-identify-circle',
+      'owm-identify',
+      'owm-identify-circle',
       const CircleLayerProperties(
         circleRadius: 8,
         circleColor: '#B3261E',

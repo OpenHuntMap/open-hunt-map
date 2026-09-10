@@ -53,7 +53,7 @@ void main() {
   late Directory documents;
 
   setUp(() async {
-    documents = await Directory.systemTemp.createTemp('ohm-pack-test');
+    documents = await Directory.systemTemp.createTemp('owm-pack-test');
     PathProviderPlatform.instance = _Documents(documents.path);
     SharedPreferences.setMockInitialValues({});
   });
