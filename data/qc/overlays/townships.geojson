@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "crs": "EPSG:4326",
+    "province": "qc",
+    "layer": "townships",
+    "feature_count": 0,
+    "coverage": "Not used — prefer StatsCan CSD municipalities for bylaw context",
+    "license": "n/a",
+    "note": "Quebec survey cantons are not shipped; municipalities cover local jurisdiction."
+  },
+  "features": []
+}

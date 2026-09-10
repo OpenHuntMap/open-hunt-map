@@ -1,0 +1,2013 @@
+{
+  "regulation": "O. Reg. 663/98",
+  "title": "Area Descriptions",
+  "citation": "O. Reg. 663/98 (Area Descriptions) under the Fish and Wildlife Conservation Act, 1997",
+  "source": "https://www.ontario.ca/laws/regulation/980663",
+  "api_source": "https://www.ontario.ca/laws/api/v2/legislation/en/doc-search/regulation/980663",
+  "license": "OGL-Ontario",
+  "license_url": "https://www.ontario.ca/page/open-government-licence-ontario",
+  "currency_date": "2026-04-01",
+  "part3": {
+    "section": "The designated Crown lands and lands in provincial parks set out in the Schedules are those lands on which hunting is permitted in accordance with Part XIV of Ontario Regulation 665/98 (Hunting).",
+    "schedules": [
+      {
+        "schedule": 1,
+        "extent": "part",
+        "conditional": false,
+        "description": "All that part of Lake Superior Provincial Park in the Territorial District of Algoma lying easterly of that part of the King’s Highway known as No. 17 and northerly of the southerly boundary of the geographic townships of Brimacombe and Broome; and that portion of Lake Superior Provincial Park in the geographic Townships of Peever, Slater and Kincaid, and in the mining locations of Rankin and Kincaid, and islands in Lake Superior and part of the bed of Lake Superior, in the Territorial District of Algoma, containing 5,156 hectares, more or less, being composed of all those parts of the said geographic townships and mining locations, designated as Parts 7 to 13, both inclusive, on a Plan known as Lake Superior Provincial Park (Natural Environment Class), filed on June 14, 2002 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 2,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Presqu’ile Provincial Park.",
+        "citations": [
+          "O. Reg. 196/08, s. 1."
+        ]
+      },
+      {
+        "schedule": 3,
+        "extent": "part",
+        "conditional": true,
+        "description": "1. Rondeau Provincial Park: Beginning at the intersection of the water’s edge of Lake Erie with the north-south dredge cut; thence north 22°30' east along the said dredge cut 3,280 feet, more or less, to the intersection with the most southerly dredge cut; thence north 77°30' west along the said dredge cut and its northwesterly production a distance of 1 mile and 3,900 feet; thence north 38°30' east 5 miles and 1,196 feet, more or less, to the intersection with the westerly production of the north park boundary lying in an easterly and westerly direction at a bearing of north 76°50' east; thence easterly along that production and the park boundary 3,630 feet, more or less, to the intersection with the easterly limit of Lake Shore Road; thence southerly and westerly along the easterly limit of Lake Shore Road to the intersection with the easterly limit of Rondeau Park Road; thence southerly along the east limit of Rondeau Park Road and its production to the intersection with the water’s edge of Lake Erie; thence in a general westerly direction following the said water’s edge of Lake Erie to the place of beginning. 2. Beginning at the northwesterly corner of Lot 2 according to a plan of survey of the tract of land known as the Rondeau Peninsula or Point aux Pins dated September 8th, 1864, prepared by Henry Lowe, Provincial Land Surveyor, of record in the Ministry of Natural Resources, Ontario; thence westerly along the production westerly of the northerly limit of that lot to the water’s edge of Rondeau Harbour; thence in a general northerly, westerly, southwesterly, southerly and easterly direction following the water’s edge on the easterly, northerly, westerly and southerly shores of that harbour to the intersection with the production northerly of the westerly limit of Lot 104 according to a plan registered in the Registry Office for the Registry Division of Kent as No. 314; thence northerly along that production to a point distant 290 feet measured northerly thereon from the southwesterly corner of that lot; thence easterly parallel to the northerly limit of Bayview Alley according to that plan, 150 feet, more or less, to the intersection with the production northerly of the easterly limit of Lot 100 according to that plan; thence southerly along that production to the water’s edge of Rondeau Harbour; thence in a general easterly direction following that water’s edge to the most easterly extremity of Shirley Point; thence southeasterly in a straight line to the most northerly extremity of the east face of the west pier of the channel connecting Rondeau Harbour and Lake Erie; thence southerly along that easterly face to a point distant 421.18 feet measured northerly thereon from the production easterly of the southerly limit of Mariner’s Road; thence south 77°14'25\" east, 100 feet; thence north 12°45'35\" east, 800 feet; thence south 77°14'25\" east, 700 feet; thence south 12°45¢35\" west, 850 feet, more or less, to the water’s edge of Lake Erie; thence in a general easterly direction following the water’s edge of Lake Erie to the intersection with the north and south dredge cut; thence north 22°30' east along the said dredge cut, 3,280 feet, more or less, to the intersection with the most southerly dredge cut; thence north 77°30' west along the said dredge cut and its northwesterly production, a distance of 1 mile and 3,900 feet; thence north 38°39' east, 5 miles and 1,196 feet, more or less, to the intersection with the westerly production of the north park boundary lying in an easterly and westerly direction at a bearing of north 76°50' east; thence easterly along that production and that park boundary 3,630 feet, more or less, to the intersection with the easterly limit of Lake Shore Road; thence southerly and westerly along the easterly limit of Lake Shore Road to the intersection with the easterly limit of Rondeau Park Road; thence southerly along the east limit of Rondeau Park Road and its production to the intersection with the water’s edge of Lake Erie; thence in a general northeasterly and northerly direction following the said water’s edge to the intersection with the production easterly of the northerly limit of Lot 2 aforementioned; thence westerly along that production and the northerly limit of that lot to the place of beginning, except the land described in paragraph 1.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 4,
+        "extent": "part",
+        "conditional": false,
+        "description": "In the Township of Norfolk in The Regional Municipality of Haldimand-Norfolk, formerly in the Township of South Walsingham in the County of Norfolk, and described as follows: 1. Beginning at a point in the southerly production of the line between lots 14 and 15 in Concession A in the Township of South Walsingham and which said point is the most northeasterly angle of the lands patented June 11, 1881, to John Woodward and William Anderson; thence southerly along that production 24 chains, more or less, to the northwesterly angle of a plan registered in the Registry Office for the Registry Division of Norfolk as Plan 429; thence easterly along the northerly limit of that plan to the northeasterly angle of that plan; thence southeasterly along the northeasterly limit of that plan to the northerly limit of Erie Boulevard; thence easterly along the northerly limit of Erie Boulevard and continuing easterly along the northerly limit of an existing travelled road to the intersection with the easterly limit of the land expropriated by the Department of Public Works, Ontario, according to a plan registered in the Registry Office for the Registry Division of Norfolk as Plan 537; thence north 19°20' east astronomically along that easterly limit and its production northerly 1 mile and 61 chains, more or less, to the intersection with a line drawn east astronomically from the intersection of the water’s edge on the southerly shore of Big Creek with the northeasterly limit of Long Point Park Road; thence west astronomically 4.5 miles, more or less, to the intersection with the southerly production of the line between lots 14 and 15 in Concession A in the Township of South Walsingham; thence southerly along the said production of the line between lots 14 and 15, a distance of 96 chains, more or less, to the place of beginning. 2. Beginning at a point in the water’s edge on the southerly shore of Big Creek where the same is intersected by the northeasterly limit of Long Point Park Road as shown on Department of Highways Plan of Survey P-2267; thence southeasterly along that limit 1 mile and 16 chains, more or less, to the intersection with a line drawn south 60°03' west astronomically from an angle in the northeasterly limit of the lands patented June 11, 1881, to John Woodward and William Anderson; thence north 60°03' east astronomically 2.92 chains; thence south 86°00' east 12.49 chains, more or less, to the intersection with the southerly production of the line between lots 14 and 15 in Concession A in the Township of South Walsingham; thence northerly along the said southerly production of the line between lots 14 and 15, a distance of 96 chains, more or less, to the intersection with a line drawn east astronomically 14 chains, more or less, to the place of beginning.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 5,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Darlington Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 6,
+        "extent": "whole",
+        "conditional": false,
+        "description": "McRae Point Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 7,
+        "extent": "part",
+        "conditional": false,
+        "description": "In the Township of Scugog in The Regional Municipality of Durham, formerly in the Township of Scugog in the County of Ontario, and described as follows: Beginning at the northwesterly corner of Lot 10 in Concession XIV; thence southerly along the westerly limit of that lot to the southwesterly corner thereof; thence southerly in a straight line to the northwesterly corner of Lot 10 in Concession XIII; thence southerly along the westerly limit of that lot to the southwesterly corner thereof; thence easterly along the southerly limit of lots 10, 11 and 12 to the intersection with the westerly limit of Charles Avenue according to registered plan 792; thence northerly along that westerly limit to the intersection with the westerly production of the southerly limit of Lot 3, registered plan 792; thence easterly along that production and the southerly limit of that Lot 3 to the high-water mark of Lake Scugog; thence in a northerly and westerly direction along that high-water mark to the place of beginning.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 8,
+        "extent": "part",
+        "conditional": false,
+        "description": "Those portions of Polar Bear Provincial Park in the Territorial District of Kenora, Patricia Portion, described as follows: 1. Beginning at the intersection of the low water mark of the low tide of Hudson’s Bay with the water’s edge along the easterly bank of Little Shagamu River; thence south 30°00' west a distance of 5 kilometres; thence north 60°00' west a distance of 15 kilometres; thence north 30°00' east a distance of 5 kilometres, more or less to the low water mark of the low tide of Hudson’s Bay; thence in a southeasterly direction along the said low water mark to the place of beginning. 2. Beginning at the intersection of latitude 55°15' north with longitude 83°45' west; thence south 45°00' west a distance of 12 kilometres; thence south 45°00' east a distance of 7 kilometres; thence north 45°00' east a distance of 14 kilometres, more or less to the low water mark of the low tide of Hudson’s Bay; thence in a general northwesterly direction along the said low water mark to a point in a line drawn north 45°00' east from the place of beginning; thence south 45°00' west to the east from the place of beginning; thence south 45°00' west to the place of beginning.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 9,
+        "extent": "part",
+        "conditional": false,
+        "description": "All that portion of Obatanga Provincial Park lying southwesterly of the southerly limit of that part of the King’s Highway known as No. 17.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 10,
+        "extent": "whole",
+        "conditional": true,
+        "description": "Chapleau-Nemegosenda Rivers Provincial Park, except that part situate in the Chapleau Crown Game Preserve.",
+        "citations": [
+          "O. Reg. 212/25, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 11,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Mississagi River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 12,
+        "extent": "part",
+        "conditional": true,
+        "description": "That part of Nagagamisis Provincial Park in the geographic Townships of Frances, Flanders, Hiawatha, Nagagami, Frost, Elgie, McEwing, Newlands, Mercer, Cross, and Arnott, in the Territorial District of Algoma, and in the geographic Townships of McMillan, Fintry, Auden, and unsurveyed territory, in the Territorial District of Cochrane being composed of those parts of the said geographic townships and unsurveyed territory designated as Parts 1 to 9, inclusive, on a plan known as Nagagamisis Provincial Park (Natural Environment Class), filed on November 1, 2004, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources saving and excepting those parts more particularly described as follows: 1. Part of the geographic townships of Frost and McEwing described as follows: Beginning at the intersection of the easterly limit of the right of way of Secondary Highway No. 631 with the southerly shore of Nagagamisis Lake; thence in a general southwesterly, southerly and southeasterly direction along the easterly limit of the said right of way to the intersection with the northerly shore of Blackwater Creek; thence in a general easterly direction following the northerly shore of Blackwater Creek to the northwesterly shore of Park Lake; thence in a general northeasterly direction following the northwesterly shore of Park Lake to the northerly shore of an unnamed creek draining Park Lake; thence in a general easterly direction following the northerly shore of the said unnamed creek to the westerly shore of Duck Bay; thence in a general northeasterly direction following the westerly shore of Duck Bay to the southerly shore of Nagagamisis Lake; thence in a general westerly and northwesterly direction following the south shore of Nagagamisis Lake to the place of beginning. 2. Part of the geographic Township of Frost described as follows: Premising that all bearings hereinafter mentioned are astronomical. Beginning at survey monument No. 334 defining a point on the westerly limit of the right of way of Secondary Highway No. 631 opposite H.O.T. at chainage 299 + 86.25 as shown on Ministry of Transportation and Communications Plan P-3451-1; thence north 85°00' west 1760.00 metres; thence north 67°00' west 1810.00 metres; thence north astronomic 400.00 metres, more or less, to a point measured southerly from and 100.00 metres in perpendicular distance to the southerly shore of Nagagamisis Lake; thence in a general northeasterly direction parallel to the said southerly shore and 100.00 metres in perpendicular distance therefrom to the intersection with the westerly limit of the right of way of Secondary Highway No. 631; thence in a general southwesterly, southerly and southeasterly direction following the westerly limit of the said right of way to the place of beginning. 3. Part of the geographic Township of Frost described as follows: Premising that all bearings hereinafter mentioned are astronomical. Beginning at the southeast corner of the herein described tract of land which is distant 1410.00 metres measured south 64°41' west from monument No. 334 defining a point on the westerly limit of the right of way of Secondary Highway No. 631 opposite H.O.T. at chainage 299 + 86.25 as shown on Ministry of Transportation and Communications Plan P-3451-1; thence north astronomic 400.00 metres; thence west astronomic 650.00 metres; thence south astronomic 400.00 metres; thence east astronomically 650.00 metres to the place of beginning. 4. Part of the geographic Township of McEwing described as follows: Beginning at the intersection of the north boundary of Nagagamisis Provincial Park with the easterly shore of an unnamed creek draining into Nagagamisis Lake being distant 5,900.00 metres, more or less, measured westerly along the said north boundary from the northeast corner of said park; thence easterly along the said north boundary 860.00 metres, more or less, to the westerly shore of an unnamed creek draining into Nagagamisis Lake; thence in a general southerly direction following the westerly shore of the unnamed creek to the northerly shore of Nagagamisis Lake; thence in a general westerly, southwesterly, westerly and northwesterly direction following the northerly shore of Nagagamisis Lake to the easterly shore of an unnamed creek on which easterly shore the place of beginning is situated; thence in a general northeasterly direction following the said easterly shore to the place of beginning. 5. Part of the geographic Township of McEwing described as follows: Premising that all bearings hereinafter mentioned are astronomical. Beginning at the southeast corner of the herein described tract of land distant 2,130.00 metres measured north astronomic from a point on the south boundary of the geographic Township of McEwing distant 12,000.00 metres measured westerly thereon from the southeast corner of the said township; thence north 20°20' east 550.00 metres; thence west astronomically 100.00 metres, more or less, to the easterly shore of Duck Bay; thence in a general southwesterly direction following the easterly shore of Duck Bay to the intersection with a line drawn on a course of west astronomic from the place of beginning; thence east astronomic 100.00 metres, more or less, to the place of beginning. 6. Part of the geographic Township of McEwing described as follows: Premising that all bearings hereinafter mentioned are astronomical. Beginning at the northeast corner of the herein described tract of land distant 1,500.00 metres measured north astronomic from a point in the south boundary of the geographic Township of McEwing distant 6,700.00 metres measured westerly thereon from the southeast corner of the said township; thence north 80°00' west 990.00 metres, more or less, to the easterly shore of Nagagamisis River; thence in a general southerly, southeasterly and easterly direction following the said shore to the intersection with a line drawn on a course of south astronomic from the place of beginning; thence north astronomic 300.00 metres, more or less, to the place of beginning. 7. Part of the geographic Township of McEwing described as follows: Premising that all bearings hereinafter mentioned are astronomical. Beginning at the northeast corner of the herein described tract of land distant 3,140.00 metres measured north astronomic from a point in the south boundary of the geographic Township of McEwing distant 2,350.00 metres measured westerly thereon from the southeast corner of the said township; thence west astronomic 700.00 metres; thence south astronomic 2,000.00 metres, more or less, to the northerly shore of Nagagamisis River; thence in a general easterly direction following the said shore to the intersection with a line drawn on a course of south astronomic from the place of beginning; thence north astronomic 2,480.00 metres, more or less, to the place of beginning.",
+        "citations": [
+          "O. Reg. 182/05, s. 1."
+        ]
+      },
+      {
+        "schedule": 13,
+        "extent": "part",
+        "conditional": true,
+        "description": "That part of the geographic townships of Bannerman, Fushimi, Hanlan and Stoddart, in the Territorial District of Cochrane and in the Province of Ontario being the land and land under water within Fushimi Lake Provincial Park, saving and excepting thereout and therefrom those parts more particularly described as follows: 1. Part of the geographic townships of Fushimi and Stoddart described as follows: Premising that the bearings hereinafter mentioned are astronomical. Beginning at the intersection of the north boundary of the geographic Township of Stoddart with the westerly shore of Achilles Lake being distant 3,120.00 metres, more or less, measured westerly thereon from the northeast corner thereof; thence in a general northerly direction following the said westerly shore to the most northerly point thereon; thence east astronomically 1,300.00 metres; thence south astronomically 1,660.00 metres, more or less, to the intersection with the northerly shore of Fushimi Lake; thence in a general northwesterly, westerly and southwesterly direction following the northerly shore of Fushimi Lake to the west shore of the creek draining Achilles Lake; thence in a general northerly direction following the said westerly shore to the westerly shore of Achilles Lake; thence in a general northerly direction following the westerly shore of Achilles Lake to the place of beginning. 2. Part of the geographic townships of Bannerman and Hanlan described as follows: Premising that the bearings hereinafter mentioned are astronomical. Beginning at the southwest corner of the said geographic Township of Bannerman; thence northerly along the west boundary of the geographic Township of Bannerman a distance of 600.00 metres; thence east astronomically 650.00 metres; thence south 17°00' west 1,250.00 metres, more or less, to the intersection with the northerly shore of Fushimi Lake; thence in a general northwesterly, westerly and southwesterly direction following the said northerly shore to the intersection with the west boundary of the geographic Township of Hanlan; thence northerly along the west boundary of the said township to the place of beginning. 3. Part of the geographic Township of Stoddart described as follows: Premising that the bearings hereinafter mentioned are astronomical. Beginning at a point within the geographic Township of Stoddart distant 2,420.00 metres measured south astronomic from a point on the north boundary of the said township distant 3,060.00 metres measured westerly thereon from the northeast corner of the said township; thence east astronomic 520.00 metres, more or less, to the intersection with the westerly shore of Fushimi Lake; thence in a general southerly direction following the westerly shore of Fushimi Lake to the northerly shore of Valentine Creek; thence in a general westerly and northerly direction following the northerly shore of Valentine Creek to the intersection with a line drawn on a course of west astronomic from the place of beginning; thence east astronomic 50.00 metres, more or less, to the place of beginning. 4. Part of the geographic Township of Stoddart described as follows: Premising that the bearings hereinafter mentioned are astronomical. Beginning at the intersection of the southerly shore of Valentine Creek with a line drawn on a course of south astronomic from a point on the north boundary of the said township distant 3,060.00 metres measured westerly thereon from the northeast corner of the said township; thence south astronomic 250.00 metres; thence east astronomic 510.00 metres, more or less, to the intersection with the westerly shore of Fushimi Lake; thence in a general northwesterly direction following the westerly shore of Fushimi Lake to the southerly shore of Valentine Creek; thence in a general westerly direction following the southerly shore of Valentine Creek to the place of beginning.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 14,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Rock Point Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 15,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Winisk River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 16,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Point Farms Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 17,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of Lake of the Woods Provincial Park in unsurveyed territory, in the Territorial District of Kenora and in unsurveyed territory, in the municipal Township of Lake of the Woods, in the Territorial District of Rainy River containing 11,589 hectares, more or less, being composed of those parts of the said unsurveyed territory, designated as Parts 2 to 10, both inclusive, on a plan known as Lake of the Woods Provincial Park (Natural Environment Class) filed on February 17, 2005, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 18,
+        "extent": "part",
+        "conditional": false,
+        "description": "The part of The Shoals Provincial Park lying northerly of that part of the King’s Highway known as No. 101 and described as follows: In the geographic townships of Bliss, Cosens, Druillettes, Gilliland and Peters, in the District of Sudbury, containing 8,010 hectares, more or less, being composed of that part of the said geographic townships designated as Part 1 on a plan known as “Northern-The Shoals”, approved on the 3rd day of July, 1984 and filed in the Office of the Surveyor General at Peterborough, Ontario.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 19,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Makobe-Grays River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 20,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Pretty River Valley Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1.",
+          "O. Reg. 50/11, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 22,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Aubrey Falls Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 23,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Silver Falls Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 24,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Wanapitei Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 25,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Kashabowie Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 26,
+        "extent": "whole",
+        "conditional": false,
+        "description": "La Cloche Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 27,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Little Abitibi Provincial Park.",
+        "citations": [
+          "O. Reg. 50/11, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 28,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Opeongo River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 29,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Westmeath Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 31,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Larder River Waterway Provincial Park.",
+        "citations": [
+          "O. Reg. 149/02, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 32,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Oxtongue River-Ragged Falls Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 33,
+        "extent": "part",
+        "conditional": false,
+        "description": "The part of Restoule Provincial Park described as follows: That portion of the geographic Townships of Hardy and Patterson, in the Territorial District of Parry Sound, being composed of Part 1 and a portion of Part 2 on a Plan known as Restoule Provincial Park (Natural Environment Class) filed on February 14, 2003 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources, and which portion of Part 2 may be more particularly described as follows: Beginning at the northwesterly corner of Lot 13, Concession 10, in the said Township of Patterson; thence southerly along the westerly limit of said Lot 13 and along the southerly production of the said limit across the allowance for road to the water’s edge along the northerly shore of Restoule Lake; thence easterly following the said water’s edge and water’s edge along the northerly shore of Restoule River to the intersection with the southerly production of the westerly limit of Lot 18, Concession 8; thence northerly along the said southerly production across the allowance for road and along the said westerly limit to the northwesterly corner of said Lot 18; thence northerly in a straight line across the allowance for road between concessions 8 and 9 to the southwesterly corner of Lot 18, Concession 9; thence northerly along the westerly limit of said Lot 18 and along the northerly production of the said limit across the allowance for road to the water’s edge along the southwesterly shore of Stormy Lake; thence north and westerly following the said water’s edge and the water’s edge along the southerly shore of Restoule River to the intersection with the northerly production of the westerly limit of Lot 13, Concession 11; thence southerly along the said northerly production across the allowance for road and along the said westerly limit to the southwesterly corner of said Lot 13; thence southerly in a straight line across the allowance for road between concessions 10 and 11 to the place of beginning.",
+        "citations": [
+          "O. Reg. 207/03, s. 1."
+        ]
+      },
+      {
+        "schedule": 34,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Sandpoint Island Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 35,
+        "extent": "whole",
+        "conditional": false,
+        "description": "South Bay Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 36,
+        "extent": "whole",
+        "conditional": false,
+        "description": "W.J.B. Greenwood Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 37,
+        "extent": "whole",
+        "conditional": false,
+        "description": "French River Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 38,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Bonnechere River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 39,
+        "extent": "whole",
+        "conditional": true,
+        "description": "Grundy Lake Provincial Park, excepting those parts thereof that are posted with signs prohibiting hunting.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 40,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Kawartha Highlands Signature Site Park.",
+        "citations": [
+          "O. Reg. 182/05, s. 2."
+        ]
+      },
+      {
+        "schedule": 41,
+        "extent": "whole",
+        "conditional": true,
+        "description": "Lower Madawaska River Provincial Park, excepting those parts thereof that are posted with signs prohibiting hunting.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 42,
+        "extent": "part",
+        "conditional": false,
+        "description": "The part of Algonquin Provincial Park known as the “McRae Addition” located in Eyre Township.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 43,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Lake St. Peter Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 44,
+        "extent": "whole",
+        "conditional": true,
+        "description": "Missinaibi Provincial Park, excepting that part situate in the Chapleau Crown Game Preserve.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 45,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Steel River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 46,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Sturgeon River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 47,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Turtle River-White Otter Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 2."
+        ]
+      },
+      {
+        "schedule": 48,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Obabika River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 49,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Solace Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 50,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Little Current River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1",
+          "O. Reg. 687/00, s. 2."
+        ]
+      },
+      {
+        "schedule": 51,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Albany River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 52,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Biscotasi Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 53,
+        "extent": "part",
+        "conditional": false,
+        "description": "Black Creek Provincial Park. Schedule 54 That portion of The Massasauga Provincial Park in the geographic townships of Conger and Cowper, and the islands and bed of Georgian Bay in front of the geographic townships of Conger and Cowper in the municipal Township of The Archipelago, in the Territorial District of Parry Sound, containing 10,161 hectares, more or less, being composed of all those Parts of the said geographic townships, designated as Parts 1 to 93 all inclusive, on a plan known as The Massasauga Provincial Park (Natural Environment Class), filed on August 16, 2017, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources and Forestry.",
+        "citations": [
+          "O. Reg. 378/00, s. 1.",
+          "O. Reg. 231/23, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 55,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Brightsand River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 56,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Dana-Jowsey Lakes Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 57,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Fawn River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 58,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Kopka River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 59,
+        "extent": "whole",
+        "conditional": false,
+        "description": "La Motte Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 60,
+        "extent": "whole",
+        "conditional": false,
+        "description": "LaVerendrye Provincial Park.",
+        "citations": [
+          "O. Reg. 50/11, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 61,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Otoskwin-Attawapiskat River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 62,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Ottawa River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 63,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Pipestone River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 64,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Severn River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 65,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Upper Madawaska River Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 66,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Nakina Moraine Provincial Park.",
+        "citations": [
+          "O. Reg. 378/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 67,
+        "extent": "part",
+        "conditional": false,
+        "description": "In the geographic Townships of Lansdowne and Escott, in the Municipal Township of Leeds and the Thousand Islands and the Municipal Township of Athens, United Counties of Leeds and Grenville, containing 1,491 hectares, more or less, being composed of those parts of the said geographic townships, designated as Parts 24, 25 and 47 on a Plan known as Charleston Lake Provincial Park (Natural Environment Class), filed on February 10, 2015 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources. Schedule 68 That portion of Wabakimi Provincial Park in unsurveyed territory and in the geographic townships of Bulmer, Bertrand, Chevrier, Fletcher, Furlonge, Heathcote, Manion, Smye and McLaurin, in the Territorial District of Thunder Bay containing 737,121 hectares, more or less, being composed of those parts of the unsurveyed territory and those parts of the said geographic townships, designated as Parts 2 to 6, both inclusive on a plan known as Wabakimi Provincial Park, filed on September 20, 2018, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources and Forestry.",
+        "citations": [
+          "O. Reg. 211/17, s. 1.",
+          "O. Reg. 231/23, s. 1 (3).",
+          "O. Reg. 370/12, s. 1."
+        ]
+      },
+      {
+        "schedule": 70,
+        "extent": "part",
+        "conditional": false,
+        "description": "In the geographic Township of Cardiff, in the Municipality of Highlands East, in the County of Haliburton, containing 180 hectares, more or less, being composed of that part of the said geographic Township of Cardiff, designated as Part 2, on a Plan known as Silent Lake Provincial Park (Natural Environment Class), filed on August 5, 2016 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources and Forestry.",
+        "citations": [
+          "O. Reg. 211/17, s. 2."
+        ]
+      },
+      {
+        "schedule": 71,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Big East River Provincial Park.",
+        "citations": [
+          "O. Reg. 463/00, s. 1."
+        ]
+      },
+      {
+        "schedule": 72,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Temagami River Provincial Park.",
+        "citations": [
+          "O. Reg. 687/00, s. 4."
+        ]
+      },
+      {
+        "schedule": 73,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Mashkinonje Provincial Park in the geographic Township of Loudon, Municipality of West Nipissing in the Territorial District of Nipissing, containing 236 hectares, more or less, being composed of that part of the said Township of Loudon designated as Part 7 on a plan known as Mashkinonje Provincial Park (Natural Environment Class), filed on November 3, 2011 in the Office of the Surveyor General in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 370/12, s. 2."
+        ]
+      },
+      {
+        "schedule": 74,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Halfway Lake Provincial Park in the geographic Townships of Antrim and Ulster, in the Territorial District of Sudbury, containing 383 hectares, more or less, being composed of those parts of the said Townships of Antrim and Ulster, designated as Parts 3 and 4, on a Plan known as Halfway Lake Provincial Park (Natural Environment Class), filed on November 3, 2011 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 96/12, s. 1."
+        ]
+      },
+      {
+        "schedule": 75,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Puzzle Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 87/01, s. 1."
+        ]
+      },
+      {
+        "schedule": 76,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Spanish River Provincial Park.",
+        "citations": [
+          "O. Reg. 385/01, s. 1."
+        ]
+      },
+      {
+        "schedule": 77,
+        "extent": "part",
+        "conditional": false,
+        "description": "In the geographic Townships of Dack and Evanturel, in the Territorial District of Timiskaming, containing 131 hectares, more or less, being composed of those parts of the said geographic townships, designated as parts 1 and 3 on a plan known as Kap-Kig-Iwan Provincial Park (Natural Environment Class), filed on June 27, 2001, with the Office of the Surveyor General in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 385/01, s. 1."
+        ]
+      },
+      {
+        "schedule": 78,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Queen Elizabeth II Wildlands Provincial Park.",
+        "citations": [
+          "O. Reg. 239/03, s. 1 (1)."
+        ]
+      },
+      {
+        "schedule": 79,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Englehart River Fine Sand Plain and Waterway Provincial Park.",
+        "citations": [
+          "O. Reg. 149/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 80,
+        "extent": "whole",
+        "conditional": false,
+        "description": "West Montreal River Provincial Park.",
+        "citations": [
+          "O. Reg. 149/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 81,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Black Sturgeon River Provincial Park.",
+        "citations": [
+          "O. Reg. 149/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 82,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Ruby Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 149/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 83,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Widdifield Forest Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 84,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Little White River Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 85,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Blind River Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 86,
+        "extent": "whole",
+        "conditional": false,
+        "description": "North Channel Inshore Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 87,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Aubinadong River Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 88,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Nimoosh Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 89,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Pukaskwa River Provincial Park.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 90,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Mississagi Provincial Park in the geographic Townships of Sagard, Viel, Raimbault, Hembruff and Hughson, in the Territorial District of Algoma, containing 3,501 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 1 and 2, on a Plan known as Mississagi Provincial Park (Natural Environment Class), filed on January 14, 2002 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 91,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Pancake Bay Provincial Park in the Geographic Townships of Ryan and Herrick, in the Territorial District of Algoma, containing 1,175 hectares, more or less, being composed of that part of the said Geographic Townships, designated as Part 3 on a Plan known as Pancake Bay Provincial Park (Recreation Class), filed on January 14, 2002 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 312/02, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 92,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Woman River Forest Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 93,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Wenebegon River Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 94,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Matinenda Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 95,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Alexander Lake Forest Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 96,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Amable du Fond River Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 97,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Jocko Rivers Provincial Park in the geographic Townships of Clarkson, Eddy, French, Garrow, Jocko, La Salle, Lockhart, McAuslan, Osborne and Stewart, in the Territorial District of Nipissing, containing 11,231 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 1 to 3, both inclusive, on a Plan known as P140 Jocko Rivers Provincial Park (Waterway Class) filed on February 14, 2003 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 98,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Goulais River Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 99,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Algoma Headwaters Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 100,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Aubinadong-Nushatogaini Rivers Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 101,
+        "extent": "whole",
+        "conditional": false,
+        "description": "East English River Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 102,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Sandbar Lake Provincial Park in unsurveyed territory, Territorial District of Kenora containing 3,295 hectares, more or less, being composed of that part of the said unsurveyed territory designated as Part 1 on a plan known as Plan of Sandbar Lake Provincial Park (Natural Environment Class), filed on September 14, 2022 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources and Forestry.",
+        "citations": [
+          "O. Reg. 212/25, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 103,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Blue Lake Provincial Park in the geographic Townships of Docker and Smellie, in the Territorial District of Kenora, containing 1,954 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 1 to 16, both inclusive, (Part 6 comprising only the islands in Cobble Lake) on a plan known as Blue Lake Provincial Park (Natural Environment Class), filed on February 24, 2003 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 104,
+        "extent": "whole",
+        "conditional": false,
+        "description": "West English River Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 105,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Eagle Dogtooth Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 106,
+        "extent": "whole",
+        "conditional": false,
+        "description": "St. Raphael Provincial Park.",
+        "citations": [
+          "O. Reg. 207/03, s. 3."
+        ]
+      },
+      {
+        "schedule": 107,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Magnetawan River Provincial Park.",
+        "citations": [
+          "O. Reg. 239/03, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 108,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Noganosh Lake Provincial Park.",
+        "citations": [
+          "O. Reg. 239/03, s. 1 (2)."
+        ]
+      },
+      {
+        "schedule": 109,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Gull River Provincial Park.",
+        "citations": [
+          "O. Reg. 242/03, s. 1."
+        ]
+      },
+      {
+        "schedule": 110,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Obonga-Ottertooth Provincial Park.",
+        "citations": [
+          "O. Reg. 242/03, s. 1."
+        ]
+      },
+      {
+        "schedule": 111,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Whitesand Provincial Park.",
+        "citations": [
+          "O. Reg. 242/03, s. 1."
+        ]
+      },
+      {
+        "schedule": 112,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Batchawana River Provincial Park.",
+        "citations": [
+          "O. Reg. 177/04, s. 1."
+        ]
+      },
+      {
+        "schedule": 113,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Ogoki River Provincial Park.",
+        "citations": [
+          "O. Reg. 177/04, s. 1."
+        ]
+      },
+      {
+        "schedule": 114,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Abitibi-De-Troyes Provincial Park.",
+        "citations": [
+          "O. Reg. 182/05, s. 3."
+        ]
+      },
+      {
+        "schedule": 115,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Egan Chutes Provincial Park Addition.",
+        "citations": [
+          "O. Reg. 182/05, s. 3."
+        ]
+      },
+      {
+        "schedule": 116,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Esker Lakes Provincial Park in the geographic Township of Bisley, in the Territorial District of Cochrane, and in the geographic Township of Morrisette in the Town of Kirkland Lake, and in the geographic Township of Arnold, in the Territorial District of Timiskaming, containing 3,285 hectares, more or less, being composed of that part of the said geographic townships designated as Part 2 on a plan known as Esker Lakes Provincial Park (Natural Environment Class), filed on April 29, 2004 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources, and that part of the geographic Township of Morrisette, in the Town of Kirkland Lake, in the Territorial District of Timiskaming, designated as Part 1 on a plan known as Plan of the Boundary of the 2024 Esker Lakes Provincial Park Addition (Natural Environment Class), filed on December 5, 2025 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 94/26, s. 1."
+        ]
+      },
+      {
+        "schedule": 117,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Greenwater Provincial Park in the geographic Townships of Colquhoun, Leitch, Calder and Clute, in the Territorial District of Cochrane, containing 3,166 hectares, more or less, being composed of those parts in the said Townships, designated as Parts 1 and 3 on a Plan known as Greenwater Provincial Park (Natural Environment Class) filed on April 14, 2004, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 182/05, s. 3."
+        ]
+      },
+      {
+        "schedule": 118,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Ivanhoe Provincial Park in the geographic Townships of Ivanhoe, Carty, Pinogami, Evans, Biggs, Hellyer, Raney, Crockett, Denyes, Halcrow, Tooms and Eisenhower, in the Territorial District of Sudbury, containing 6,100 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 2 to 4, both inclusive, on a plan known as Ivanhoe Lake Provincial Park (Natural Environment Class), filed on November 23, 2004, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 182/05, s. 3."
+        ]
+      },
+      {
+        "schedule": 119,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Barron River Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 120,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Bissett Creek Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 121,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of Bon Echo Provincial Park in the geographic Townships of Anglesea and Effingham, in the municipal Township of Addington Highlands, County of Lennox and Addington, and in the geographic township of Barrie, in the municipal Township of North Frontenac, in the County of Frontenac, containing 1,702 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 3 to 7, both inclusive, on a plan known as Bon Echo Provincial Park (Natural Environment Class) filed on August 27, 2004, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 122,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Chiniguchi Waterway Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 123,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Grant’s Creek Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 124,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Groundhog River Waterway Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 125,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Killarney Lakelands and Headwaters Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 126,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of Killarney Provincial Park in the geographic Townships of Hansen, Goschen, Sale, Carlyle, Killarney and Rutherford, now in the Municipality of Killarney, and in the geographic Townships of Roosevelt and Curtin, in the Territorial District of Sudbury, containing 1,275 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 3 and 4, on a plan known as Killarney Provincial Park (Wilderness Class), filed on December 29, 2005, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 127,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of Mattawa River Provincial Park in the geographic Township of Widdifield, now in the City of North Bay, and in the geographic Township of Papineau, now in the municipal Township of Papineau-Cameron, and in the geographic Township of Ferris, now in the municipal Township of East Ferris, and in the municipal and geographic Townships of Bonfield, Calvin and Mattawan, and in the geographic Townships of Phelps and Olrig, District of Nipissing, containing 10,924 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 1, 3 to 18, both inclusive, 20, 23 to 25, both inclusive, and 27, on a plan known as Mattawa River Provincial Park (Waterway Class), filed on December 29, 2005, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 128,
+        "extent": "whole",
+        "conditional": false,
+        "description": "River Aux Sables Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 129,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Rushbrook Provincial Park.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 130,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of White Lake Provincial Park in the geographic Townships of Brothers and Laberge, and unsurveyed territory, in the Territorial District of Thunder Bay, containing 2,368 hectares, more or less, being composed of that part of the said geographic townships and unsurveyed territory designated as Part 1 on a plan known as White Lake Provincial Park (Natural Environment Class), filed on December 29, 2005, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 131,
+        "extent": "part",
+        "conditional": false,
+        "description": "That part of Lake of the Woods Provincial Park in unsurveyed territory, in the Territorial District of Kenora and in unsurveyed territory, in the municipal Township of Lake of the Woods, in the Territorial District of Rainy River containing 9,086 hectares, more or less, being composed of those parts of the said unsurveyed territory, designated as Parts 1 and 11 to 18, both inclusive, on a plan known as Lake of the Woods Provincial Park (Natural Environment Class) filed on February 17, 2005, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 334/06, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 132,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Beekahncheekahmeeng Deebahncheekayweehn Eenahohnahnuhn.",
+        "citations": [
+          "O. Reg. 126/11, s. 1."
+        ]
+      },
+      {
+        "schedule": 133,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Kahnahmaykoosayseekahk.",
+        "citations": [
+          "O. Reg. 126/11, s. 1."
+        ]
+      },
+      {
+        "schedule": 134,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Pahngwahshahshk Ohweemushkeeg.",
+        "citations": [
+          "O. Reg. 126/11, s. 1."
+        ]
+      },
+      {
+        "schedule": 135,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Sahkeesuhkuh Weesuhkaheegahn.",
+        "citations": [
+          "O. Reg. 126/11, s. 1."
+        ]
+      },
+      {
+        "schedule": 136,
+        "extent": "whole",
+        "conditional": false,
+        "description": "Weeskayjahk Ohtahzhoganeeng.",
+        "citations": [
+          "O. Reg. 126/11, s. 1."
+        ]
+      },
+      {
+        "schedule": 137,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Queen Elizabeth The Queen Mother Mnidoo Mnising Provincial Park in the geographic Townships of Robinson and Dawson, in the Territorial District of Manitoulin, containing 6,530 hectares, more or less, being composed of that part of the geographic townships designated as Parts 1 to 3, both inclusive, on a plan known as Queen Elizabeth The Queen Mother Mnidoo Mnising Provincial Park (Natural Environment Class), filed on August 12, 2013 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 47/14, s. 2."
+        ]
+      },
+      {
+        "schedule": 138,
+        "extent": "part",
+        "conditional": false,
+        "description": "Those portions of Woodland Caribou Provincial Park in the geographic Township of Ball and in unsurveyed territory, in the Territorial District of Kenora, Patricia Portion, containing 13,659 hectares, more or less, designated as Parts 2 and 3, both inclusive, on a plan known as Woodland Caribou Provincial Park (Wilderness Class), filed on March 5, 2014, with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources. Schedule 139 Alfred Bog Provincial Park.",
+        "citations": [
+          "O. Reg. 123/14, s. 1.",
+          "O. Reg. 231/23, s. 1 (4)."
+        ]
+      },
+      {
+        "schedule": 140,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of MacGregor Point Provincial Park in the geographic Township of Bruce, in the Municipality of Kincardine, and in the geographic Township of Saugeen, Town of Saugeen Shores, in the County of Bruce, containing 219 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 4 and 5, on a plan known as Plan of MacGregor Point Provincial Park (Natural Environment Class), filed on November 28, 2024 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 212/25, s. 1 (3)."
+        ]
+      },
+      {
+        "schedule": 141,
+        "extent": "part",
+        "conditional": false,
+        "description": "That portion of Boyne Valley Provincial Park in the geographic Township of Mulmur, in the Municipal Township of Mulmur, and in the geographic Township of Melanchthon in the Municipal Township of Melanchthon, in the County of Dufferin, containing 419 hectares, more or less, being composed of those parts of the said geographic townships designated as Parts 1, 2, 4 and 5 on a plan known as Plan of the 2025 Boyne Valley Provincial Park Addition (Natural Environment Class), filed on December 16, 2025 with the Office of the Surveyor General of Ontario in the Ministry of Natural Resources.",
+        "citations": [
+          "O. Reg. 94/26, s. 2."
+        ]
+      }
+    ]
+  },
+  "part7": {
+    "section": "The municipalities referred to in Schedule 1 are the areas south of the French and Mattawa rivers where it is permitted to hunt with a gun on Sundays under Ontario Regulation 665/98 (Hunting) made under the Act.",
+    "municipalities": [
+      {
+        "municipality": "Addington Highlands, Township of",
+        "geographic_area": "Lennox and Addington"
+      },
+      {
+        "municipality": "Adelaide Metcalfe, Township of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Algonquin Highlands, Township of",
+        "geographic_area": "Haliburton"
+      },
+      {
+        "municipality": "Alnwick/Haldimand, Township of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Amaranth, Township of",
+        "geographic_area": "Dufferin"
+      },
+      {
+        "municipality": "Amherstburg, Town of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Armour, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Arran-Elderslie, Municipality of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Ashfield-Colborne-Wawanosh, Township of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Asphodel-Norwood, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Athens, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Augusta, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Ballantyne, Boulter, Boyd, Lauder, Paxton, Geographic Townships of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "Bancroft, Town of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Bayham, Municipality of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "Beckwith, Township of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Belleville, City of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Blair, Brown, East Mills, Hardy, Henvy, Laurier, Lount, McConkey, Mowat, Patterson, Pringle, Wallbridge, Wilson, Geographic Townships of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Blandford-Blenheim, Township of",
+        "geographic_area": "Oxford"
+      },
+      {
+        "municipality": "Bluewater, Municipality of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Bonfield, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "Bracebridge, Town of",
+        "geographic_area": "Muskoka"
+      },
+      {
+        "municipality": "Brant, County of",
+        "geographic_area": "Brant"
+      },
+      {
+        "municipality": "Brighton, Municipality of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Brock, Township of",
+        "geographic_area": "Durham"
+      },
+      {
+        "municipality": "Brockton, Municipality of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Brooke-Alvinston, Municipality of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Callander, Municipality of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Calvin, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "Carlow/Mayo, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Cavan-Millbrook-North Monaghan, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Central Elgin, Municipality of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "Central Frontenac, Township of",
+        "geographic_area": "Frontenac"
+      },
+      {
+        "municipality": "Central Huron, Municipality of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Centre Hastings, Municipality of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Chatham-Kent, Municipality of",
+        "geographic_area": "Chatham-Kent"
+      },
+      {
+        "municipality": "Chatsworth, Township of",
+        "geographic_area": "Grey"
+      },
+      {
+        "municipality": "Chisholm, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "Clearview, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Cramahe, Township of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Dawn-Euphemia, Township of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Douro-Dummer, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Drummond/North Elmsley, Township of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Dutton-Dunwich, Municipality of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "Dysart, Dudley, Harcourt, Guilford, Harburn, Bruton, Havelock, Eyre and Clyde, United Townships of",
+        "geographic_area": "Haliburton"
+      },
+      {
+        "municipality": "East Ferris, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "East Gwillimbury, Town of",
+        "geographic_area": "York"
+      },
+      {
+        "municipality": "East Zorra-Tavistock, Township of",
+        "geographic_area": "Oxford"
+      },
+      {
+        "municipality": "Edwardsburgh/Cardinal, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Elizabethtown-Kitley, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Enniskillen, Township of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Essa, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Essex, Town of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Faraday, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Fort Erie, Town of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Frontenac Islands, Township of",
+        "geographic_area": "Frontenac"
+      },
+      {
+        "municipality": "Front of Yonge, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Galway-Cavendish and Harvey, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Georgian Bluffs, Township of",
+        "geographic_area": "Grey"
+      },
+      {
+        "municipality": "Georgina, Town of",
+        "geographic_area": "York"
+      },
+      {
+        "municipality": "Grand Valley, Town of",
+        "geographic_area": "Dufferin"
+      },
+      {
+        "municipality": "Gravenhurst, Town of",
+        "geographic_area": "Muskoka"
+      },
+      {
+        "municipality": "Greater Napanee, Town of",
+        "geographic_area": "Lennox and Addington"
+      },
+      {
+        "municipality": "Grimsby, Town of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Guelph/Eramosa, Township of",
+        "geographic_area": "Wellington"
+      },
+      {
+        "municipality": "Hamilton, Township of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Hastings Highlands, Municipality of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Harrison, Geographic Township of, except that part in The Archipelago, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Havelock-Belmont-Methuen, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Highlands East, Municipality of",
+        "geographic_area": "Haliburton"
+      },
+      {
+        "municipality": "Howick, Township of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Huntsville, Town of",
+        "geographic_area": "Muskoka"
+      },
+      {
+        "municipality": "Huron East, Municipality of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Huron Kinloss, Township of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Joly, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Kawartha Lakes, City of",
+        "geographic_area": "Kawartha Lakes"
+      },
+      {
+        "municipality": "Kearney, Town of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Killarney, Municipality of",
+        "geographic_area": "Sudbury"
+      },
+      {
+        "municipality": "Kincardine, Municipality of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Kingston, City of",
+        "geographic_area": "Frontenac"
+      },
+      {
+        "municipality": "Kingsville, Town of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Lake of Bays, Township of",
+        "geographic_area": "Muskoka"
+      },
+      {
+        "municipality": "Lakeshore, Town of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Lambton Shores, Municipality of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Lanark Highlands, Township of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Leamington, Municipality of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Leeds and the Thousand Islands, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Limerick, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Lincoln, Town of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Loyalist, Township of",
+        "geographic_area": "Lennox and Addington"
+      },
+      {
+        "municipality": "Lucan Biddulph, Township of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Machar, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Madoc, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Magnetawan, Municipality of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Malahide, Township of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "Mapleton, Township of",
+        "geographic_area": "Wellington"
+      },
+      {
+        "municipality": "Marmora and Lake, Municipality of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "McDougall, Municipality of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "McKellar, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "McMurrich/Monteith, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Meaford, Municipality of",
+        "geographic_area": "Grey"
+      },
+      {
+        "municipality": "Melancthon, Township of",
+        "geographic_area": "Dufferin"
+      },
+      {
+        "municipality": "Merrickville-Wolford, Village of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Middlesex Centre, Municipality of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Minden Hills, Township of",
+        "geographic_area": "Haliburton"
+      },
+      {
+        "municipality": "Minto, Town of",
+        "geographic_area": "Wellington"
+      },
+      {
+        "municipality": "Mississippi Mills, Town of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Montague, Township of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Morris-Turnberry, Municipality of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "Muskoka Lakes, Township of",
+        "geographic_area": "Muskoka"
+      },
+      {
+        "municipality": "Newbury, Village of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Niagara Falls, Municipality of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Nipissing, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Norfolk County",
+        "geographic_area": "Norfolk"
+      },
+      {
+        "municipality": "North Dumfries, Township of",
+        "geographic_area": "Waterloo"
+      },
+      {
+        "municipality": "North Dundas, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "North Frontenac, Township of",
+        "geographic_area": "Frontenac"
+      },
+      {
+        "municipality": "North Glengarry, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "North Grenville, Municipality of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "North Huron, Township of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "North Kawartha, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "North Middlesex, Municipality of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "North Perth, Municipality of",
+        "geographic_area": "Perth"
+      },
+      {
+        "municipality": "North Stormont, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "Northern Bruce Peninsula, Municipality of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Norwich, Township of",
+        "geographic_area": "Oxford"
+      },
+      {
+        "municipality": "Oro-Medonte, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Otonabee-South Monaghan, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Ottawa, City of",
+        "geographic_area": "Ottawa"
+      },
+      {
+        "municipality": "Papineau-Cameron, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "Pelee, Township of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Perry, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Perth East, Township of",
+        "geographic_area": "Perth"
+      },
+      {
+        "municipality": "Perth South, Township of",
+        "geographic_area": "Perth"
+      },
+      {
+        "municipality": "Plympton-Wyoming, Town of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Port Colborne, City of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Port Hope, Municipality of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Powassan, Municipality of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Prescott and Russell, United Counties of",
+        "geographic_area": "Prescott and Russell"
+      },
+      {
+        "municipality": "Prince Edward, County of",
+        "geographic_area": "Prince Edward"
+      },
+      {
+        "municipality": "Puslinch, Township of",
+        "geographic_area": "Wellington"
+      },
+      {
+        "municipality": "Quinte West, City of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Ramara, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Renfrew, County of",
+        "geographic_area": "Renfrew"
+      },
+      {
+        "municipality": "Rideau Lakes, Township of",
+        "geographic_area": "Leeds and Grenville"
+      },
+      {
+        "municipality": "Ryerson, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Sarnia, City of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Saugeen Shores, Town of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "Scugog, Township of",
+        "geographic_area": "Durham"
+      },
+      {
+        "municipality": "Seguin, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Selwyn, Township of",
+        "geographic_area": "Peterborough"
+      },
+      {
+        "municipality": "Severn, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Shawanaga, Geographic Township of, except that part in The Archipelago, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "South Algonquin, Township of",
+        "geographic_area": "Nipissing"
+      },
+      {
+        "municipality": "South Bruce, Municipality of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "South Bruce Peninsula, Town of",
+        "geographic_area": "Bruce"
+      },
+      {
+        "municipality": "South Dundas, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "South Frontenac, Township of",
+        "geographic_area": "Frontenac"
+      },
+      {
+        "municipality": "South Glengarry, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "South Huron, Municipality of",
+        "geographic_area": "Huron"
+      },
+      {
+        "municipality": "South Stormont, Township of",
+        "geographic_area": "Stormont, Dundas and Glengarry"
+      },
+      {
+        "municipality": "Southgate, Township of",
+        "geographic_area": "Grey"
+      },
+      {
+        "municipality": "Southwest Middlesex, Municipality of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Southwold, Township of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "South-West Oxford, Township of",
+        "geographic_area": "Oxford"
+      },
+      {
+        "municipality": "Springwater, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "St. Clair, Township of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Stirling-Rawdon, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Stone Mills, Township of",
+        "geographic_area": "Lennox and Addington"
+      },
+      {
+        "municipality": "Strathroy-Caradoc, Municipality of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "Strong, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Tay, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Tay Valley, Township of",
+        "geographic_area": "Lanark"
+      },
+      {
+        "municipality": "Tecumseh, Town of",
+        "geographic_area": "Essex"
+      },
+      {
+        "municipality": "Thames Centre, Municipality of",
+        "geographic_area": "Middlesex"
+      },
+      {
+        "municipality": "The Archipelago, Township of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Thorold, City of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Tiny, Township of",
+        "geographic_area": "Simcoe"
+      },
+      {
+        "municipality": "Trent Hills, Municipality of",
+        "geographic_area": "Northumberland"
+      },
+      {
+        "municipality": "Tudor and Cashel, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Tweed, Municipality of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Tyendinaga, Township of",
+        "geographic_area": "Hastings"
+      },
+      {
+        "municipality": "Wainfleet, Township of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "Warwick, Township of",
+        "geographic_area": "Lambton"
+      },
+      {
+        "municipality": "Wellington North, Township of",
+        "geographic_area": "Wellington"
+      },
+      {
+        "municipality": "West Elgin, Municipality of",
+        "geographic_area": "Elgin"
+      },
+      {
+        "municipality": "West Lincoln, Township of",
+        "geographic_area": "Niagara"
+      },
+      {
+        "municipality": "West Perth, Municipality of",
+        "geographic_area": "Perth"
+      },
+      {
+        "municipality": "Whitby, Town of",
+        "geographic_area": "Durham"
+      },
+      {
+        "municipality": "Whitchurch-Stouffville, Town of",
+        "geographic_area": "York"
+      },
+      {
+        "municipality": "Whitestone, Municipality of",
+        "geographic_area": "Parry Sound"
+      },
+      {
+        "municipality": "Wilmot, Municipality of",
+        "geographic_area": "Waterloo"
+      },
+      {
+        "municipality": "Wollaston, Township of",
+        "geographic_area": "Hastings"
+      }
+    ]
+  }
+}

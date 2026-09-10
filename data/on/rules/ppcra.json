@@ -1,0 +1,28 @@
+{
+  "statute": "S.O. 2006, c. 12",
+  "title": "Provincial Parks and Conservation Reserves Act, 2006",
+  "citation": "Provincial Parks and Conservation Reserves Act, 2006, S.O. 2006, c. 12",
+  "source": "https://www.ontario.ca/laws/statute/06p12",
+  "api_source": "https://www.ontario.ca/laws/api/v2/legislation/en/doc-search/statute/06p12",
+  "license": "OGL-Ontario",
+  "license_url": "https://www.ontario.ca/page/open-government-licence-ontario",
+  "currency_date": "2026-03-30",
+  "provisions": {
+    "parks": {
+      "subsection": "15 (1)",
+      "text": "Hunting is not permitted in provincial parks unless it is allowed by regulation made under the Fish and Wildlife Conservation Act, 1997."
+    },
+    "algonquin_bruton_clyde": {
+      "subsection": "15 (2)",
+      "text": "Despite subsection (1) and the repeal of The Algonquin Provincial Park Extension Act, 1960-61, hunting is permitted on the public lands in the Geographic Townships of Bruton and Clyde that were added to Algonquin Park by section 1 of The Algonquin Provincial Park Extension Act, 1960-61."
+    },
+    "conservation_reserves": {
+      "subsection": "15 (3)",
+      "text": "Hunting is permitted in conservation reserves unless it is prohibited by regulation made under the Fish and Wildlife Conservation Act, 1997."
+    },
+    "conservation_reserve_zoning": {
+      "subsection": "12 (3)",
+      "text": "Despite subsection (2), hunting in a conservation reserve shall not be constrained by zoning but may be restricted solely in accordance with subsection 15 (3)."
+    }
+  }
+}

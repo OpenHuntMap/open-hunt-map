@@ -1,0 +1,83 @@
+# Re-scrape Ontario hunting seasons from the regulations summary and open a PR.
+#
+# Ontario publishes no seasons API, so the pack is built by parsing the open
+# season tables on ontario.ca. The result is never pushed straight to main:
+# hunters act on these dates, so a human reviews the diff first.
+#
+# On-demand: Actions -> Refresh hunting seasons -> Run workflow
+
+name: Refresh hunting seasons
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: Regulation year the summary covers (season starts spring of this year)
+        required: true
+        default: "2026"
+        type: string
+  schedule:
+    # Mid-March, after Ontario publishes the updated summary for the new year.
+    - cron: "0 14 15 3 *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-seasons
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scrape Ontario seasons
+        id: scrape
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          YEAR="${{ github.event.inputs.year || '' }}"
+          if [ -z "$YEAR" ]; then
+            # Scheduled runs target the regulation year that starts this spring.
+            YEAR="$(date -u +%Y)"
+          fi
+          echo "year=$YEAR" >> "$GITHUB_OUTPUT"
+          python tools/gis/scrape_seasons_on.py --year "$YEAR" | tee scrape.log
+          echo 'summary<<EOF' >> "$GITHUB_OUTPUT"
+          cat scrape.log >> "$GITHUB_OUTPUT"
+          echo 'EOF' >> "$GITHUB_OUTPUT"
+          rm scrape.log
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automated/refresh-seasons-${{ steps.scrape.outputs.year }}
+          title: "Refresh Ontario hunting seasons (${{ steps.scrape.outputs.year }})"
+          commit-message: "data(on): refresh ${{ steps.scrape.outputs.year }} hunting seasons"
+          add-paths: data/on/seasons
+          delete-branch: true
+          body: |
+            Re-scraped from the [Ontario Hunting Regulations Summary](https://www.ontario.ca/document/ontario-hunting-regulations-summary).
+
+            **Review the diff against the official tables before merging.**
+            Pay attention to any `WARN` lines below: they mean a WMU token in a
+            regulation table did not match the mapped WMU list, so those rows
+            were dropped.
+
+            ```
+            ${{ steps.scrape.outputs.summary }}
+            ```
+
+            After merging, run **Rebuild geometry packs** with publish enabled
+            so the new seasons ship in `packs-latest`.

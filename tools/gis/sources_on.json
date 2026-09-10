@@ -1,0 +1,146 @@
+{
+  "province": "on",
+  "name": "Ontario",
+  "license": "OGL-Ontario",
+  "license_url": "https://www.ontario.ca/page/open-government-licence-ontario",
+  "attribution": "Contains information licensed under the Open Government Licence – Ontario; Statistics Canada boundaries under the Statistics Canada Open Licence.",
+  "layers": {
+    "crown_land": {
+      "label": "Huntable Crown land",
+      "output": "overlays/crown_land.geojson",
+      "sources": [
+        {
+          "name": "Crown Land Use Policy Atlas (CLUPA)",
+          "portal": "Ontario GeoHub / Land Information Ontario",
+          "url": "https://geohub.lio.gov.on.ca/datasets/lio::crown-land-use-policy-atlas/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/lio::crown-land-use-policy-atlas",
+          "format": "geojson",
+          "notes": "Land-use designation (GUA/EMA/etc.). Intersect with unpatented tenure before shipping."
+        },
+        {
+          "name": "Crown land: ministry unpatented land",
+          "portal": "Ontario GeoHub / LIO Open08 layer 34",
+          "url": "https://data.ontario.ca/dataset/crown-land-ministry-unpatented-land",
+          "download": "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open08/MapServer/34",
+          "format": "geojson",
+          "notes": "Positive Crown tenure mask. Run fetch_unpatented_on.py then filter_huntable_crown.py."
+        },
+        {
+          "name": "Patent land external",
+          "portal": "Ontario GeoHub / LIO Open08 layer 35",
+          "url": "https://data.ontario.ca/dataset/patent-land-external",
+          "download": "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open08/MapServer/35",
+          "format": "geojson",
+          "notes": "Optional subtract layer (fetch_patent_on.py). Prefer unpatented intersect; patent alone misses many urban parcels."
+        }
+      ],
+      "required_properties": ["policy_id", "designation", "hunting_allowed", "summary"]
+    },
+    "wmu": {
+      "label": "Wildlife Management Units",
+      "output": "overlays/wmu.geojson",
+      "sources": [
+        {
+          "name": "Wildlife Management Units",
+          "portal": "Ontario GeoHub (MNRF)",
+          "url": "https://geohub.lio.gov.on.ca/datasets/mnrf::wildlife-management-units/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/mnrf::wildlife-management-units",
+          "format": "geojson",
+          "notes": "WMU polygons for Ontario hunting regulations."
+        }
+      ],
+      "required_properties": ["wmu_id", "name"]
+    },
+    "parks": {
+      "label": "Parks & conservation reserves",
+      "output": "overlays/parks.geojson",
+      "sources": [
+        {
+          "name": "Provincial Park Boundaries",
+          "portal": "Ontario GeoHub (MNRF / Ontario Parks)",
+          "url": "https://geohub.lio.gov.on.ca/datasets/mnrf::provincial-park-boundaries/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/mnrf::provincial-park-boundaries",
+          "format": "geojson",
+          "notes": "Provincial parks; add conservation reserves from MNRF protected areas where available."
+        },
+        {
+          "name": "Conservation Reserves",
+          "portal": "Ontario GeoHub (MNRF)",
+          "url": "https://geohub.lio.gov.on.ca/datasets/mnrf::conservation-reserve-boundaries/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/mnrf::conservation-reserve-boundaries",
+          "format": "geojson",
+          "notes": "Conservation reserve boundaries; merge with parks layer in pipeline."
+        }
+      ],
+      "required_properties": ["name", "park_type", "hunting_allowed"]
+    },
+    "townships": {
+      "label": "Geographic townships",
+      "output": "overlays/townships.geojson",
+      "sources": [
+        {
+          "name": "Geographic Township",
+          "portal": "Ontario GeoHub (LIO)",
+          "url": "https://geohub.lio.gov.on.ca/datasets/lio::geographic-township/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/lio::geographic-township",
+          "format": "geojson",
+          "notes": "Official geographic township names for locate context."
+        }
+      ],
+      "required_properties": ["name", "type"]
+    },
+    "municipalities": {
+      "label": "Municipalities (CSD)",
+      "output": "overlays/municipalities.geojson",
+      "sources": [
+        {
+          "name": "Census Subdivision (CSD) — Ontario",
+          "portal": "Statistics Canada",
+          "url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21&geos=350",
+          "download": "https://www12.statcan.gc.ca/rest/census-recensement/2021/geo/sgc/2021/sgc_35.zip",
+          "format": "shapefile",
+          "notes": "StatsCan Open Licence. Filter to Ontario (PRUID 35). Prefer merged municipal boundaries where StatsCan CSD matches local limits."
+        },
+        {
+          "name": "Municipal Boundary",
+          "portal": "Ontario GeoHub (Municipal Boundaries)",
+          "url": "https://geohub.lio.gov.on.ca/datasets/lio::municipal-boundary/about",
+          "download": "https://geohub.lio.gov.on.ca/datasets/lio::municipal-boundary",
+          "format": "geojson",
+          "notes": "Optional LIO municipal limits; use when more current than CSD."
+        }
+      ],
+      "required_properties": ["name", "type"]
+    },
+    "municipal_forest": {
+      "label": "Municipal & county forests",
+      "output": "overlays/municipal_forest.geojson",
+      "sources": [
+        {
+          "name": "Agreement Forest Area",
+          "portal": "Ontario Data Catalogue (Geospatial Ontario)",
+          "url": "https://data.ontario.ca/en/dataset/agreement-forest-area",
+          "download": "https://data.ontario.ca/dataset/03700c14-5e9a-449e-a8f9-7ac3315bea91/resource/13f40cdc-db28-4fbe-b0be-ef3dda955690/download/agreefor_shp.zip",
+          "format": "shapefile",
+          "notes": "Parcel-level county/regional/municipal forest tracts; the only open source for southern Ontario public forest. Deprecated by Ontario, verified 1997-1998, positional accuracy ~100 m, and carries no ownership attribute - fetch_agreement_forest_on.py infers owner from the tract name and keeps only clearly public ones."
+        }
+      ],
+      "required_properties": ["name", "owner_type", "basis", "area_ha"]
+    },
+    "game_preserve": {
+      "label": "Crown game preserves",
+      "output": "overlays/game_preserve.geojson",
+      "sources": [
+        {
+          "name": "Crown Game Preserve",
+          "portal": "Land Information Ontario (LIO_Open05/MapServer/7)",
+          "url": "https://data.ontario.ca/dataset/crown-game-preserves",
+          "download": "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open05/MapServer/7",
+          "format": "geojson",
+          "notes": "Hunting and trapping prohibited under Fish and Wildlife Conservation Act s. 9 and O. Reg. 665/98 Part XIII. Drawn over the Crown tenure fabric, which otherwise renders these acres as open Crown land. Records flagged REGULATED_IND=No are kept but marked unconfirmed, since failing to warn is the costlier error."
+        }
+      ],
+      "required_properties": ["name", "hunting_allowed", "basis"]
+    }
+  }
+}

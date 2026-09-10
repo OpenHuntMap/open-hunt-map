@@ -1,0 +1,56 @@
+{
+  "version": 8,
+  "name": "OpenWoodsMap Satellite",
+  "sources": {
+    "sentinel2": {
+      "type": "raster",
+      "tiles": [
+        "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg"
+      ],
+      "tileSize": 256,
+      "attribution": "Sentinel-2 cloudless © EOX (modified Copernicus Sentinel data)",
+      "maxzoom": 14
+    },
+    "qc-ortho": {
+      "type": "raster",
+      "tiles": [
+        "https://servicesmatriciels.mern.gouv.qc.ca/erdas-iws/ogc/wmts/Imagerie_Continue/Imagerie_GQ/default/GoogleMapsCompatibleExt2:epsg:3857/{z}/{y}/{x}.jpg"
+      ],
+      "tileSize": 256,
+      "attribution": "Imagerie orthorectifiée © Gouvernement du Québec (MRNF)",
+      "bounds": [-79.9, 44.9, -56.9, 62.7],
+      "minzoom": 8,
+      "maxzoom": 20
+    },
+    "on-ortho": {
+      "type": "raster",
+      "tiles": [
+        "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_Imagery/Ontario_Imagery_Web_Map_Service/MapServer/tile/{z}/{y}/{x}"
+      ],
+      "tileSize": 256,
+      "attribution": "Ontario orthophotography © King's Printer for Ontario",
+      "bounds": [-95.3, 41.6, -74.2, 57.0],
+      "minzoom": 8,
+      "maxzoom": 19
+    }
+  },
+  "layers": [
+    {
+      "id": "satellite-global",
+      "type": "raster",
+      "source": "sentinel2"
+    },
+    {
+      "id": "satellite-qc",
+      "type": "raster",
+      "source": "qc-ortho",
+      "minzoom": 8
+    },
+    {
+      "id": "satellite-on",
+      "type": "raster",
+      "source": "on-ortho",
+      "minzoom": 8
+    }
+  ]
+}

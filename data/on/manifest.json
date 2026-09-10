@@ -1,0 +1,179 @@
+{
+  "id": "on",
+  "name": "Ontario",
+  "version": "0.13.0",
+  "crs": "EPSG:4326",
+  "license": "OGL-Ontario",
+  "license_url": "https://www.ontario.ca/page/open-government-licence-ontario",
+  "policy_report_url": "https://www.lioapplications.lrc.gov.on.ca/services/CLUPA/xmlReader.aspx?xsl=web-primary.xsl&type=primary&POLICY_IDENT={id}",
+  "policy_atlas_url": "https://www.lioapplications.lrc.gov.on.ca/CLUPA/index.html?viewer=CLUPA.CLUPA&locale=en-CA",
+  "policy_atlas_accepts_centre": true,
+  "note": "Crown land is the provincial tenure parcel fabric (MNR unpatented land), attributed with Crown Land Use Policy Atlas designations and official permitted-use hunting flags. The overlay shows tenure, not permission. Municipal and county forests are drawn from Agreement Forest Area parcels, so the gaps between tracts are private land. Crown game preserves are drawn over that tenure and close it to hunting outright, as do federal wildlife areas and bird sanctuaries. National Defence property is closed outright. Conservation authority land and reserve land are drawn as permission-required rather than open or closed: the first needs the authority's permit, and the second is federal land an Ontario licence does not reach. Provincial park hunting permissions come from O. Reg. 663/98 Part 3, plus the one opening the Provincial Parks and Conservation Reserves Act, 2006 writes into the Act itself, and Sunday gun hunting from Part 7 of the same regulation. Conservation reserves are the mirror image of parks: the same Act permits hunting in them unless a regulation prohibits it, so a reserve is a permission and not a closure, and what closes one is a Crown game preserve drawn over it. Municipal discharge and hunting bylaws are not mapped: check them with the local municipality.",
+  "policies": "policies/",
+  "seasons": "seasons/2026.json",
+  "layers": [
+    {
+      "id": "crown_land",
+      "label": "Crown land parcels",
+      "path": "overlays/crown_land.geojson",
+      "format": "geojson",
+      "feature_count": 42713,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario Crown land parcels (MNR unpatented tenure) with CLUPA designation and permitted-use hunting flags",
+      "boundary_accuracy": "mapped",
+      "note": "The provincial source holds 62,685 parcels. Those under half a hectare are not carried: they are road and shore allowances and survey remnants, and at map scale they are smaller than the outline drawn for them. Sampling the excluded parcels against the source at full resolution put 96% genuinely under half a hectare and the largest at 0.8 ha, so no usable hunting ground is missing. The record also covers the beds of lakes and rivers, and 4,243 parcels that are over 90% water against the province's 1:500,000 hydrography say so on the card rather than being described in the words used for dry ground."
+    },
+    {
+      "id": "crown_disposition",
+      "label": "Leased & occupied Crown land",
+      "path": "overlays/crown_disposition.geojson",
+      "format": "geojson",
+      "feature_count": 33167,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario Crown land held under lease, land use permit or licence of occupation, province-wide. Easements are excluded: a right of passage over Crown land does not create the exclusive occupation this layer warns about.",
+      "boundary_accuracy": "mapped",
+      "note": "Not a hunting closure. The Crown still owns this ground and wildlife law does not close it, but somebody else holds the right to occupy the described area and may lawfully refuse entry, which the tenure layer alone cannot show. This is the answer to Crown land that carries no land use policy and would otherwise read as simply open."
+    },
+    {
+      "id": "parks",
+      "label": "Provincial parks",
+      "path": "overlays/parks.geojson",
+      "format": "geojson",
+      "feature_count": 347,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario regulated provincial parks, with hunting permissions from O. Reg. 663/98 Part 3",
+      "boundary_accuracy": "mapped",
+      "note": "Hunting in an Ontario provincial park is prohibited unless the park is scheduled in O. Reg. 663/98 Part 3. Where a schedule opens only a surveyed part of a park, the province describes that part in words and does not publish its boundary, so the park is reported as partly open and the outline cannot say whether a given point is inside the open area."
+    },
+    {
+      "id": "conservation_reserve",
+      "label": "Conservation reserves",
+      "path": "overlays/conservation_reserve.geojson",
+      "format": "geojson",
+      "feature_count": 306,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario regulated conservation reserves, province-wide",
+      "boundary_accuracy": "mapped",
+      "note": "The mirror image of a provincial park: the Provincial Parks and Conservation Reserves Act, 2006 permits hunting in a conservation reserve unless a regulation under the Fish and Wildlife Conservation Act, 1997 prohibits it. Six reserves are overlapped by a Crown game preserve, which is such a prohibition and leads the card where it applies."
+    },
+    {
+      "id": "wmu",
+      "label": "Wildlife Management Units",
+      "path": "overlays/wmu.geojson",
+      "format": "geojson",
+      "feature_count": 151,
+      "crs": "EPSG:4326",
+      "coverage": "Province-wide WMUs",
+      "boundary_accuracy": "mapped"
+    },
+    {
+      "id": "municipal_forest",
+      "label": "Municipal & county forests",
+      "path": "overlays/municipal_forest.geojson",
+      "format": "geojson",
+      "feature_count": 2274,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario county, regional, municipal and conservation authority forest tracts at parcel level (Agreement Forest Area)",
+      "boundary_accuracy": "mapped",
+      "note": "Tracts whose owner could not be established are excluded, so this under-reports rather than drawing private woodlots as public. Source records were verified 1997-1998 to about 100 m."
+    },
+    {
+      "id": "game_preserve",
+      "label": "Crown game preserves",
+      "path": "overlays/game_preserve.geojson",
+      "format": "geojson",
+      "feature_count": 15,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario Crown game preserves, province-wide",
+      "boundary_accuracy": "mapped",
+      "note": "Hunting and trapping are prohibited under Fish and Wildlife Conservation Act s. 9, whatever the underlying tenure says. Three preserves whose provincial record does not confirm current regulation are flagged unconfirmed rather than dropped."
+    },
+    {
+      "id": "conservation_authority",
+      "label": "Conservation authority land",
+      "path": "overlays/conservation_authority.geojson",
+      "format": "geojson",
+      "feature_count": 409,
+      "crs": "EPSG:4326",
+      "coverage": "Conservation authority and other conserved properties Ontario authorities reported to CPCAD",
+      "boundary_accuracy": "mapped",
+      "note": "Permit-only land, not public land: hunting needs the authority's permission on top of a provincial licence, several authorities allocate popular tracts by lottery, and some properties are closed outright. Coverage is incomplete by construction, since CPCAD holds only what each authority reported — Grand River Conservation Authority is absent entirely. A polygon means ask; the absence of one is not evidence the land is open."
+    },
+    {
+      "id": "federal_closure",
+      "label": "Wildlife areas & bird sanctuaries",
+      "path": "overlays/federal_closure.geojson",
+      "format": "geojson",
+      "feature_count": 24,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario National Wildlife Areas and Migratory Bird Sanctuaries",
+      "boundary_accuracy": "mapped",
+      "note": "Boundaries from ECCC, prohibitions from the regulations. Hunting and possessing hunting equipment are prohibited in every National Wildlife Area except waterfowl in areas the Minister designates within Big Creek and Long Point, and those designations are not published as geometry. Three areas may not be entered at all without a federal permit. In a Migratory Bird Sanctuary the possession of any firearm or hunting appliance is itself an offence, so a sanctuary is closed to hunting anything by any means."
+    },
+    {
+      "id": "first_nations",
+      "label": "Reserves",
+      "path": "overlays/first_nations.geojson",
+      "format": "geojson",
+      "feature_count": 203,
+      "crs": "EPSG:4326",
+      "coverage": "Reserve boundaries in Ontario from the Canada Lands Survey System",
+      "boundary_accuracy": "mapped",
+      "note": "Reported as permission required, not as prohibited: reserve land is held federally for the use and benefit of the First Nation and an Ontario licence conveys no right of access, which is a question of access rather than of wildlife law. This layer says nothing about the harvesting rights of members, or about Aboriginal or treaty rights. Survey accuracy is stated per reserve and the one boundary looser than 100 m is drawn as approximate."
+    },
+    {
+      "id": "defence_land",
+      "label": "Defence property",
+      "path": "overlays/defence_land.geojson",
+      "format": "geojson",
+      "feature_count": 140,
+      "crs": "EPSG:4326",
+      "coverage": "National Defence property in Ontario (51,309 ha), from armouries to the training areas at Petawawa, Borden and Meaford",
+      "boundary_accuracy": "mapped",
+      "note": "Closed to public hunting, and much of it closed to entry — training areas hold unexploded ordnance and live ranges. Some bases run their own controlled hunts civilians can apply for, but which bases, where and when is not published as data and changes yearly, so the card points at the property's own federal record instead of naming programmes the pack cannot keep current."
+    },
+    {
+      "id": "land_use_plan",
+      "label": "Far North & community land use plans",
+      "path": "overlays/land_use_plan.geojson",
+      "format": "geojson",
+      "feature_count": 5,
+      "crs": "EPSG:4326",
+      "coverage": "The Far North boundary, plus the four approved community based land use plans inside it (3,003,133 ha)",
+      "boundary_accuracy": "approximate",
+      "note": "Context, not tenure. It exists so the app can tell 'the policy atlas never reached this ground' apart from 'no policy applies here' — measured by bounding box, CLUPA returns 11 polygons around Big Trout Lake and zero around Fort Severn, against 717 near Thunder Bay. A community based land use plan directs how Crown land is managed and is not a hunting regulation."
+    },
+    {
+      "id": "sunday_gun",
+      "label": "Sunday gun hunting permitted",
+      "path": "overlays/sunday_gun.geojson",
+      "format": "geojson",
+      "feature_count": 241,
+      "crs": "EPSG:4326",
+      "coverage": "Municipalities and geographic townships south of the French and Mattawa rivers where Sunday gun hunting is permitted",
+      "boundary_accuracy": "mapped",
+      "note": "Drawn only where Sunday gun hunting is permitted. North of the French and Mattawa rivers it is permitted everywhere and nothing is drawn; south of them an area with no polygon is a prohibition. Ontario publishes the list of municipalities but not its geometry, so these are municipal and survey township boundaries matched to O. Reg. 663/98 Part 7 Schedule 1 by name."
+    },
+    {
+      "id": "municipalities",
+      "label": "Municipalities (bylaws)",
+      "path": "overlays/municipalities.geojson",
+      "format": "geojson",
+      "feature_count": 685,
+      "crs": "EPSG:4326",
+      "coverage": "Ontario lower/single-tier municipalities (full)",
+      "boundary_accuracy": "mapped"
+    },
+    {
+      "id": "townships",
+      "label": "Geographic townships",
+      "path": "overlays/townships.geojson",
+      "format": "geojson",
+      "feature_count": 2521,
+      "crs": "EPSG:4326",
+      "coverage": "LIO Geographic Township Improved",
+      "boundary_accuracy": "mapped",
+      "note": "Available for locate/Land Info; not drawn as a default map layer."
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "province": "on",
+  "nwa": {
+    "citation": "Wildlife Area Regulations, C.R.C., c. 1609, under the Canada Wildlife Act",
+    "source": "https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._1609/",
+    "currency_date": "2025-03-12",
+    "prohibition": "3 (1) Subject to subsections 3.1 (1) to (3) and sections 3.6 and 3.7, no person shall do any of the following in any wildlife area except in accordance with a permit issued under section 4 or section 8.1 : (a) introduce any living organism whose presence is likely to result in harm to any wildlife or the degradation of any wildlife residence or wildlife habitat; (b) hunt, fish or trap; (c) have in their possession any equipment that could be used for hunting, fishing or trapping; (d) have in their possession, while fishing, any lead sinkers or lead jigs; (e) have in their possession any wildlife, carcass, nest, egg or a part of any of those things; (f) carry on any agricultural activity, graze livestock or harvest any natural or cultivated crop; (g) bring a domestic animal with hooves into the wildlife area; (h) allow any domestic animal to run at large or keep any domestic animal on a leash that is longer than three metres; (i) carry on any recreational activities, including swimming, camping, hiking, wildlife viewing, snowshoeing, cross-country skiing and skating; (j) participate in a group meal or group event involving 15 or more people; (k) light or maintain a fire; (l) operate",
+    "opening_rule": "3.1 (1) The activities set out in Schedule I.1 in relation to any wildlife area that is listed in that Schedule may be carried out in that wildlife area, subject to any conditions that are specified in that Schedule for those activities in that wildlife area. (2) The activities must be carried out in a manner that minimizes the adverse effects on any wildlife, wildlife residence or wildlife habitat. (3) The activities may be carried out in that wildlife area only from sunrise to sunset, unless otherwise specified in Schedule I.1. (4) For greater certainty, a permit issued under section 4 or section 8.1 is not required for those activities. SOR/2020-256, s. 4",
+    "areas": [
+      {
+        "name": "Big Creek National Wildlife Area",
+        "hunting_authorized": true,
+        "hunting_activities": [
+          "Sport hunting of waterfowl — including with dogs off leash — in designated areas from half an hour before sunrise to half an hour after sunset, if the hunting is carried out"
+        ],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Eleanor Island National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": false,
+        "no_entry": true,
+        "no_entry_paragraph": "s. 3.3(1)(b)"
+      },
+      {
+        "name": "Mohawk Island National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Long Point National Wildlife Area",
+        "hunting_authorized": true,
+        "hunting_activities": [
+          "Sport hunting of waterfowl, including with dogs off-leash, in designated areas from half an hour before sunrise to half an hour after sunset, if the hunting is carried out"
+        ],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Mississippi Lake National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "St. Clair National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Wellers Bay National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": false,
+        "no_entry": true,
+        "no_entry_paragraph": "s. 3.3(1)(c)"
+      },
+      {
+        "name": "Wye Marsh National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Prince Edward Point National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": true,
+        "no_entry": false,
+        "no_entry_paragraph": null
+      },
+      {
+        "name": "Scotch Bonnet Island National Wildlife Area",
+        "hunting_authorized": false,
+        "hunting_activities": [],
+        "activities_listed": false,
+        "no_entry": true,
+        "no_entry_paragraph": "s. 3.3(1)(d)"
+      }
+    ]
+  },
+  "mbs": {
+    "citation": "Migratory Bird Sanctuary Regulations, C.R.C., c. 1036, under the Migratory Birds Convention Act, 1994",
+    "source": "https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._1036/",
+    "currency_date": "2025-03-12",
+    "hunting_prohibition": "3 (1) The areas set out in the schedule are hereby prescribed as migratory bird sanctuaries. (2) No person shall, in a migratory bird sanctuary, (a) hunt migratory birds, (b) disturb, destroy or take the nests of migratory birds, or (c) have in his possession a live migratory bird, or a carcass, skin, nest or egg of a migratory bird, except under authority of a permit therefor. (3) Notwithstanding paragraph (2)(c), a resident of or a person domiciled in a migratory bird sanctuary may have in their possession migratory birds lawfully killed outside a migratory bird sanctuary. SOR/2000-332, s. 1",
+    "firearm_prohibition": "4 (1) No person shall have in his possession in a migratory bird sanctuary (a) any firearm; or (b) any hunting appliance except as otherwise provided in these Regulations. (2) Subsection (1) does not apply to any resident or person actually domiciled in a migratory bird sanctuary while that resident or person is in his residence or transporting any firearms or a hunting appliance to or from his residence. (3) Subject to the Act and the Migratory Birds Regulations, 2022 , the Minister may issue a permit authorizing any person to have firearms in their possession and to shoot and have in their possession migratory birds in such portion of a migratory bird sanctuary and during such time as are specified in the permit. SOR/2000-332, s. 2 SOR/2022-105, s. 83",
+    "areas": [
+      {
+        "name": "Beckett Creek Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Chantry Island Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Eleanor Island Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Mississippi Lake Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Moose River Migratory Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Rideau Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "St. Joseph’s Island Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Upper Canada Bird Sanctuary",
+        "part": "VI"
+      },
+      {
+        "name": "Hannah Bay Bird Sanctuary",
+        "part": "XII"
+      }
+    ]
+  },
+  "license": "Reproduced from the Justice Laws Website consolidation. Not the official version.",
+  "license_url": "https://laws-lois.justice.gc.ca/eng/reproduction/"
+}

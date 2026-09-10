@@ -1,0 +1,58 @@
+{
+  "id": "qc",
+  "name": "Quebec",
+  "version": "0.1.0",
+  "crs": "EPSG:4326",
+  "license": "Licence-ouverte-Quebec",
+  "license_url": "https://www.donneesquebec.ca/fr/licence/",
+  "note": "Province-wide open layers: GAGQ hunting zones, TRQ parks/ZECs/outfitters, StatsCan 2021 CSD municipalities. Quebec does not publish an open Crown tenure parcel fabric, so the green layer shows managed hunting territories rather than public land ownership. No policy documents are bundled; consult official Quebec sources.",
+  "layers": [
+    {
+      "id": "crown_land",
+      "label": "Managed hunting territories",
+      "path": "overlays/crown_land.geojson",
+      "format": "geojson",
+      "feature_count": 272,
+      "crs": "EPSG:4326",
+      "coverage": "ZECs, exclusive hunting territories, outfitter exclusive areas (TRQ)",
+      "boundary_accuracy": "mapped",
+      "note": "Managed territories with their own access rules and fees — not a Crown tenure fabric and not open public access."
+    },
+    {
+      "id": "wmu",
+      "label": "Hunting zones / WMUs",
+      "path": "overlays/wmu.geojson",
+      "format": "geojson",
+      "feature_count": 24,
+      "crs": "EPSG:4326",
+      "coverage": "Quebec zones de chasse (GAGQ), merged by zone name"
+    },
+    {
+      "id": "parks",
+      "label": "Parks & protected areas",
+      "path": "overlays/parks.geojson",
+      "format": "geojson",
+      "feature_count": 179,
+      "crs": "EPSG:4326",
+      "coverage": "National/provincial parks, reserves, refuges (TRQ)"
+    },
+    {
+      "id": "municipalities",
+      "label": "Municipalities (CSD)",
+      "path": "overlays/municipalities.geojson",
+      "format": "geojson",
+      "feature_count": 1282,
+      "crs": "EPSG:4326",
+      "coverage": "Quebec census subdivisions (StatsCan 2021, WGS84)"
+    },
+    {
+      "id": "municipal_forest",
+      "label": "Municipal forests",
+      "path": "overlays/municipal_forest.geojson",
+      "format": "geojson",
+      "feature_count": 0,
+      "crs": "EPSG:4326",
+      "coverage": "None yet — no province-wide municipal forest layer"
+    }
+  ]
+}

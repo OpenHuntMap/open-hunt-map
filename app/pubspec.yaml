@@ -1,0 +1,69 @@
+name: open_woods_map
+description: Offline-first Canadian hunting land map
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  maplibre_gl: ^0.27.0
+  path_provider: ^2.1.5
+  shared_preferences: ^2.5.3
+  file_picker: ^10.1.2
+  share_plus: ^11.0.0
+  xml: ^6.5.0
+  path: ^1.9.1
+  collection: ^1.19.1
+  geolocator: ^14.0.2
+  archive: ^4.0.7
+  http: ^1.4.0
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  # Only so a test can point the documents directory at a temporary one and check
+  # what an install actually wrote.
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
+  flutter_launcher_icons: ^0.14.4
+
+# Build-time only: assets/icon/icon.png is the source artwork and is not bundled
+# into the app. Regenerate the launcher icons after changing it with
+#   cd app; dart run flutter_launcher_icons
+# Replacement artwork must be a full-bleed square, not a rounded one. Both
+# platforms apply their own corner mask, so art that is pre-rounded gets rounded
+# twice and whatever sits outside its radius shows as four bright wedges.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/icon.png
+  min_sdk_android: 21
+  # The adaptive foreground is the whole square. The default 16% inset leaves the
+  # artwork filling 68% of the 108dp canvas, which sits just inside the 72dp the
+  # launcher actually shows, so the round and squircle masks clip the padding
+  # rather than the tips of the map.
+  adaptive_icon_foreground: assets/icon/icon.png
+  # Sampled from the artwork's own background. It is barely ever visible, since
+  # the inset foreground covers the mask, but it has to match or a launcher that
+  # zooms the layers for parallax would show a bright seam.
+  adaptive_icon_background: "#103823"
+  # Kept even though the source is currently opaque, so that replacement artwork
+  # arriving with an alpha channel cannot ship an icon iOS refuses.
+  remove_alpha_ios: true
+  background_color_ios: "#103823"
+
+flutter:
+  uses-material-design: true
+  # Province overlays, policies and seasons ship only in downloadable packs, so
+  # the binary stays small and map data can be refreshed without a store
+  # release. Keep in sync with scripts/sync_assets.*
+  assets:
+    - assets/styles/offline.json
+    - assets/styles/satellite.json
+    - assets/styles/hybrid.json
+    - assets/data/provinces.json

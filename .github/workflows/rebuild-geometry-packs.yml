@@ -1,0 +1,119 @@
+# Rebuild province geometry overlays and publish downloadable packs.
+#
+# Schedule: ~every 4 weeks (1st of each month). Seasons/policies are NOT
+# refreshed here — use the refresh-seasons-policies skill / manual edits, then
+# workflow_dispatch if you only need to re-pack, or a dedicated seasons path.
+#
+# On-demand: Actions → Rebuild geometry packs → Run workflow
+
+name: Rebuild geometry packs
+
+on:
+  schedule:
+    # 14:00 UTC on the 1st of each month (~4 weeks)
+    - cron: "0 14 1 * *"
+  workflow_dispatch:
+    inputs:
+      province:
+        description: Province geometry to rebuild
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - on
+          - qc
+      publish:
+        description: Publish / update the packs-latest GitHub Release
+        required: true
+        default: true
+        type: boolean
+      skip_clupa_download:
+        description: Reuse Actions cache for CLUPAPRO zip if present (faster ON)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-geometry-packs
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/gis/requirements.txt
+
+      - name: Install GIS dependencies
+        run: pip install -r tools/gis/requirements.txt
+
+      - name: Cache GIS downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/gis/_tmp_clupapro
+            tools/gis/_tmp_statcan
+            tools/gis/_tmp_patent
+          key: gis-downloads-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            gis-downloads-${{ runner.os }}-
+
+      - name: Rebuild geometry
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          PROV="${{ github.event.inputs.province || 'all' }}"
+          EXTRA=()
+          if [ "${{ github.event.inputs.skip_clupa_download || 'false' }}" = "true" ]; then
+            EXTRA+=(--skip-clupa-download)
+          fi
+          python tools/gis/rebuild_geometry.py --province "$PROV" --pack "${EXTRA[@]}"
+
+      - name: Upload pack artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: province-overlay-packs
+          path: packs/*-overlays.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish packs-latest release
+        if: ${{ github.event_name == 'schedule' || inputs.publish }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          FILES=(packs/*-overlays.zip)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No pack zips found under packs/" >&2
+            exit 1
+          fi
+          NOTES="$(printf '%s\n' \
+            "Automated geometry overlay packs (seasons/policies unchanged)." \
+            "" \
+            "- Trigger: ${{ github.event_name }}" \
+            "- Province: ${{ github.event.inputs.province || 'all' }}" \
+            "- Commit: ${GITHUB_SHA}" \
+            "- Built: $(date -u +%Y-%m-%dT%H:%MZ)")"
+          if gh release view packs-latest >/dev/null 2>&1; then
+            gh release upload packs-latest "${FILES[@]}" --clobber
+            gh release edit packs-latest --notes "$NOTES"
+          else
+            gh release create packs-latest "${FILES[@]}" \
+              --title "Province overlay packs (latest)" \
+              --notes "$NOTES"
+          fi

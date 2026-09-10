@@ -1,0 +1,99 @@
+{
+  "province": "qc",
+  "name": "Quebec",
+  "license": "Licence-ouverte-Quebec",
+  "license_url": "https://www.donneesquebec.ca/fr/licence/",
+  "attribution": "Données ouvertes du gouvernement du Québec; limites Statistics Canada sous licence ouverte Statistics Canada.",
+  "layers": {
+    "crown_land": {
+      "label": "Crown / public land use",
+      "output": "overlays/crown_land.geojson",
+      "sources": [
+        {
+          "name": "Aires d'attribution (forêts publiques)",
+          "portal": "Données Québec / MFFP",
+          "url": "https://www.donneesquebec.ca/recherche/dataset/aires-d-attribution",
+          "download": null,
+          "format": "geojson",
+          "notes": "Stub — wire MFFP public land tenure / management zones when building full QC pack."
+        }
+      ],
+      "required_properties": ["policy_id", "designation", "hunting_allowed", "summary"]
+    },
+    "wmu": {
+      "label": "Hunting zones / WMUs",
+      "output": "overlays/wmu.geojson",
+      "sources": [
+        {
+          "name": "Zones de chasse",
+          "portal": "Données Québec / MFFP",
+          "url": "https://www.donneesquebec.ca/recherche/dataset/zones-de-chasse",
+          "download": null,
+          "format": "geojson",
+          "notes": "Stub — Quebec hunting zone boundaries (WMU equivalent)."
+        }
+      ],
+      "required_properties": ["wmu_id", "name"]
+    },
+    "parks": {
+      "label": "Parks & protected areas",
+      "output": "overlays/parks.geojson",
+      "sources": [
+        {
+          "name": "Parcs nationaux du Québec (SÉPAQ)",
+          "portal": "Données Québec",
+          "url": "https://www.donneesquebec.ca/recherche/dataset/parcs-nationaux",
+          "download": null,
+          "format": "geojson",
+          "notes": "Stub — provincial parks and protected areas."
+        }
+      ],
+      "required_properties": ["name", "park_type", "hunting_allowed"]
+    },
+    "townships": {
+      "label": "Townships / cantons",
+      "output": "overlays/townships.geojson",
+      "sources": [
+        {
+          "name": "Cantons",
+          "portal": "Données Québec",
+          "url": "https://www.donneesquebec.ca/recherche/dataset/referentiel-geographique-du-quebec-rgq",
+          "download": null,
+          "format": "geojson",
+          "notes": "Stub — RGQ township/canton boundaries."
+        }
+      ],
+      "required_properties": ["name", "type"]
+    },
+    "municipalities": {
+      "label": "Municipalities (CSD)",
+      "output": "overlays/municipalities.geojson",
+      "sources": [
+        {
+          "name": "Census Subdivision (CSD) — Quebec",
+          "portal": "Statistics Canada",
+          "url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21&geos=240",
+          "download": "https://www12.statcan.gc.ca/rest/census-recensement/2021/geo/sgc/2021/sgc_24.zip",
+          "format": "shapefile",
+          "notes": "StatsCan Open Licence. Filter to Quebec (PRUID 24)."
+        }
+      ],
+      "required_properties": ["name", "type"]
+    },
+    "municipal_forest": {
+      "label": "Municipal forests",
+      "output": "overlays/municipal_forest.geojson",
+      "sources": [
+        {
+          "name": "Forêts municipales (aggregate)",
+          "portal": "Données Québec / municipal open data",
+          "url": "https://www.donneesquebec.ca/",
+          "download": null,
+          "format": "geojson",
+          "notes": "Stub — no province-wide layer; collect from municipal portals. Verify local hunting rules."
+        }
+      ],
+      "required_properties": ["name", "owner"]
+    }
+  }
+}
