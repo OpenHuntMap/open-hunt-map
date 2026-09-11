@@ -82,11 +82,16 @@ ICONS = {
 # asserts that map one-to-one onto WaypointCategory, and an extra in there would
 # read as a category the app had forgotten to define.
 EXTRAS = {
-    # The direction arrow repeated along a track. A solid triangle rather than a
-    # chevron because it has to read at about 12 dp, and it points right because
+    # Direction markers repeated along a track. Every one points right, because
     # MapLibre's `symbol-placement: line` aligns a symbol's horizontal axis with
     # the direction the line's coordinates run.
+    #
+    # A solid triangle, an open chevron and a double chevron rather than three
+    # variations on one shape: they have to be told apart at around 10 dp, where
+    # ink weight and how many strokes there are is about all that survives.
     "track-arrow": 0xE4CB,
+    "track-chevron": 0xE15F,
+    "track-chevron-double": 0xE1FF,
 }
 
 

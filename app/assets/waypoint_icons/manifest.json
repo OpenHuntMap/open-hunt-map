@@ -27,6 +27,8 @@
     "boundary": 57954
   },
   "extras": {
-    "track-arrow": 58571
+    "track-arrow": 58571,
+    "track-chevron": 57695,
+    "track-chevron-double": 57855
   }
 }
