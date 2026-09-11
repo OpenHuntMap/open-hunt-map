@@ -15,6 +15,7 @@ import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
 import '../tracks/follow_bar.dart';
 import '../tracks/track_follow.dart';
+import '../tracks/track_layers.dart';
 import '../tracks/track_math.dart';
 import '../tracks/track_style.dart';
 import '../waypoints/waypoint_category.dart';
@@ -43,7 +44,6 @@ class _MapShellState extends State<MapShell> {
   /// list and wants to see what is around it rather than where it is.
   static const _waypointRevealZoom = 15.0;
   static const _landInfoTipDismissedKey = 'land_info_tip_dismissed';
-  static const _trackArrowsKey = 'tracks.arrows';
 
   final _loader = ProvinceLoader();
   final _overlays = OverlayController();
@@ -122,33 +122,16 @@ class _MapShellState extends State<MapShell> {
   /// rather than on every fix for as long as someone stands there.
   var _arrivalAnnounced = false;
 
-  /// Arrows on by default: a track without them says where it went but not which
-  /// way, and which way is the whole point of following one back out.
-  final _trackArrows = ValueNotifier(true);
-
   @override
   void initState() {
     super.initState();
-    _trackArrows.addListener(_applyTrackArrows);
     _bootstrap();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
-    _trackArrows.removeListener(_applyTrackArrows);
-    _trackArrows.dispose();
     super.dispose();
-  }
-
-  /// Redraws both track layers, rather than hiding an arrow layer that may not
-  /// have been added: the sync methods drop and rebuild, so off simply means the
-  /// arrow layer is never created.
-  Future<void> _applyTrackArrows() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_trackArrowsKey, _trackArrows.value);
-    await _syncSavedTrackSource();
-    await _syncFollowSource();
   }
 
   Future<void> _bootstrap() async {
@@ -169,9 +152,6 @@ class _MapShellState extends State<MapShell> {
       await _overlays.loadPreferences();
       final prefs = await SharedPreferences.getInstance();
       final tipDismissed = prefs.getBool(_landInfoTipDismissedKey) ?? false;
-      // Read before the style loads, so the first draw already honours it rather
-      // than drawing arrows and then taking them away.
-      _trackArrows.value = prefs.getBool(_trackArrowsKey) ?? true;
       final fix = await launchFix;
       if (!mounted) return;
       setState(() {
@@ -1295,7 +1275,7 @@ class _MapShellState extends State<MapShell> {
     final wanted = {
       for (final category in WaypointCategory.values)
         category.iconImage: 'assets/waypoint_icons/${category.id}.png',
-      trackArrowImage: trackArrowAsset,
+      for (final marker in TrackMarker.drawn) marker.image: marker.asset!,
     };
     final failures = <String>[];
     for (final entry in wanted.entries) {
@@ -1333,17 +1313,17 @@ class _MapShellState extends State<MapShell> {
     // recorded in. Leaving it here too would put two sets of arrows on one line,
     // pointing opposite ways whenever it is being followed in reverse.
     final followedId = _followTrack?.id;
-    final data = _trackFeatureCollection(
+    final data = trackFeatureCollection(
       _waypoints.items.where(
         (item) => item.track.isNotEmpty && item.id != followedId,
       ),
     );
-    // Arrows come off before the line, because a layer cannot be removed once
+    // Markers come off before the lines, because a layer cannot be removed once
     // its source has gone and leaving it behind blocks the source from being
     // replaced.
-    for (final layer in const [
-      'owm-saved-track-arrows',
-      'owm-saved-track-lines',
+    for (final layer in [
+      _savedMarkerLayer,
+      for (final stroke in TrackStroke.values) _savedLineLayer(stroke),
     ]) {
       try {
         await map.removeLayer(layer);
@@ -1356,74 +1336,90 @@ class _MapShellState extends State<MapShell> {
       'owm-saved-tracks',
       GeojsonSourceProperties(data: data),
     );
-    await map.addLineLayer(
-      'owm-saved-tracks',
-      'owm-saved-track-lines',
-      const LineLayerProperties(
-        lineColor: ['get', 'colour'],
-        lineWidth: trackLineWidth,
-        lineOpacity: 0.85,
-        // Round, so a track that doubles back on itself does not grow spikes at
-        // the switchbacks where two segments meet at a sharp angle.
-        lineCap: 'round',
-        lineJoin: 'round',
-      ),
-    );
+    // One layer per stroke, each taking only the tracks that chose it. All of
+    // them are added whether or not anything uses them yet, so that editing a
+    // track's look is a source update rather than a layer rebuild.
+    for (final stroke in TrackStroke.values) {
+      await map.addLineLayer(
+        'owm-saved-tracks',
+        _savedLineLayer(stroke),
+        LineLayerProperties(
+          lineColor: const ['get', 'colour'],
+          lineWidth: trackLineWidth,
+          lineOpacity: 0.85,
+          lineCap: stroke.cap,
+          // Round, so a track that doubles back on itself does not grow spikes
+          // at the switchbacks where two segments meet at a sharp angle.
+          lineJoin: 'round',
+          lineDasharray: stroke.dash,
+        ),
+        filter: ['==', ['get', 'stroke'], stroke.id],
+      );
+    }
     try {
-      await _addTrackArrowLayer(map);
+      await _addTrackMarkerLayer(map);
     } catch (error) {
       // The line still carries the track; only its direction is lost. Worth
       // saying so, because the same failure on a software GL stack takes the
       // waypoint glyphs with it and the two are one diagnosis.
-      _toast('Track direction arrows could not be drawn: $error');
+      _toast('Track direction markers could not be drawn: $error');
     }
   }
 
-  /// Repeated arrows along each track, showing which way it runs.
-  Future<void> _addTrackArrowLayer(
+  static String _savedLineLayer(TrackStroke stroke) =>
+      'owm-saved-track-lines-${stroke.id}';
+  static const _savedMarkerLayer = 'owm-saved-track-markers';
+
+  /// Repeated markers along each track, showing which way it runs.
+  ///
+  /// One layer for every shape, because `icon-image` is data-driven on mobile
+  /// even though `line-dasharray` is not.
+  Future<void> _addTrackMarkerLayer(
     MapLibreMapController map, {
     String source = 'owm-saved-tracks',
-    String layer = 'owm-saved-track-arrows',
-  }) async {
-    if (!_trackArrows.value) return;
-    return map.addSymbolLayer(
+    String layer = _savedMarkerLayer,
+  }) =>
+      map.addSymbolLayer(
         source,
         layer,
         SymbolLayerProperties(
-          iconImage: trackArrowImage,
-          // Placed along the line, which is also what orients each arrow: the
+          iconImage: const ['get', 'marker'],
+          // Placed along the line, which is also what orients each marker: the
           // symbol's horizontal axis is aligned with the direction the
           // coordinates run, and ours run start to finish.
           symbolPlacement: 'line',
-          symbolSpacing: trackArrowSpacing,
-          // Rotate with the map rather than the screen. Without this the arrows
+          symbolSpacing: trackMarkerSpacing,
+          // Rotate with the map rather than the screen. Without this the markers
           // stay upright as the map turns and stop agreeing with the line.
           iconRotationAlignment: 'map',
           // Load-bearing despite matching the default. When true, MapLibre flips
           // a symbol to keep it reading left-to-right, which silently reverses
-          // every arrow on a westward leg — the one failure mode that would make
-          // this feature actively lie about which way the track goes.
+          // every marker on a westward leg — the one failure mode that would
+          // make this feature actively lie about which way the track goes.
           iconKeepUpright: false,
           iconColor: const ['get', 'arrow'],
-          // Halo in the track's own colour, so each arrow reads as a hole
+          // Halo in the track's own colour, so each marker reads as a hole
           // punched in the line rather than a separate mark beside it.
           iconHaloColor: const ['get', 'colour'],
-          iconHaloWidth: 1.2,
-          iconSize: _iconSizeFor(trackArrowSizeDp),
-          // Kept rather than thinned. Collision culling makes arrows come and go
-          // as the camera moves, which reads as a rendering fault on a feature
-          // whose only job is to be legible.
+          iconHaloWidth: trackMarkerHaloWidth,
+          iconSize: _iconSizeFor(trackMarkerSizeDp),
+          // Kept rather than thinned. Collision culling makes markers come and
+          // go as the camera moves, which reads as a rendering fault on a
+          // feature whose only job is to be legible.
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
         ),
+        // Tracks whose marker is None are excluded outright. Left in, they would
+        // carry an empty icon-image, and MapLibre draws nothing and reports
+        // nothing for one of those — indistinguishable from a bug.
+        filter: ['!=', ['get', 'marker'], ''],
       );
-  }
 
   /// The followed track, drawn heavier and pointing the way being walked.
   Future<void> _syncFollowSource() async {
     final map = _map;
     if (!_styleReady || map == null) return;
-    for (final layer in const ['owm-follow-arrows', 'owm-follow-line']) {
+    for (final layer in const ['owm-follow-markers', 'owm-follow-line']) {
       try {
         await map.removeLayer(layer);
       } catch (_) {}
@@ -1445,7 +1441,15 @@ class _MapShellState extends State<MapShell> {
               'properties': {
                 'id': track.id,
                 'colour': track.colourHex,
-                'arrow': arrowColourFor(track.displayColour),
+                'arrow': markerHexFor(track.displayColour),
+                // The track's own marker, except that a track saved with none
+                // gets arrows while it is being followed: direction is the whole
+                // point of following one, and this is the only place the app
+                // overrides a look the user chose.
+                'marker': (track.marker.draws
+                        ? track.marker
+                        : TrackMarker.arrow)
+                    .image,
               },
               'geometry': {
                 'type': 'LineString',
@@ -1469,14 +1473,21 @@ class _MapShellState extends State<MapShell> {
         // visible without reading the bar.
         lineWidth: trackLineWidth + 3,
         lineOpacity: 0.95,
+        // Solid whatever the track's saved stroke is. A dotted line is a fine
+        // way to record a route you are unsure of and a poor one to walk, and
+        // the change of stroke is itself the signal that this is the active one.
         lineCap: 'round',
         lineJoin: 'round',
       ),
     );
     try {
-      await _addTrackArrowLayer(map, source: 'owm-follow', layer: 'owm-follow-arrows');
+      await _addTrackMarkerLayer(
+        map,
+        source: 'owm-follow',
+        layer: 'owm-follow-markers',
+      );
     } catch (error) {
-      _toast('Track direction arrows could not be drawn: $error');
+      _toast('Track direction markers could not be drawn: $error');
     }
   }
 
@@ -1498,7 +1509,7 @@ class _MapShellState extends State<MapShell> {
           {
             'type': 'Feature',
             'properties': {
-              'colour': arrowColourFor(
+              'colour': markerHexFor(
                 _followTrack?.displayColour ?? const Color(0xFF000000),
               ),
             },
@@ -1575,34 +1586,6 @@ class _MapShellState extends State<MapShell> {
       // A style change can race a position update; the next update resyncs it.
     }
   }
-
-  Map<String, dynamic> _trackFeatureCollection(Iterable<Waypoint> tracks) => {
-    'type': 'FeatureCollection',
-    'features': [
-      for (final waypoint in tracks)
-        if (waypoint.track.length >= 2)
-          {
-            'type': 'Feature',
-            'properties': {
-              'name': waypoint.name,
-              'id': waypoint.id,
-              // Per feature, so one layer draws every track in its own colour
-              // rather than one layer per track.
-              'colour': waypoint.colourHex,
-              // Resolved here rather than in the style, because MapLibre has no
-              // expression for "a colour that contrasts with this one".
-              'arrow': arrowColourFor(waypoint.displayColour),
-            },
-            'geometry': {
-              'type': 'LineString',
-              'coordinates': [
-                for (final point in waypoint.track)
-                  [point.longitude, point.latitude],
-              ],
-            },
-          },
-    ],
-  };
 
   Future<void> _selectProvince(String id) async {
     setState(() {
@@ -1827,8 +1810,7 @@ class _MapShellState extends State<MapShell> {
       // Without this the sheet is capped near half the screen, which is shorter
       // than the layer list. The panel constrains its own height.
       isScrollControlled: true,
-      builder: (_) =>
-          LayerPanel(controller: _overlays, trackArrows: _trackArrows),
+      builder: (_) => LayerPanel(controller: _overlays),
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../tracks/track_style.dart';
 import 'waypoint_category.dart';
 import 'waypoint_storage_stub.dart'
     if (dart.library.io) 'waypoint_storage_io.dart'
@@ -64,6 +65,8 @@ class Waypoint {
     this.tags = const [],
     this.colour,
     this.track = const [],
+    this.stroke = TrackStroke.solid,
+    this.marker = TrackMarker.arrow,
   });
 
   final String id;
@@ -89,6 +92,14 @@ class Waypoint {
 
   final List<TrackPoint> track;
 
+  /// How the line is drawn. Set on every waypoint rather than only on tracks
+  /// because a point simply never consults it, and a nullable field here would
+  /// buy one saved byte in exchange for a null check at every use.
+  final TrackStroke stroke;
+
+  /// The direction marker repeated along the line.
+  final TrackMarker marker;
+
   Color get displayColour => colour?.value ?? category.colour;
 
   /// What MapLibre's `icon-color` gets.
@@ -113,6 +124,10 @@ class Waypoint {
         track: (json['track'] as List<dynamic>? ?? const [])
             .map((item) => TrackPoint.fromJson(item as Map<String, dynamic>))
             .toList(),
+        // Absent means a track saved before the look was choosable, which is a
+        // solid line with arrows — what those tracks have always been drawn as.
+        stroke: TrackStroke.fromId(json['stroke'] as String?),
+        marker: TrackMarker.fromId(json['marker'] as String?),
       );
 
   Map<String, dynamic> toJson() => {
@@ -128,6 +143,11 @@ class Waypoint {
         // category" stays distinguishable from "happens to be that colour".
         if (colour != null) 'colour': colour!.id,
         'track': track.map((point) => point.toJson()).toList(),
+        // Written only for lines, and only when not the default. A file of
+        // several hundred points has no business carrying "solid" on every one
+        // of them, and a point has no line to draw.
+        if (track.isNotEmpty && stroke != TrackStroke.solid) 'stroke': stroke.id,
+        if (track.isNotEmpty && marker != TrackMarker.arrow) 'marker': marker.id,
       };
 
   /// [clearColour] exists because passing `colour: null` cannot mean "unset" —
@@ -139,6 +159,8 @@ class Waypoint {
     List<String>? tags,
     WaypointColour? colour,
     bool clearColour = false,
+    TrackStroke? stroke,
+    TrackMarker? marker,
   }) => Waypoint(
         id: id,
         name: name ?? this.name,
@@ -150,6 +172,8 @@ class Waypoint {
         tags: tags == null ? this.tags : normaliseTags(tags),
         colour: clearColour ? null : (colour ?? this.colour),
         track: track,
+        stroke: stroke ?? this.stroke,
+        marker: marker ?? this.marker,
       );
 }
 

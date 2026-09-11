@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' show Color;
 import 'package:share_plus/share_plus.dart';
 import 'package:xml/xml.dart';
 
+import '../tracks/track_style.dart';
 import 'waypoint_category.dart';
 import 'waypoint_store.dart';
 
@@ -310,6 +311,15 @@ class WaypointImportExport {
                       'tags': waypoint.tags,
                       if (waypoint.colour case final colour?)
                         'colour': colour.id,
+                      // How the line looks. Only GeoJSON carries this, and only
+                      // because GeoJSON is this app's own backup format: GPX has
+                      // no element for a stroke pattern and KML's LineStyle has
+                      // colour and width but no dashes, so writing it into either
+                      // would mean inventing an extension no other tool reads.
+                      if (waypoint.track.isNotEmpty) ...{
+                        'stroke-style': waypoint.stroke.id,
+                        'direction-marker': waypoint.marker.id,
+                      },
                       // Not read back on import: it is derived from the two
                       // fields above. It is here so a GeoJSON viewer can draw
                       // the waypoint in the colour the user chose.
@@ -524,6 +534,14 @@ class WaypointImportExport {
               category: category,
               tags: tags,
               colour: colour,
+              // Absent in anyone else's GeoJSON, which is why both fall back to
+              // the default rather than to nothing.
+              stroke: TrackStroke.fromId(
+                properties['stroke-style']?.toString(),
+              ),
+              marker: TrackMarker.fromId(
+                properties['direction-marker']?.toString(),
+              ),
             );
           }
           if (type != 'Point') return null;
@@ -596,6 +614,8 @@ class WaypointImportExport {
     WaypointCategory category = WaypointCategory.other,
     List<String> tags = const [],
     WaypointColour? colour,
+    TrackStroke stroke = TrackStroke.solid,
+    TrackMarker marker = TrackMarker.arrow,
   }) {
     if (points.isEmpty) return null;
     return Waypoint(
@@ -609,6 +629,8 @@ class WaypointImportExport {
       tags: tags,
       colour: colour,
       track: points,
+      stroke: stroke,
+      marker: marker,
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_woods_map/tracks/track_style.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -96,6 +97,134 @@ void main() {
 
       final track = (await WaypointStore().load()).single.track;
       expect(track.map((p) => p.latitude), [45.1, 45.2, 45.3]);
+    });
+
+    group('a track\'s look', () {
+      Waypoint line(
+        String id, {
+        TrackStroke stroke = TrackStroke.solid,
+        TrackMarker marker = TrackMarker.arrow,
+      }) => Waypoint(
+        id: id,
+        name: 'Ridge',
+        latitude: 45.1,
+        longitude: -77.1,
+        notes: '',
+        createdAt: DateTime.utc(2026, 9, 10),
+        stroke: stroke,
+        marker: marker,
+        track: const [
+          TrackPoint(latitude: 45.1, longitude: -77.1),
+          TrackPoint(latitude: 45.2, longitude: -77.2),
+        ],
+      );
+
+      Future<Map<String, dynamic>> writeAndRead(Waypoint waypoint) async {
+        final store = WaypointStore();
+        await store.load();
+        await store.add(waypoint);
+        return (jsonDecode(file.readAsStringSync()) as List).single
+            as Map<String, dynamic>;
+      }
+
+      test('is written when it is not the default', () async {
+        final written = await writeAndRead(
+          line(
+            't1',
+            stroke: TrackStroke.dotted,
+            marker: TrackMarker.doubleChevron,
+          ),
+        );
+        expect(written['stroke'], 'dotted');
+        expect(written['marker'], 'double');
+
+        final reloaded = (await WaypointStore().load()).single;
+        expect(reloaded.stroke, TrackStroke.dotted);
+        expect(reloaded.marker, TrackMarker.doubleChevron);
+      });
+
+      // A file of several hundred points has no business carrying "solid" on
+      // every one of them.
+      test('is left out entirely when it is the default', () async {
+        final written = await writeAndRead(line('t1'));
+        expect(written.containsKey('stroke'), isFalse);
+        expect(written.containsKey('marker'), isFalse);
+      });
+
+      test('is never written for a point, which has no line', () async {
+        final written = await writeAndRead(point('1'));
+        expect(written.containsKey('stroke'), isFalse);
+        expect(written.containsKey('marker'), isFalse);
+      });
+
+      // Every track saved before the look was choosable was drawn solid with
+      // arrows, so that is what absence has to mean.
+      test('absent reads back as solid with arrows', () async {
+        file.writeAsStringSync(
+          jsonEncode([
+            {
+              'id': 't1',
+              'name': 'Old track',
+              'lat': 45.1,
+              'lng': -77.1,
+              'notes': '',
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'track': [
+                {'lat': 45.1, 'lng': -77.1},
+                {'lat': 45.2, 'lng': -77.2},
+              ],
+            },
+          ]),
+        );
+
+        final loaded = (await WaypointStore().load()).single;
+        expect(loaded.stroke, TrackStroke.solid);
+        expect(loaded.marker, TrackMarker.arrow);
+      });
+
+      test('an unreadable value falls back rather than throwing', () async {
+        file.writeAsStringSync(
+          jsonEncode([
+            {
+              'id': 't1',
+              'name': 'From the future',
+              'lat': 45.1,
+              'lng': -77.1,
+              'notes': '',
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'stroke': 'zigzag',
+              'marker': 'barbed',
+              'track': [
+                {'lat': 45.1, 'lng': -77.1},
+                {'lat': 45.2, 'lng': -77.2},
+              ],
+            },
+          ]),
+        );
+
+        final store = WaypointStore();
+        final loaded = (await store.load()).single;
+        expect(store.unreadableFilePath, isNull);
+        expect(loaded.stroke, TrackStroke.solid);
+        expect(loaded.marker, TrackMarker.arrow);
+      });
+
+      test('copyWith carries the look through an edit', () async {
+        final edited = line('t1', stroke: TrackStroke.dashed)
+            .copyWith(name: 'Renamed');
+        expect(edited.stroke, TrackStroke.dashed);
+        expect(edited.marker, TrackMarker.arrow);
+
+        expect(
+          edited.copyWith(marker: TrackMarker.none).marker,
+          TrackMarker.none,
+        );
+        // Changing the marker must not quietly reset the stroke.
+        expect(
+          edited.copyWith(marker: TrackMarker.none).stroke,
+          TrackStroke.dashed,
+        );
+      });
     });
 
     // The map shell loads waypoints during bootstrap, so a throw here used to

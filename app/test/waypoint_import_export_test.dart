@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_woods_map/tracks/track_style.dart';
 import 'package:open_woods_map/waypoints/import_export.dart';
 import 'package:open_woods_map/waypoints/waypoint_category.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
@@ -25,13 +26,20 @@ Waypoint point(
   colour: colour,
 );
 
-Waypoint track(String id, {List<TrackPoint>? points}) => Waypoint(
+Waypoint track(
+  String id, {
+  List<TrackPoint>? points,
+  TrackStroke stroke = TrackStroke.solid,
+  TrackMarker marker = TrackMarker.arrow,
+}) => Waypoint(
   id: id,
   name: 'Morning walk',
   latitude: 45.1,
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
+  stroke: stroke,
+  marker: marker,
   track: points ??
       const [
         TrackPoint(latitude: 45.1, longitude: -77.1),
@@ -188,6 +196,96 @@ void main() {
 
       expect(back.single.id, 't1');
       expect(back.single.track, hasLength(2));
+    });
+
+    group('a track\'s look', () {
+      test('round trips', () {
+        final back = transfer.fromGeoJson(
+          transfer.toGeoJson([
+            track(
+              't1',
+              stroke: TrackStroke.dashed,
+              marker: TrackMarker.doubleChevron,
+            ),
+          ]),
+        );
+
+        expect(back.single.stroke, TrackStroke.dashed);
+        expect(back.single.marker, TrackMarker.doubleChevron);
+      });
+
+      test('is written under keys that say what they mean', () {
+        final json =
+            jsonDecode(
+                  transfer.toGeoJson([
+                    track('t1', stroke: TrackStroke.dotted),
+                  ]),
+                )
+                as Map<String, dynamic>;
+        final properties =
+            (json['features'] as List).single['properties']
+                as Map<String, dynamic>;
+
+        expect(properties['stroke-style'], 'dotted');
+        expect(properties['direction-marker'], 'arrow');
+      });
+
+      // A point has no line, so a stroke on one would be noise in the file and
+      // a claim the app does not honour.
+      test('is absent for a point', () {
+        final json =
+            jsonDecode(transfer.toGeoJson([point('1')])) as Map<String, dynamic>;
+        final properties =
+            (json['features'] as List).single['properties']
+                as Map<String, dynamic>;
+
+        expect(properties.containsKey('stroke-style'), isFalse);
+        expect(properties.containsKey('direction-marker'), isFalse);
+      });
+
+      // Anyone else's GeoJSON has neither key, and a track from a file is a
+      // solid line with arrows rather than nothing at all.
+      test('defaults when the file is not ours', () {
+        const foreign = '''
+{"type":"FeatureCollection","features":[
+  {"type":"Feature","properties":{"name":"Someone else's line"},
+   "geometry":{"type":"LineString","coordinates":[[-77.1,45.1],[-77.2,45.2]]}}]}''';
+
+        final back = transfer.fromGeoJson(foreign);
+        expect(back.single.stroke, TrackStroke.solid);
+        expect(back.single.marker, TrackMarker.arrow);
+      });
+
+      test('an unrecognised value falls back rather than throwing', () {
+        const odd = '''
+{"type":"FeatureCollection","features":[
+  {"type":"Feature","properties":{"stroke-style":"zigzag","direction-marker":"barbs"},
+   "geometry":{"type":"LineString","coordinates":[[-77.1,45.1],[-77.2,45.2]]}}]}''';
+
+        final back = transfer.fromGeoJson(odd);
+        expect(back.single.stroke, TrackStroke.solid);
+        expect(back.single.marker, TrackMarker.arrow);
+      });
+
+      // Deliberate, and asserted so nobody "fixes" it later by inventing an
+      // extension. GPX 1.1 has no element for a stroke pattern and KML's
+      // LineStyle carries colour and width but no dashes, so anything written
+      // there would be a private tag no other tool reads — and it would make the
+      // file look richer than it is.
+      test('is not smuggled into GPX or KML', () {
+        final styled = track(
+          't1',
+          stroke: TrackStroke.dotted,
+          marker: TrackMarker.chevron,
+        );
+
+        for (final text in [transfer.toGpx([styled]), transfer.toKml([styled])]) {
+          expect(text, isNot(contains('dotted')));
+          expect(text, isNot(contains('chevron')));
+          expect(text, isNot(contains('stroke-style')));
+          expect(text, isNot(contains('direction-marker')));
+        }
+      });
     });
 
     test('elevation rides in the third position element and comes back', () {
