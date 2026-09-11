@@ -12,6 +12,7 @@ import '../data/models.dart';
 import '../data/province_loader.dart';
 import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
+import '../search/coordinate_search_sheet.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
 import 'basemap.dart';
@@ -412,6 +413,11 @@ class _MapShellState extends State<MapShell> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Go to a coordinate',
+            icon: const Icon(Icons.search),
+            onPressed: _searchCoordinate,
+          ),
           IconButton(
             tooltip: 'Basemap: ${_basemap.label}',
             icon: Icon(_basemap.icon),
@@ -1242,6 +1248,50 @@ class _MapShellState extends State<MapShell> {
       }
     }
     return hits;
+  }
+
+  /// Takes a pasted coordinate, moves the map there and marks the spot.
+  ///
+  /// It marks rather than opening Land Info outright. The card is assembled from
+  /// the features MapLibre has actually rendered under a screen point, and
+  /// querying that in the instant after an animated camera move can come back
+  /// empty simply because the tiles have not arrived. Empty reads on the card as
+  /// "we have no record here", which is a different and far worse answer than
+  /// "not drawn yet". The snackbar action runs the same identify a moment later,
+  /// once it can tell the truth.
+  Future<void> _searchCoordinate() async {
+    final found = await showCoordinateSearch(context);
+    if (!mounted || found == null) return;
+    final map = _map;
+    if (map == null) return;
+    final target = LatLng(found.latitude, found.longitude);
+    await _moveCamera(map, target, _waypointRevealZoom);
+    await _setIdentifyPin(target);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${found.latitude.toStringAsFixed(6)}, '
+          '${found.longitude.toStringAsFixed(6)}',
+        ),
+        action: SnackBarAction(
+          label: 'Land info',
+          onPressed: () => _identifyAt(target),
+        ),
+      ),
+    );
+  }
+
+  /// Runs the tap-to-identify path at a coordinate rather than a screen tap.
+  Future<void> _identifyAt(LatLng target) async {
+    final map = _map;
+    if (map == null) return;
+    final point = await map.toScreenLocation(target);
+    if (!mounted) return;
+    await _identify(
+      math.Point<double>(point.x.toDouble(), point.y.toDouble()),
+      target,
+    );
   }
 
   void _showLayers() {
