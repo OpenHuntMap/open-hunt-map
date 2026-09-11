@@ -13,6 +13,7 @@ import '../data/province_loader.dart';
 import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
+import '../waypoints/waypoint_category.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
 import 'basemap.dart';
@@ -42,6 +43,12 @@ class _MapShellState extends State<MapShell> {
   final _loader = ProvinceLoader();
   final _overlays = OverlayController();
   final _waypoints = WaypointStore();
+
+  /// The SDF glyphs, kept so a basemap swap does not re-read fifteen assets.
+  final _iconBytes = <String, Uint8List>{};
+
+  /// Whether the glyphs are in the *current* style. Reset on every style load.
+  var _iconsRegistered = false;
 
   MapLibreMapController? _map;
   List<Province> _provinces = const [];
@@ -505,6 +512,8 @@ class _MapShellState extends State<MapShell> {
               },
               onStyleLoadedCallback: () async {
                 _styleReady = true;
+                // A new style has no images, whatever the last one had.
+                _iconsRegistered = false;
                 await _attachLayers();
                 await _syncWaypointSource();
                 await _syncActiveTrackSource();
@@ -960,7 +969,12 @@ class _MapShellState extends State<MapShell> {
         ))
           {
             'type': 'Feature',
-            'properties': {'name': waypoint.name, 'id': waypoint.id},
+            'properties': {
+              'name': waypoint.name,
+              'id': waypoint.id,
+              'icon': waypoint.category.iconImage,
+              'colour': waypoint.colourHex,
+            },
             'geometry': {
               'type': 'Point',
               'coordinates': [waypoint.longitude, waypoint.latitude],
@@ -968,9 +982,15 @@ class _MapShellState extends State<MapShell> {
           },
       ],
     };
-    try {
-      await map.removeLayer('owm-waypoint-circles');
-    } catch (_) {}
+    await _ensureWaypointIcons();
+    for (final layer in const [
+      'owm-waypoint-symbols',
+      'owm-waypoint-dots',
+    ]) {
+      try {
+        await map.removeLayer(layer);
+      } catch (_) {}
+    }
     try {
       await map.removeSource('owm-waypoints');
     } catch (_) {}
@@ -978,17 +998,110 @@ class _MapShellState extends State<MapShell> {
       'owm-waypoints',
       GeojsonSourceProperties(data: featureCollection),
     );
+    // A small dot under every glyph, marking the exact coordinate the centred
+    // glyph only approximates.
+    //
+    // It is also the fallback, and that is not hypothetical: a software GL stack
+    // draws fills, lines and circles but no symbol layers at all, so on one the
+    // glyphs vanish and the basemap loses its own labels too. Android emulators
+    // are a supported target here, BlueStacks included. Without this a waypoint
+    // on such a device would render as nothing whatsoever, which is the kind of
+    // silent wrong answer this app is not allowed to give.
     await map.addCircleLayer(
       'owm-waypoints',
-      'owm-waypoint-circles',
+      'owm-waypoint-dots',
       const CircleLayerProperties(
-        circleRadius: 6,
-        circleColor: '#B3261E',
-        circleStrokeWidth: 2,
+        circleRadius: 3,
+        circleColor: ['get', 'colour'],
+        circleStrokeWidth: 1.5,
         circleStrokeColor: '#FFFFFF',
       ),
     );
+    try {
+      await _addWaypointSymbolLayer(map);
+    } catch (error) {
+      // The dots above are already drawn, so a throw here leaves the waypoints
+      // visible but unglyphed rather than invisible. Said out loud because the
+      // difference is not something the user could otherwise work out.
+      _toast('Waypoint icons could not be drawn: $error');
+    }
     await _syncSavedTrackSource();
+  }
+
+  Future<void> _addWaypointSymbolLayer(MapLibreMapController map) =>
+      map.addSymbolLayer(
+        'owm-waypoints',
+        'owm-waypoint-symbols',
+        SymbolLayerProperties(
+          iconImage: const ['get', 'icon'],
+          iconColor: const ['get', 'colour'],
+          iconSize: _waypointIconSize,
+          // Waypoints cluster where the hunting is good, and a symbol layer
+          // drops colliding icons by default. Losing the one you are looking
+          // for because it sits near another is worse than a little overlap.
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          // Only SDF images can take a halo, and the halo is what keeps a dark
+          // glyph readable on a satellite basemap and a light one on snow.
+          iconHaloColor: '#FFFFFF',
+          iconHaloWidth: 1.0,
+          iconHaloBlur: 0.2,
+        ),
+      );
+
+  /// The glyphs are 64 px square and meant to read at 24 dp.
+  ///
+  /// MapLibre draws an added image at its own pixel size and Android decodes it
+  /// unscaled, so a fixed icon-size would make a waypoint 64 physical pixels
+  /// everywhere: cramped on a dense phone, oversized on a cheap tablet. iOS
+  /// builds the image with its own scale factor and may not need the same
+  /// correction, which is untested here because this project has no Mac.
+  double get _waypointIconSize =>
+      24 * MediaQuery.devicePixelRatioOf(context) / 64;
+
+  /// Puts the waypoint glyphs into the current style, once per style.
+  ///
+  /// Images belong to a style rather than to the map, so every style load — and
+  /// that includes every basemap swap — drops them. They have to go back before
+  /// any layer names one, because a symbol layer whose icon-image is missing
+  /// draws nothing at all and reports nothing about why.
+  ///
+  /// Called from the sync rather than only from the style-load callback so that
+  /// every path which creates the layer also guarantees its images. Failures are
+  /// caught and surfaced instead of propagating: this used to run directly in
+  /// `onStyleLoadedCallback`, where one throw from `addImage` abandoned the rest
+  /// of the callback and took the overlays and the identify pin down with it.
+  Future<void> _ensureWaypointIcons() async {
+    final map = _map;
+    if (map == null || _iconsRegistered) return;
+    final failures = <String>[];
+    for (final category in WaypointCategory.values) {
+      try {
+        var bytes = _iconBytes[category.iconImage];
+        if (bytes == null) {
+          final data = await rootBundle.load(
+            'assets/waypoint_icons/${category.id}.png',
+          );
+          bytes = data.buffer.asUint8List();
+          _iconBytes[category.iconImage] = bytes;
+        }
+        // The third argument is what marks these as signed distance fields, and
+        // it is what makes icon-color apply. Without it every waypoint draws in
+        // the glyph's own white and the colours do nothing.
+        await map.addImage(category.iconImage, bytes, true);
+      } catch (error) {
+        failures.add('${category.id}: $error');
+      }
+    }
+    if (failures.isEmpty) {
+      _iconsRegistered = true;
+      return;
+    }
+    // Said out loud rather than swallowed. Without the glyphs the waypoints are
+    // still in the list but invisible on the map, and a saved waypoint that is
+    // silently not drawn is the kind of quiet wrong answer this app must not
+    // give: the dot under each glyph is there so something still shows.
+    _toast('Some waypoint icons could not be drawn (${failures.first}).');
   }
 
   Future<void> _syncSavedTrackSource() async {
@@ -1124,7 +1237,9 @@ class _MapShellState extends State<MapShell> {
   ) {
     // Backup path when a fill/line absorbs the tap (even with
     // featureTapsTriggersMapClick). Ignore our own pin/waypoints.
-    if (layerId == 'owm-identify-circle' || layerId == 'owm-waypoint-circles') {
+    if (layerId == 'owm-identify-circle' ||
+        layerId == 'owm-waypoint-symbols' ||
+        layerId == 'owm-waypoint-dots') {
       return;
     }
     _identify(point, coordinates);

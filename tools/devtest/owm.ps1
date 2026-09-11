@@ -25,6 +25,7 @@
     ./owm.ps1 launch -Settle 25
     ./owm.ps1 shot startup
     ./owm.ps1 tap "Map layers"
+    ./owm.ps1 tapshot 219 85
     ./owm.ps1 net off
 
     Quote any shell command that carries flags. PowerShell binds a bare -c to
@@ -36,8 +37,8 @@
 param(
     [Parameter(Mandatory, Position = 0)]
     [ValidateSet('doctor', 'boot', 'kill', 'install', 'launch', 'stop', 'clear',
-        'grant', 'shot', 'dump', 'tap', 'tapxy', 'swipe', 'back', 'home',
-        'type', 'gps', 'net', 'logs', 'shell', 'push')]
+        'grant', 'shot', 'dump', 'tap', 'tapxy', 'tapshot', 'swipe', 'back',
+        'home', 'type', 'gps', 'net', 'logs', 'shell', 'push')]
     [string]$Command,
 
     # Not $Args. That name is an automatic variable in PowerShell, so binding a
@@ -190,18 +191,27 @@ function Cmd-Boot {
     # while the device carries on running: the clock inside the capture stops
     # even though `adb shell date` keeps advancing. swiftshader_indirect renders
     # off-screen and keeps capturing correctly no matter what the desktop is
-    # doing. It is a conformant GL implementation, so MapLibre draws the same
-    # pixels, only slower, which is what -Settle is for.
+    # doing.
+    #
+    # It is not, however, equivalent. SwiftShader renders fills, lines and
+    # circles faithfully but draws no symbol layers at all: on the headless
+    # emulator the basemap's own place and road labels are missing, and so is any
+    # icon added through a symbol layer. So a clean headless screenshot says
+    # nothing about whether a symbol renders. Use -Windowed to check one.
     #
     # -no-snapshot-load forces a cold boot so a test never inherits state from
     # the last run.
     $gpuArgs = if ($Windowed) { @('-gpu', 'host') } `
         else { @('-no-window', '-gpu', 'swiftshader_indirect') }
-    "Booting $AvdName$(if ($Windowed) { ' (windowed)' } else { ' (headless)' })..."
+    # Normal, not Minimized, when windowed: -gpu host only produces frames while
+    # the window is genuinely on screen, so minimizing it is the one thing that
+    # makes this mode useless.
+    $windowStyle = if ($Windowed) { 'Normal' } else { 'Minimized' }
+    "Booting $AvdName$(if ($Windowed) { ' (windowed, host GPU)' } else { ' (headless, no symbol layers)' })..."
     Start-Process -FilePath $Emulator -ArgumentList (@(
             '-avd', $AvdName, '-no-snapshot-load',
             '-no-boot-anim', '-netdelay', 'none', '-netspeed', 'full'
-        ) + $gpuArgs) -WindowStyle Minimized
+        ) + $gpuArgs) -WindowStyle $windowStyle
 
     # Not `adb wait-for-device`: with another emulator already attached it has no
     # way to know which one to wait for. Poll for our own AVD by name instead,
@@ -378,6 +388,35 @@ function Cmd-TapXY {
     "Tapped $($Rest[0]),$($Rest[1])."
 }
 
+# Taps a point read straight off a screenshot, without the arithmetic.
+#
+# Screenshots are downscaled on their way to whoever is reading them -- 461 px
+# wide for an agent, at the time of writing -- while the device is 1080 or wider.
+# Coordinates lifted off that image therefore have to be scaled before `input
+# tap` lands on the widget you were aiming at, and hand-multiplying by a
+# remembered ratio is both tedious and a silent source of mis-taps: it fails
+# quietly by hitting the wrong thing, which looks like the app misbehaving.
+#
+# The scale comes from the device's own reported width rather than a constant, so
+# this keeps working when the target changes. The phone and the emulator do not
+# share a width, and a hardcoded 1080 is only right on one of them.
+function Cmd-TapShot {
+    if ($Rest.Count -lt 2) { throw 'tapshot needs x and y as read off the screenshot, then optionally the width of that screenshot (default 461).' }
+    $shotWidth = if ($Rest.Count -ge 3) { [double]$Rest[2] } else { 461.0 }
+    if ($shotWidth -le 0) { throw 'The screenshot width has to be positive.' }
+    $size = Invoke-Adb @('shell', 'wm', 'size') | Out-String
+    # Override size wins when present: it is the resolution the device is
+    # actually composing at, and so the one the screenshot was taken from.
+    $deviceWidth = if ($size -match 'Override size:\s*(\d+)x(\d+)') { [double]$Matches[1] }
+                   elseif ($size -match 'Physical size:\s*(\d+)x(\d+)') { [double]$Matches[1] }
+                   else { throw "Could not read the screen size from: $size" }
+    $scale = $deviceWidth / $shotWidth
+    $x = [int][math]::Round([double]$Rest[0] * $scale)
+    $y = [int][math]::Round([double]$Rest[1] * $scale)
+    Invoke-Adb @('shell', 'input', 'tap', $x, $y) | Out-Null
+    "Tapped $x,$y on a ${deviceWidth}px screen (from $($Rest[0]),$($Rest[1]) at ${shotWidth}px wide, x$([math]::Round($scale, 3)))."
+}
+
 function Cmd-Swipe {
     if ($Rest.Count -lt 4) { throw 'swipe needs x1 y1 x2 y2 [ms].' }
     $ms = if ($Rest.Count -ge 5) { $Rest[4] } else { '300' }
@@ -441,6 +480,7 @@ switch ($Command) {
     'dump' { Cmd-Dump }
     'tap' { Cmd-Tap }
     'tapxy' { Cmd-TapXY }
+    'tapshot' { Cmd-TapShot }
     'swipe' { Cmd-Swipe }
     'back' { Cmd-Back }
     'home' { Cmd-Home }

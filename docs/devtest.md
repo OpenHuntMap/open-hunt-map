@@ -74,6 +74,19 @@ hits one by label. Flutter publishes its full semantics tree to `uiautomator`, s
 this works across the whole app without adding anything to production code.
 Icon-only buttons are reachable because their tooltips become semantics labels.
 
+`tapshot x y [shotWidth]` taps a point read straight off a screenshot, scaling it
+to device pixels from the width the device reports. It exists for the things
+`tap` cannot reach — a spot on the map, a colour swatch, anything without a
+label — because those coordinates come off an image that has usually been
+downscaled on the way to whoever is reading it. `shotWidth` defaults to 461,
+which is the width an agent sees. Doing that multiplication by hand fails
+quietly, by tapping the wrong widget, which reads as the app misbehaving.
+
+Two things a swipe can get wrong, both of which look like app bugs: dragging
+across an open keyboard glide-types into the focused field, and dragging inside a
+scrollable sheet is fine but dragging over the map pans it. Dismiss the keyboard
+with `back` before any swipe meant to scroll.
+
 Screenshots and logcat land in `.artifacts/`, which is gitignored. They are
 evidence from one run, not repo content.
 
@@ -87,13 +100,29 @@ evidence from one run, not repo content.
   every command with `error: closed`. No adb client version works around it. Its
   adb port also has no emulator console behind it, so `adb emu` calls hang
   forever instead of failing; `owm.ps1` reads `ro.boot.qemu.avd_name` instead.
+- **The headless emulator draws no symbol layers at all.** This is the expensive
+  one. Under `swiftshader_indirect` fills, lines and circles render faithfully,
+  so a screenshot looks entirely healthy — but every symbol layer is missing,
+  including the basemap's own place and road labels. A waypoint glyph added
+  through `addSymbolLayer` therefore renders as nothing, with no error, no
+  exception from `addImage` or `addSymbolLayer`, and nothing in logcat. It is
+  indistinguishable from a bug in your own code, and it will cost you several
+  build cycles if you do not know.
+
+  The tell is the basemap: if you cannot see "North Gower" or a road name
+  anywhere, symbol rendering is off and the screenshot cannot tell you anything
+  about your icon. Re-check with `boot -Windowed`, which uses the host GPU, and
+  confirm from `dumpsys SurfaceFlinger | grep GLES` that you got a real driver
+  rather than `Google SwiftShader`.
 - **A minimized `-gpu host` emulator stops producing frames.** `screencap` then
   returns the same stale image indefinitely while the device keeps running: the
   clock inside the capture freezes while `adb shell date` advances. `boot`
   defaults to headless `swiftshader_indirect`, which renders off-screen and does
-  not have this failure mode. Use `-Windowed` for real GPU behaviour, and expect
-  slow frames and occasional "System UI isn't responding" under software GL,
-  which is an emulator artifact rather than an app fault.
+  not have this failure mode. `-Windowed` therefore leaves the window at normal
+  size rather than minimizing it, since minimizing is the one thing that makes
+  that mode useless. Expect slow frames and occasional "System UI isn't
+  responding" under software GL, which is an emulator artifact rather than an app
+  fault.
 - **Write device files to `/data/local/tmp`, not `/sdcard`.** Under scoped
   storage a `/sdcard` file gets the media provider's ownership and no read bit
   for others, so the pull fails after a capture that succeeded. `/data/local/tmp`

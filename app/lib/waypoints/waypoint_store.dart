@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+
+import 'waypoint_category.dart';
 import 'waypoint_storage_stub.dart'
     if (dart.library.io) 'waypoint_storage_io.dart'
     if (dart.library.html) 'waypoint_storage_web.dart' as storage;
@@ -25,6 +28,9 @@ class Waypoint {
     required this.longitude,
     required this.notes,
     required this.createdAt,
+    this.category = WaypointCategory.other,
+    this.tags = const [],
+    this.colour,
     this.track = const [],
   });
 
@@ -34,8 +40,31 @@ class Waypoint {
   final double longitude;
   final String notes;
   final DateTime createdAt;
+
+  /// Single-valued and always set, because every app this exports to files
+  /// waypoints under exactly one parent. [WaypointCategory.other] is the
+  /// unclassified case rather than a null.
+  final WaypointCategory category;
+
+  /// The loose layer over [category]. Lowercased and de-duplicated on the way
+  /// in, so "Ridge" and "ridge" are one tag rather than two.
+  final List<String> tags;
+
+  /// Null means "whatever the category's colour is", which is different from
+  /// having chosen that same colour: a later change to the category's default
+  /// follows the first and not the second.
+  final WaypointColour? colour;
+
   final List<TrackPoint> track;
 
+  Color get displayColour => colour?.value ?? category.colour;
+
+  /// What MapLibre's `icon-color` gets.
+  String get colourHex => hexColour(displayColour);
+
+  /// Every field here is tolerant of absence, because this reads files written
+  /// by builds that predate the field. A waypoint saved before categories
+  /// existed is not corrupt, it is just uncategorised.
   factory Waypoint.fromJson(Map<String, dynamic> json) => Waypoint(
         id: json['id'] as String,
         name: json['name'] as String,
@@ -43,6 +72,12 @@ class Waypoint {
         longitude: (json['lng'] as num).toDouble(),
         notes: json['notes'] as String? ?? '',
         createdAt: DateTime.parse(json['createdAt'] as String),
+        category: WaypointCategory.fromId(json['category'] as String?),
+        tags: normaliseTags(
+          (json['tags'] as List<dynamic>? ?? const [])
+              .map((tag) => tag.toString()),
+        ),
+        colour: WaypointColour.fromId(json['colour'] as String?),
         track: (json['track'] as List<dynamic>? ?? const [])
             .map((item) => TrackPoint.fromJson(item as Map<String, dynamic>))
             .toList(),
@@ -55,18 +90,52 @@ class Waypoint {
         'lng': longitude,
         'notes': notes,
         'createdAt': createdAt.toIso8601String(),
+        'category': category.id,
+        'tags': tags,
+        // Omitted rather than written as the resolved colour, so "follows the
+        // category" stays distinguishable from "happens to be that colour".
+        if (colour != null) 'colour': colour!.id,
         'track': track.map((point) => point.toJson()).toList(),
       };
 
-  Waypoint copyWith({String? name, String? notes}) => Waypoint(
+  /// [clearColour] exists because passing `colour: null` cannot mean "unset" —
+  /// that is indistinguishable from not passing it at all.
+  Waypoint copyWith({
+    String? name,
+    String? notes,
+    WaypointCategory? category,
+    List<String>? tags,
+    WaypointColour? colour,
+    bool clearColour = false,
+  }) => Waypoint(
         id: id,
         name: name ?? this.name,
         latitude: latitude,
         longitude: longitude,
         notes: notes ?? this.notes,
         createdAt: createdAt,
+        category: category ?? this.category,
+        tags: tags == null ? this.tags : normaliseTags(tags),
+        colour: clearColour ? null : (colour ?? this.colour),
         track: track,
       );
+}
+
+/// Trims, lowercases, drops blanks and de-duplicates, preserving first-seen
+/// order.
+///
+/// Tags are typed by hand and arrive from other people's files, so without this
+/// a list picks up "Ridge", "ridge " and "ridge" as three separate things and
+/// the filter chips multiply until they are useless.
+List<String> normaliseTags(Iterable<String> tags) {
+  final seen = <String>{};
+  final result = <String>[];
+  for (final tag in tags) {
+    final clean = tag.trim().toLowerCase();
+    if (clean.isEmpty || !seen.add(clean)) continue;
+    result.add(clean);
+  }
+  return result;
 }
 
 class WaypointStore {
@@ -117,6 +186,33 @@ class WaypointStore {
   Future<void> delete(String id) async {
     _items = _items.where((item) => item.id != id).toList();
     await _save();
+  }
+
+  /// Every tag in use across the list, in first-seen order.
+  List<String> get tagsInUse =>
+      normaliseTags(_items.expand((item) => item.tags));
+
+  /// How many items sit in each category. Absent categories are absent rather
+  /// than zero, so a filter row can show only what the user actually has.
+  Map<WaypointCategory, int> get categoryCounts {
+    final counts = <WaypointCategory, int>{};
+    for (final item in _items) {
+      counts[item.category] = (counts[item.category] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /// Deletes everything matching [test] and hands back what went.
+  ///
+  /// The return value is the whole point: clearing a category removes many
+  /// waypoints on one tap, with no per-row confirmation, so the caller has to be
+  /// able to put them all back.
+  Future<List<Waypoint>> deleteWhere(bool Function(Waypoint) test) async {
+    final removed = _items.where(test).toList();
+    if (removed.isEmpty) return removed;
+    _items = _items.where((item) => !test(item)).toList();
+    await _save();
+    return removed;
   }
 
   Future<void> replaceAll(Iterable<Waypoint> waypoints) async {

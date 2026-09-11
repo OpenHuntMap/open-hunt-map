@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:share_plus/share_plus.dart';
 import 'package:xml/xml.dart';
 
+import 'waypoint_category.dart';
 import 'waypoint_store.dart';
 
 enum WaypointFormat { gpx, kml, geoJson }
@@ -86,10 +88,20 @@ class WaypointImportExport {
                 nest: waypoint.createdAt.toUtc().toIso8601String(),
               );
               builder.element('name', nest: waypoint.name);
+              if (_comment(waypoint) case final comment?) {
+                builder.element('cmt', nest: comment);
+              }
               if (waypoint.notes.isNotEmpty) {
                 builder.element('desc', nest: waypoint.notes);
               }
               builder.element('src', nest: 'OpenWoodsMap');
+              // sym before type: still the wptType sequence. sym is what makes a
+              // Garmin unit draw the right icon, and type is the free-text
+              // category that survives a round trip back into this app.
+              if (waypoint.category.garminSym case final sym?) {
+                builder.element('sym', nest: sym);
+              }
+              builder.element('type', nest: waypoint.category.id);
             },
           );
         }
@@ -100,9 +112,14 @@ class WaypointImportExport {
             'trk',
             nest: () {
               builder.element('name', nest: waypoint.name);
+              if (_comment(waypoint) case final comment?) {
+                builder.element('cmt', nest: comment);
+              }
               if (waypoint.notes.isNotEmpty) {
                 builder.element('desc', nest: waypoint.notes);
               }
+              builder.element('src', nest: 'OpenWoodsMap');
+              builder.element('type', nest: waypoint.category.id);
               builder.element(
                 'trkseg',
                 nest: () {
@@ -125,9 +142,21 @@ class WaypointImportExport {
     return builder.buildDocument().toXmlString(pretty: true);
   }
 
+  /// KML, grouped into one folder per category.
+  ///
+  /// Folders are the only grouping construct Google Earth, CalTopo and onX all
+  /// understand, and they are single-parent, which is why the category is
+  /// single-valued in the first place. Tags ride along in ExtendedData, where we
+  /// can read them back but nothing else will.
   String toKml(List<Waypoint> waypoints) {
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-8"');
+    // Grouped up front so an empty category produces no empty folder.
+    final grouped = <WaypointCategory, List<Waypoint>>{};
+    for (final waypoint in waypoints) {
+      grouped.putIfAbsent(waypoint.category, () => []).add(waypoint);
+    }
+    final styles = {for (final w in waypoints) w.colourHex};
     builder.element(
       'kml',
       attributes: {'xmlns': 'http://www.opengis.net/kml/2.2'},
@@ -135,38 +164,39 @@ class WaypointImportExport {
         builder.element(
           'Document',
           nest: () {
-            for (final waypoint in waypoints) {
+            builder.element('name', nest: 'OpenWoodsMap waypoints');
+            for (final hex in styles) {
               builder.element(
-                'Placemark',
+                'Style',
+                attributes: {'id': _styleId(hex)},
                 nest: () {
-                  builder.element('name', nest: waypoint.name);
-                  builder.element('description', nest: waypoint.notes);
-                  if (waypoint.track.isEmpty) {
-                    builder.element(
-                      'Point',
-                      nest: () {
-                        builder.element(
-                          'coordinates',
-                          nest: '${waypoint.longitude},${waypoint.latitude},0',
-                        );
-                      },
-                    );
-                  } else {
-                    builder.element(
-                      'LineString',
-                      nest: () {
-                        builder.element('tessellate', nest: '1');
-                        builder.element(
-                          'coordinates',
-                          nest: waypoint.track
-                              .map(
-                                (point) =>
-                                    '${point.longitude},${point.latitude},0',
-                              )
-                              .join(' '),
-                        );
-                      },
-                    );
+                  final kml = kmlColour(Color(0xFF000000 | _rgb(hex)));
+                  // colorMode normal, so the icon takes our colour rather than
+                  // Google Earth's default random tint.
+                  builder.element(
+                    'IconStyle',
+                    nest: () {
+                      builder.element('color', nest: kml);
+                      builder.element('colorMode', nest: 'normal');
+                    },
+                  );
+                  builder.element(
+                    'LineStyle',
+                    nest: () {
+                      builder.element('color', nest: kml);
+                      builder.element('width', nest: '3');
+                    },
+                  );
+                },
+              );
+            }
+            for (final entry in grouped.entries) {
+              builder.element(
+                'Folder',
+                nest: () {
+                  builder.element('name', nest: entry.key.label);
+                  for (final waypoint in entry.value) {
+                    _kmlPlacemark(builder, waypoint);
                   }
                 },
               );
@@ -177,6 +207,68 @@ class WaypointImportExport {
     );
     return builder.buildDocument().toXmlString(pretty: true);
   }
+
+  void _kmlPlacemark(XmlBuilder builder, Waypoint waypoint) {
+    builder.element(
+      'Placemark',
+      nest: () {
+        builder.element('name', nest: waypoint.name);
+        builder.element('description', nest: waypoint.notes);
+        builder.element('styleUrl', nest: '#${_styleId(waypoint.colourHex)}');
+        // The lossless path home. A folder name is the human label and can be
+        // renamed by anything that touches the file; this is the machine copy.
+        builder.element(
+          'ExtendedData',
+          nest: () {
+            _kmlData(builder, 'category', waypoint.category.id);
+            if (waypoint.tags.isNotEmpty) {
+              _kmlData(builder, 'tags', waypoint.tags.join(','));
+            }
+            if (waypoint.colour case final colour?) {
+              _kmlData(builder, 'colour', colour.id);
+            }
+          },
+        );
+        if (waypoint.track.isEmpty) {
+          builder.element(
+            'Point',
+            nest: () {
+              builder.element(
+                'coordinates',
+                nest: '${waypoint.longitude},${waypoint.latitude},0',
+              );
+            },
+          );
+        } else {
+          builder.element(
+            'LineString',
+            nest: () {
+              builder.element('tessellate', nest: '1');
+              builder.element(
+                'coordinates',
+                nest: waypoint.track
+                    .map((point) => '${point.longitude},${point.latitude},0')
+                    .join(' '),
+              );
+            },
+          );
+        }
+      },
+    );
+  }
+
+  void _kmlData(XmlBuilder builder, String name, String value) =>
+      builder.element(
+        'Data',
+        attributes: {'name': name},
+        nest: () => builder.element('value', nest: value),
+      );
+
+  /// A style id has to be an XML name, and `#B3261E` is not one.
+  static String _styleId(String hex) => 'owm-${hex.replaceAll('#', '')}';
+
+  static int _rgb(String hex) =>
+      int.parse(hex.replaceAll('#', ''), radix: 16) & 0xFFFFFF;
 
   String toGeoJson(List<Waypoint> waypoints) =>
       const JsonEncoder.withIndent('  ').convert({
@@ -191,6 +283,14 @@ class WaypointImportExport {
                       'name': waypoint.name,
                       'notes': waypoint.notes,
                       'createdAt': waypoint.createdAt.toIso8601String(),
+                      'category': waypoint.category.id,
+                      'tags': waypoint.tags,
+                      if (waypoint.colour case final colour?)
+                        'colour': colour.id,
+                      // Not read back on import: it is derived from the two
+                      // fields above. It is here so a GeoJSON viewer can draw
+                      // the waypoint in the colour the user chose.
+                      'marker-color': waypoint.colourHex,
                     },
                     'geometry': {
                       'type': waypoint.track.isEmpty ? 'Point' : 'LineString',
@@ -219,7 +319,19 @@ class WaypointImportExport {
               final name = _childText(element, 'name') ?? 'Imported waypoint';
               final notes = _childText(element, 'desc') ?? '';
               final time = DateTime.tryParse(_childText(element, 'time') ?? '');
-              return _waypoint(name, lat, lng, notes, time);
+              // type first, then sym: type is what we wrote, sym is what a
+              // Garmin unit is more likely to have preserved.
+              return _waypoint(
+                name,
+                lat,
+                lng,
+                notes,
+                time,
+                category: WaypointCategory.fromId(
+                  _childText(element, 'type') ?? _childText(element, 'sym'),
+                ),
+                tags: _tagsFromComment(_childText(element, 'cmt')),
+              );
             })
             .toList();
     final tracks =
@@ -243,6 +355,10 @@ class WaypointImportExport {
                 points,
                 _childText(element, 'desc') ?? '',
                 null,
+                category: WaypointCategory.fromId(
+                  _childText(element, 'type'),
+                ),
+                tags: _tagsFromComment(_childText(element, 'cmt')),
               );
             })
             .whereType<Waypoint>();
@@ -257,6 +373,17 @@ class WaypointImportExport {
         .map((element) {
           final name = _childText(element, 'name') ?? 'Imported waypoint';
           final notes = _childText(element, 'description') ?? '';
+          final data = _extendedData(element);
+          // ExtendedData is ours and exact. The enclosing folder name is the
+          // fallback, and it is why a file passed through Google Earth still
+          // arrives sorted: fromId matches labels as well as ids.
+          final category = WaypointCategory.fromId(
+            data['category'] ?? _enclosingFolderName(element),
+          );
+          final tags = normaliseTags(
+            (data['tags'] ?? '').split(',').map((tag) => tag.trim()),
+          );
+          final colour = WaypointColour.fromId(data['colour']);
           final lineString = _firstDescendant(element, 'LineString');
           if (lineString != null) {
             final coordinateText = _childText(lineString, 'coordinates') ?? '';
@@ -273,7 +400,15 @@ class WaypointImportExport {
                       );
                     })
                     .toList();
-            return _trackWaypoint(name, points, notes, null);
+            return _trackWaypoint(
+              name,
+              points,
+              notes,
+              null,
+              category: category,
+              tags: tags,
+              colour: colour,
+            );
           }
           // Via the Point rather than straight to the coordinates, so a
           // Placemark wrapped in a MultiGeometry still resolves and a stray
@@ -290,6 +425,9 @@ class WaypointImportExport {
             double.parse(coordinates[0]),
             notes,
             null,
+            category: category,
+            tags: tags,
+            colour: colour,
           );
         })
         .whereType<Waypoint>()
@@ -307,6 +445,14 @@ class WaypointImportExport {
           final geometry = feature['geometry'] as Map<String, dynamic>;
           final coordinates = geometry['coordinates'] as List<dynamic>;
           final type = geometry['type']?.toString();
+          final category = WaypointCategory.fromId(
+            properties['category']?.toString(),
+          );
+          final tags = normaliseTags(
+            (properties['tags'] as List<dynamic>? ?? const [])
+                .map((tag) => tag.toString()),
+          );
+          final colour = WaypointColour.fromId(properties['colour']?.toString());
           if (type == 'LineString') {
             final points =
                 coordinates.map((item) {
@@ -322,6 +468,9 @@ class WaypointImportExport {
               properties['notes']?.toString() ?? '',
               DateTime.tryParse(properties['createdAt']?.toString() ?? ''),
               id: properties['id']?.toString(),
+              category: category,
+              tags: tags,
+              colour: colour,
             );
           }
           if (type != 'Point') return null;
@@ -334,25 +483,55 @@ class WaypointImportExport {
             createdAt:
                 DateTime.tryParse(properties['createdAt']?.toString() ?? '') ??
                 DateTime.now(),
+            category: category,
+            tags: tags,
+            colour: colour,
           );
         })
         .whereType<Waypoint>()
         .toList();
   }
 
+  /// Carries the category label and the tags as readable text.
+  ///
+  /// Nothing in GPX or KML has a field for a many-valued grouping. Garmin's
+  /// `gpxx:Categories` is the closest thing and its import side is undocumented
+  /// and reported broken in BaseCamp, while onX and CalTopo have nothing at all.
+  /// `<cmt>` at least shows up beside the waypoint in every one of them, so the
+  /// tags stay legible to a person even though only this app parses them back.
+  String? _comment(Waypoint waypoint) {
+    final tags = waypoint.tags.map((tag) => '#$tag').join(' ');
+    if (tags.isEmpty) return waypoint.category.label;
+    return '${waypoint.category.label} · $tags';
+  }
+
+  /// The other half of [_comment]. Anything that is not a `#tag` token is left
+  /// alone, so a comment a different app wrote does not become tags.
+  static List<String> _tagsFromComment(String? comment) => normaliseTags(
+    RegExp(r'#([\w-]+)')
+        .allMatches(comment ?? '')
+        .map((match) => match.group(1)!),
+  );
+
   Waypoint _waypoint(
     String name,
     double lat,
     double lng,
     String notes,
-    DateTime? createdAt,
-  ) => Waypoint(
+    DateTime? createdAt, {
+    WaypointCategory category = WaypointCategory.other,
+    List<String> tags = const [],
+    WaypointColour? colour,
+  }) => Waypoint(
     id: _id(),
     name: name,
     latitude: lat,
     longitude: lng,
     notes: notes,
     createdAt: createdAt ?? DateTime.now(),
+    category: category,
+    tags: tags,
+    colour: colour,
   );
 
   Waypoint? _trackWaypoint(
@@ -361,6 +540,9 @@ class WaypointImportExport {
     String notes,
     DateTime? createdAt, {
     String? id,
+    WaypointCategory category = WaypointCategory.other,
+    List<String> tags = const [],
+    WaypointColour? colour,
   }) {
     if (points.isEmpty) return null;
     return Waypoint(
@@ -370,6 +552,9 @@ class WaypointImportExport {
       longitude: points.first.longitude,
       notes: notes,
       createdAt: createdAt ?? DateTime.now(),
+      category: category,
+      tags: tags,
+      colour: colour,
       track: points,
     );
   }
@@ -382,6 +567,33 @@ class WaypointImportExport {
   String? _childText(XmlElement element, String localName) {
     for (final node in element.childElements) {
       if (node.name.local == localName) return node.innerText;
+    }
+    return null;
+  }
+
+  /// `<Data name="x"><value>y</value></Data>` pairs, flattened.
+  Map<String, String> _extendedData(XmlElement element) {
+    final extended = _firstDescendant(element, 'ExtendedData');
+    if (extended == null) return const {};
+    final data = <String, String>{};
+    for (final node in extended.descendants.whereType<XmlElement>()) {
+      if (node.name.local != 'Data') continue;
+      final name = node.getAttribute('name');
+      final value = _childText(node, 'value');
+      if (name != null && value != null) data[name] = value;
+    }
+    return data;
+  }
+
+  /// The name of the Folder a Placemark sits in, if any.
+  ///
+  /// Walks up rather than down: a Folder can nest, and the nearest one is the
+  /// one that describes this Placemark.
+  String? _enclosingFolderName(XmlElement element) {
+    for (var node = element.parentElement;
+        node != null;
+        node = node.parentElement) {
+      if (node.name.local == 'Folder') return _childText(node, 'name');
     }
     return null;
   }

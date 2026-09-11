@@ -628,6 +628,31 @@ and bush in both provinces, and its medians are what
 starts. Re-run it if a source changes; the estimate is only as honest as those
 numbers.
 
+## Waypoint glyphs: Material Icons, Apache 2.0
+
+The only artwork the app bundles. `tools/icons/build_waypoint_icons.py` renders one
+glyph per waypoint category out of the Material Icons font that ships with the
+Flutter SDK, and converts each to a signed distance field so MapLibre can tint it
+per waypoint with `icon-color` instead of us shipping one PNG per colour. Source
+and licence are recorded in `app/assets/waypoint_icons/manifest.json`, which ships
+with the images.
+
+Chosen over the CC0 outdoor sets (Temaki, Maki, Osmic) for a first pass because it
+is already in the dependency tree, so it adds no download and no licence to audit.
+The category's `iconImage` is one level of indirection away from the glyph, so
+replacing a specific icon with better outdoor artwork later changes one line and
+regenerates.
+
+Two of the fifteen are compromises worth knowing about: Material has no tree stand
+and no ground blind, so `stand` borrows an armchair and `blind` a shelter. They are
+distinguishable and not misleading, but they are not the right pictures.
+
+Where the category goes when a waypoint leaves the app is a separate question from
+what it looks like here — see the export notes in `app/lib/waypoints/import_export.dart`.
+GPX `<sym>` values are the display names from GPSBabel's `garmin_icon_tables.h`,
+which is the reference the GPX ecosystem shares, and are omitted rather than
+guessed where Garmin has no matching symbol.
+
 ## Pack layout
 
 Nothing province-specific is bundled in the app binary — only `data/provinces.json`

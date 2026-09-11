@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:open_woods_map/waypoints/waypoint_category.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 import 'package:open_woods_map/waypoints/waypoints_page.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -17,13 +18,20 @@ class _Documents extends PathProviderPlatform with MockPlatformInterfaceMixin {
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
-Waypoint point(String id, String name) => Waypoint(
+Waypoint point(
+  String id,
+  String name, {
+  WaypointCategory category = WaypointCategory.other,
+  List<String> tags = const [],
+}) => Waypoint(
   id: id,
   name: name,
   latitude: 45.5,
   longitude: -77.5,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
+  category: category,
+  tags: tags,
 );
 
 void main() {
@@ -141,7 +149,18 @@ void main() {
       });
 
       await pumpPage(tester, store);
-      await tester.tap(find.byTooltip('Delete').at(1));
+      // By name rather than by position: the list is now sorted by category and
+      // then name for display, so the second row on screen is not the second
+      // waypoint in the store. Delete also moved behind an overflow menu once
+      // Edit joined it, so the menu has to be opened first.
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(ListTile, 'Middle'),
+          matching: find.byTooltip('More'),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Delete').last);
       await settle(tester);
 
       expect(store.items.map((item) => item.name), ['First', 'Last']);
@@ -175,6 +194,147 @@ void main() {
 
       expect(find.text('Your waypoint file could not be read'), findsOneWidget);
       expect(find.textContaining('.unreadable'), findsOneWidget);
+    });
+  });
+
+  group('filtering', () {
+    Future<WaypointStore> stocked(WidgetTester tester) async {
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.replaceAll([
+          point('1', 'North stand', category: WaypointCategory.stand),
+          point('2', 'South stand', category: WaypointCategory.stand),
+          point('3', 'Spring', category: WaypointCategory.water, tags: ['creek']),
+        ]);
+      });
+      return store;
+    }
+
+    // Only categories in use, or the row opens with fifteen chips of which
+    // twelve match nothing.
+    testWidgets('the chip row shows only categories that have waypoints', (
+      tester,
+    ) async {
+      await pumpPage(tester, await stocked(tester));
+
+      expect(find.text('Tree stand 2'), findsOneWidget);
+      expect(find.text('Water source 1'), findsOneWidget);
+      expect(find.textContaining('Trail camera'), findsNothing);
+      expect(find.text('All 3'), findsOneWidget);
+    });
+
+    testWidgets('picking a category hides everything else', (tester) async {
+      await pumpPage(tester, await stocked(tester));
+
+      await tester.tap(find.text('Water source 1'));
+      await settle(tester);
+
+      expect(find.text('Spring'), findsOneWidget);
+      expect(find.text('North stand'), findsNothing);
+    });
+
+    testWidgets('a tag chip filters too', (tester) async {
+      await pumpPage(tester, await stocked(tester));
+
+      await tester.tap(find.text('creek'));
+      await settle(tester);
+
+      expect(find.text('Spring'), findsOneWidget);
+      expect(find.text('South stand'), findsNothing);
+    });
+
+    // The filter is the export selection, so the menu has to say what will
+    // leave rather than leaving the user to guess.
+    testWidgets('the export menu counts what is shown, not what is held', (
+      tester,
+    ) async {
+      await pumpPage(tester, await stocked(tester));
+
+      await tester.tap(find.byTooltip('Export'));
+      await settle(tester);
+      expect(find.text('Exports all 3'), findsOneWidget);
+
+      await tester.tapAt(const Offset(20, 20));
+      await settle(tester);
+      await tester.tap(find.text('Tree stand 2'));
+      await settle(tester);
+      await tester.tap(find.byTooltip('Export'));
+      await settle(tester);
+      expect(find.text('Exports the 2 shown'), findsOneWidget);
+    });
+  });
+
+  group('deleting a whole category', () {
+    Future<WaypointStore> stocked(WidgetTester tester) async {
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.replaceAll([
+          point('1', 'North stand', category: WaypointCategory.stand),
+          point('2', 'Spring', category: WaypointCategory.water),
+          point('3', 'South stand', category: WaypointCategory.stand),
+        ]);
+      });
+      return store;
+    }
+
+    testWidgets('asks first, and keeping them changes nothing', (tester) async {
+      final store = await stocked(tester);
+      await pumpPage(tester, store);
+
+      await tester.tap(find.byTooltip('Delete all Tree stand'));
+      await settle(tester);
+      expect(find.text('Delete 2 Tree stand waypoint(s)?'), findsOneWidget);
+
+      await tester.tap(find.text('Keep them'));
+      await settle(tester);
+      expect(store.items, hasLength(3));
+    });
+
+    // A confirmation is something people dismiss on reflex, so the undo has to
+    // be there as well — and it has to restore the original order, not append.
+    testWidgets('confirming removes the category and undo restores order', (
+      tester,
+    ) async {
+      final store = await stocked(tester);
+      await pumpPage(tester, store);
+
+      await tester.tap(find.byTooltip('Delete all Tree stand'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await settle(tester);
+
+      expect(store.items.map((item) => item.name), ['Spring']);
+      expect(find.text('Deleted 2 Tree stand.'), findsOneWidget);
+
+      await tester.tap(find.text('UNDO'));
+      await settle(tester);
+
+      expect(store.items.map((item) => item.name), [
+        'North stand',
+        'Spring',
+        'South stand',
+      ]);
+    });
+
+    // Otherwise the list is left filtered to a category that no longer exists,
+    // showing "nothing matches this filter" over a list that has waypoints.
+    testWidgets('clears a filter that pointed at the deleted category', (
+      tester,
+    ) async {
+      final store = await stocked(tester);
+      await pumpPage(tester, store);
+
+      await tester.tap(find.text('Tree stand 2'));
+      await settle(tester);
+      await tester.tap(find.byTooltip('Delete all Tree stand'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await settle(tester);
+
+      expect(find.text('Nothing matches this filter.'), findsNothing);
+      expect(find.text('Spring'), findsOneWidget);
     });
   });
 }

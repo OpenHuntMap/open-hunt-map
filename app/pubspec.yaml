@@ -67,3 +67,8 @@ flutter:
     - assets/styles/satellite.json
     - assets/styles/hybrid.json
     - assets/data/provinces.json
+    # Signed distance fields for the waypoint glyphs, generated from Flutter's
+    # bundled Material Icons by tools/icons/build_waypoint_icons.py. Fifteen
+    # small PNGs rather than one per colour, because SDF lets icon-color tint
+    # them at draw time.
+    - assets/waypoint_icons/

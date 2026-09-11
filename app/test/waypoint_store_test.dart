@@ -62,6 +62,11 @@ void main() {
         'lng': -77.5,
         'notes': '',
         'createdAt': '2026-09-10T12:00:00.000Z',
+        'category': 'other',
+        'tags': <String>[],
+        // No 'colour' key: this waypoint follows its category, and writing the
+        // resolved colour here would make that indistinguishable from a colour
+        // the user picked.
         'track': <Object>[],
       });
 
