@@ -160,6 +160,15 @@ evidence from one run, not repo content.
   owm.ps1 gps 45.095 -75.748
   ```
 
+  Sensors-only has a cost worth knowing before you reach for it: with network
+  location off, Play services puts up "For a better experience, turn on device
+  location" every time the app asks for a fix, and the dialog appears *after* the
+  tap that triggered it, so the tap looks like it did nothing and the next tap
+  lands on the dialog. Recording a track never starts. Leaving `location_mode` at
+  `3` with wifi and data still disabled avoids the dialog and works just as well,
+  because what makes the mock fix win is Play services having no network position
+  to prefer rather than the mode itself.
+
   Restore all three afterwards (`enable`, `enable`, `location_mode 3`) or the
   next run's basemap and weather checks fail for reasons that have nothing to do
   with the change under test. Re-send `gps` a few times a second apart and allow

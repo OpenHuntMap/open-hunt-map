@@ -37,6 +37,11 @@ class OverlayController extends ChangeNotifier {
 
   static const _colorPrefKey = 'overlay.colors';
 
+  /// Only the layers turned *off* are stored, so a layer added in a later build
+  /// arrives visible rather than hidden by a preference written before it
+  /// existed.
+  static const _hiddenPrefKey = 'overlay.hidden';
+
   final Map<String, bool> visibility;
   final Map<String, String> _colorOverrides = {};
   MapLibreMapController? _map;
@@ -83,19 +88,26 @@ class OverlayController extends ChangeNotifier {
 
   bool isCustomColor(String id) => _colorOverrides.containsKey(id);
 
+  /// Must be awaited before the layers are added, because [_addLayer] reads
+  /// [visibility] to decide what to paint: loading it afterwards would draw
+  /// every layer and then take some away.
   Future<void> loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
+    for (final id in prefs.getStringList(_hiddenPrefKey) ?? const <String>[]) {
+      if (visibility.containsKey(id)) visibility[id] = false;
+    }
     final raw = prefs.getString(_colorPrefKey);
-    if (raw == null) return;
-    try {
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      for (final entry in decoded.entries) {
-        if (_styles.containsKey(entry.key)) {
-          _colorOverrides[entry.key] = entry.value.toString();
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        for (final entry in decoded.entries) {
+          if (_styles.containsKey(entry.key)) {
+            _colorOverrides[entry.key] = entry.value.toString();
+          }
         }
+      } catch (_) {
+        // A corrupt preference is not worth failing startup over.
       }
-    } catch (_) {
-      // A corrupt preference is not worth failing startup over.
     }
     notifyListeners();
   }
@@ -164,6 +176,16 @@ class OverlayController extends ChangeNotifier {
   Future<void> setVisible(String id, bool value) async {
     visibility[id] = value;
     notifyListeners();
+    final hidden = [
+      for (final layer in layerOrder)
+        if (visibility[layer] == false) layer,
+    ];
+    final prefs = await SharedPreferences.getInstance();
+    if (hidden.isEmpty) {
+      await prefs.remove(_hiddenPrefKey);
+    } else {
+      await prefs.setStringList(_hiddenPrefKey, hidden);
+    }
     final map = _map;
     if (map == null || !_added.contains(id)) return;
     final style = _styles[id]!;

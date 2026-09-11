@@ -14,11 +14,14 @@ import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
 import '../tracks/follow_bar.dart';
+import '../tracks/recording_bar.dart';
 import '../tracks/track_follow.dart';
 import '../tracks/track_layers.dart';
 import '../tracks/track_math.dart';
 import '../tracks/track_style.dart';
+import '../waypoints/waypoint_card.dart';
 import '../waypoints/waypoint_category.dart';
+import '../waypoints/waypoint_editor.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
 import 'basemap.dart';
@@ -44,6 +47,13 @@ class _MapShellState extends State<MapShell> {
   /// list and wants to see what is around it rather than where it is.
   static const _waypointRevealZoom = 15.0;
   static const _landInfoTipDismissedKey = 'land_info_tip_dismissed';
+  static const _provinceKey = 'map.province';
+
+  /// Remembered because forgetting it is worse than an annoyance. Someone who
+  /// deliberately switches to the offline basemap before walking in would
+  /// otherwise find the app back on Streets, which needs a network, at exactly
+  /// the moment there is none.
+  static const _basemapKey = 'map.basemap';
 
   final _loader = ProvinceLoader();
   final _overlays = OverlayController();
@@ -100,8 +110,12 @@ class _MapShellState extends State<MapShell> {
   final List<TrackPoint> _activeTrack = [];
 
   /// Fixes discarded during the current recording for being too imprecise.
-  /// Reported on save; see [_worstUsableAccuracyMetres].
+  /// Reported live in the recording bar and again on save; see
+  /// [_worstUsableAccuracyMetres].
   var _rejectedFixes = 0;
+
+  /// When the current recording began. Null when not recording.
+  DateTime? _recordingStartedAt;
 
   /// The track being followed, or null when not following one.
   Waypoint? _followTrack;
@@ -152,6 +166,13 @@ class _MapShellState extends State<MapShell> {
       await _overlays.loadPreferences();
       final prefs = await SharedPreferences.getInstance();
       final tipDismissed = prefs.getBool(_landInfoTipDismissedKey) ?? false;
+      // Both fall back rather than validating, because a province can be
+      // dropped from provinces.json and a basemap renamed, and neither is worth
+      // failing a launch over.
+      final savedProvince = prefs.getString(_provinceKey);
+      final savedBasemap = BasemapKind.values
+          .where((kind) => kind.name == prefs.getString(_basemapKey))
+          .firstOrNull;
       final fix = await launchFix;
       if (!mounted) return;
       setState(() {
@@ -159,6 +180,11 @@ class _MapShellState extends State<MapShell> {
         _styleCache[BasemapKind.satellite] = satellite;
         _styleCache[BasemapKind.hybrid] = hybrid;
         _provinces = provinces;
+        if (savedProvince != null &&
+            provinces.any((province) => province.id == savedProvince)) {
+          _provinceId = savedProvince;
+        }
+        if (savedBasemap != null) _basemap = savedBasemap;
         _showLandInfoTip = !tipDismissed;
         // This setState is the one that lets the map build, so setting the
         // camera here means the very first frame is already on the user.
@@ -619,19 +645,38 @@ class _MapShellState extends State<MapShell> {
               ),
             ),
           // Along the top, because the bottom edge already carries the basemap
-          // attribution, the zoom pair, locate and the record button, and this
-          // bar stays on screen for as long as the walk does.
-          if (_followTrack case final track?)
+          // attribution, the zoom pair, locate and the record button, and these
+          // bars stay on screen for as long as the walk does.
+          //
+          // Stacked in one column rather than positioned separately, because
+          // recording a new track while following an old one back out is a
+          // reasonable thing to be doing and two bars at top: 8 would sit on top
+          // of each other.
+          if (_recording || _followTrack != null)
             Positioned(
               left: 8,
               right: 8,
               top: 8,
-              child: FollowBar(
-                track: track,
-                reversed: _followReversed,
-                guidance: _followGuidance,
-                onReverse: _reverseFollowing,
-                onStop: _stopFollowing,
+              child: Column(
+                children: [
+                  if (_recordingStartedAt case final started? when _recording)
+                    RecordingBar(
+                      points: _activeTrack,
+                      startedAt: started,
+                      rejectedFixes: _rejectedFixes,
+                      onStop: _stopTrackRecording,
+                    ),
+                  if (_recording && _followTrack != null)
+                    const SizedBox(height: 8),
+                  if (_followTrack case final track?)
+                    FollowBar(
+                      track: track,
+                      reversed: _followReversed,
+                      guidance: _followGuidance,
+                      onReverse: _reverseFollowing,
+                      onStop: _stopFollowing,
+                    ),
+                ],
               ),
             ),
           if (_highlightedArea != null)
@@ -783,6 +828,8 @@ class _MapShellState extends State<MapShell> {
       _mapEpoch++;
       _map = null;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_basemapKey, next.name);
   }
 
   Future<void> _dismissLandInfoTip() async {
@@ -914,7 +961,12 @@ class _MapShellState extends State<MapShell> {
       _activeTrack
         ..clear()
         ..add(_trackPointFrom(position));
-      if (mounted) setState(() => _recording = true);
+      if (mounted) {
+        setState(() {
+          _recording = true;
+          _recordingStartedAt = DateTime.now();
+        });
+      }
       await _syncActiveTrackSource();
       _startPositionStream();
     } catch (error) {
@@ -1005,6 +1057,7 @@ class _MapShellState extends State<MapShell> {
     final rejected = _rejectedFixes;
     _activeTrack.clear();
     _rejectedFixes = 0;
+    _recordingStartedAt = null;
     if (mounted) setState(() => _recording = false);
     await _syncActiveTrackSource();
     // One point is not a line, and saving it would leave a track in the list
@@ -1594,6 +1647,8 @@ class _MapShellState extends State<MapShell> {
       _error = null;
       _identifiedLocation = null;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_provinceKey, id);
     await _loadProvinceData(id);
     if (!mounted || id != _provinceId) return;
     await _clearIdentifyPin();
@@ -1630,12 +1685,13 @@ class _MapShellState extends State<MapShell> {
     Annotation? annotation,
   ) {
     // Backup path when a fill/line absorbs the tap (even with
-    // featureTapsTriggersMapClick). Ignore our own pin/waypoints.
-    if (layerId == 'owm-identify-circle' ||
-        layerId == 'owm-waypoint-symbols' ||
-        layerId == 'owm-waypoint-dots') {
-      return;
-    }
+    // featureTapsTriggersMapClick).
+    //
+    // Waypoint and track layers are no longer excluded here: identify now
+    // resolves the user's own data first, so letting them through is what opens
+    // the card. Only the identify pin is, because tapping the marker the last
+    // answer left behind should not ask the same question again.
+    if (layerId == 'owm-identify-circle') return;
     _identify(point, coordinates);
   }
 
@@ -1691,9 +1747,8 @@ class _MapShellState extends State<MapShell> {
   }
 
   Future<void> _identify(math.Point<double> point, LatLng coordinates) async {
-    final data = _provinceData;
     final map = _map;
-    if (data == null || map == null) return;
+    if (map == null) return;
     // One tap on a fill arrives twice: once as a map click and once through the
     // feature-tap backup path above. Both then race to replace the pin layer,
     // and the loser throws "layer already exists". Keyed on the point rather
@@ -1701,26 +1756,85 @@ class _MapShellState extends State<MapShell> {
     if (_identifying == point) return;
     _identifying = point;
     try {
-      final hits = await _hitsAt(map, point);
-      await _setIdentifyPin(coordinates);
-      if (!mounted) return;
-      await showLandInfoSheet(
-        context,
-        info: LandInfo(
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          hits: hits,
-          attribution: '${data.manifest.license}. ${data.manifest.licenseUrl}',
-        ),
-        provinceId: _provinceId,
-        loader: _loader,
-        manifest: data.manifest,
-        seasons: data.seasons,
-        layers: data.layers,
-      );
+      // The user's own data wins, and is checked before the province guard
+      // below: a waypoint is theirs whether or not a pack is installed, and it
+      // is the thing they aimed at.
+      final mine = await _ownFeatureAt(map, point);
+      if (mine != null) {
+        await _openWaypointCard(mine, coordinates);
+        return;
+      }
+      await _showLandInfo(map, point, coordinates);
     } finally {
       _identifying = null;
     }
+  }
+
+  /// Land Info for a spot, with no regard for what the user has saved there.
+  ///
+  /// Separate from [_identify] so the card's own Land Info action can reach it
+  /// without going back through the check that opened the card.
+  Future<void> _showLandInfo(
+    MapLibreMapController map,
+    math.Point<double> point,
+    LatLng coordinates,
+  ) async {
+    final data = _provinceData;
+    if (data == null) return;
+    final hits = await _hitsAt(map, point);
+    await _setIdentifyPin(coordinates);
+    if (!mounted) return;
+    await showLandInfoSheet(
+      context,
+      info: LandInfo(
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        hits: hits,
+        attribution: '${data.manifest.license}. ${data.manifest.licenseUrl}',
+      ),
+      provinceId: _provinceId,
+      loader: _loader,
+      manifest: data.manifest,
+      seasons: data.seasons,
+      layers: data.layers,
+    );
+  }
+
+  /// The user's own waypoint or track under [point], or null for bare ground.
+  ///
+  /// Points are asked about before lines, so a waypoint standing on a track is
+  /// the answer rather than the track under it: it is the smaller target, so
+  /// hitting it is the more deliberate act.
+  Future<Waypoint?> _ownFeatureAt(
+    MapLibreMapController map,
+    math.Point<double> point,
+  ) async {
+    for (final layerId in [
+      'owm-waypoint-symbols',
+      'owm-waypoint-dots',
+      'owm-follow-markers',
+      'owm-follow-line',
+      _savedMarkerLayer,
+      for (final stroke in TrackStroke.values) _savedLineLayer(stroke),
+    ]) {
+      final List<dynamic> found;
+      try {
+        found = await map.queryRenderedFeatures(point, [layerId], null);
+      } catch (_) {
+        // The layer may not exist: the marker layers are only added when
+        // something wants them, and a tap can race a style reload.
+        continue;
+      }
+      for (final feature in found) {
+        if (feature is! Map<String, dynamic>) continue;
+        final id = (feature['properties'] as Map?)?['id']?.toString();
+        if (id == null) continue;
+        for (final waypoint in _waypoints.items) {
+          if (waypoint.id == id) return waypoint;
+        }
+      }
+    }
+    return null;
   }
 
   /// Resolves what sits under [point] by asking MapLibre, which already holds
@@ -1839,6 +1953,45 @@ class _MapShellState extends State<MapShell> {
     if (reveal != null) await _revealWaypoint(reveal);
     if (request case FollowTrack(:final track, :final reversed)) {
       await _startFollowing(track, reversed: reversed);
+    }
+  }
+
+  /// The card for one of the user's own features, and whatever it asks for next.
+  Future<void> _openWaypointCard(
+    Waypoint waypoint,
+    LatLng coordinates,
+  ) async {
+    final request = await showWaypointCard(context, waypoint);
+    if (!mounted || request == null) return;
+    switch (request) {
+      case EditFromCard(waypoint: final subject):
+        final edited = await showWaypointEditor(
+          context,
+          existing: subject,
+          knownTags: _waypoints.tagsInUse,
+          isNew: false,
+        );
+        if (edited == null) return;
+        await _waypoints.update(edited);
+        await _syncWaypointSource();
+        // The followed track is drawn from its own copy, so restyling the one
+        // being followed would otherwise not show until following stopped.
+        if (_followTrack?.id == edited.id) {
+          setState(() => _followTrack = edited);
+          await _syncFollowSource();
+        }
+      case FollowFromCard(:final track, :final reversed):
+        await _startFollowing(track, reversed: reversed);
+      case LandInfoFromCard():
+        final map = _map;
+        if (map == null) return;
+        final point = await map.toScreenLocation(coordinates);
+        if (!mounted) return;
+        await _showLandInfo(
+          map,
+          math.Point<double>(point.x.toDouble(), point.y.toDouble()),
+          coordinates,
+        );
     }
   }
 
