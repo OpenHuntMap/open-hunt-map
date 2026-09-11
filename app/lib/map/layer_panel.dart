@@ -3,22 +3,9 @@ import 'package:flutter/material.dart';
 import 'overlay_controller.dart';
 
 class LayerPanel extends StatelessWidget {
-  const LayerPanel({
-    super.key,
-    required this.controller,
-    required this.trackArrows,
-  });
+  const LayerPanel({super.key, required this.controller});
 
   final OverlayController controller;
-
-  /// Whether saved tracks are drawn with direction arrows along them.
-  ///
-  /// Lives here rather than on a settings screen because this sheet is already
-  /// the answer to "what is on my map and how does it look", and a notifier
-  /// rather than a value and a callback so the checkbox redraws on tap: the
-  /// sheet is built once by [showModalBottomSheet] and does not rebuild when the
-  /// map shell does.
-  final ValueNotifier<bool> trackArrows;
 
   static const labels = {
     'crown_land': 'Crown land parcels',
@@ -90,25 +77,6 @@ class LayerPanel extends StatelessWidget {
                           customised: controller.isCustomColor(id),
                           onTap: () => _pickColor(context, id),
                         ),
-                      ),
-                    ),
-                    const Divider(height: 24),
-                    Text(
-                      'Your tracks',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: trackArrows,
-                      builder: (context, on, _) => CheckboxListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text('Direction arrows'),
-                        subtitle: const Text(
-                          'Arrows along each track showing which way it runs.',
-                        ),
-                        value: on,
-                        onChanged: (value) => trackArrows.value = value ?? true,
                       ),
                     ),
                   ],

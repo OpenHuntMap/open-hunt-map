@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../tracks/track_math.dart';
+import '../tracks/track_preview.dart';
+import '../tracks/track_style.dart';
 import 'waypoint_category.dart';
 import 'waypoint_store.dart';
 
@@ -58,6 +60,8 @@ class _WaypointEditorState extends State<WaypointEditor> {
   late WaypointCategory _category;
   late WaypointColour? _colour;
   late List<String> _tags;
+  late TrackStroke _stroke;
+  late TrackMarker _marker;
 
   @override
   void initState() {
@@ -67,6 +71,8 @@ class _WaypointEditorState extends State<WaypointEditor> {
     _category = widget.existing.category;
     _colour = widget.existing.colour;
     _tags = [...widget.existing.tags];
+    _stroke = widget.existing.stroke;
+    _marker = widget.existing.marker;
   }
 
   @override
@@ -101,9 +107,15 @@ class _WaypointEditorState extends State<WaypointEditor> {
         tags: _tags,
         colour: _colour,
         clearColour: _colour == null,
+        stroke: _stroke,
+        marker: _marker,
       ),
     );
   }
+
+  /// What the line will actually be drawn in, which is not [_colour]: null there
+  /// means "follow the category", and a preview has to resolve that to see it.
+  Color get _lineColour => _colour?.value ?? _category.colour;
 
   Future<void> _addTag() async {
     final controller = TextEditingController();
@@ -194,6 +206,12 @@ class _WaypointEditorState extends State<WaypointEditor> {
                   for (final category in _offered)
                     ChoiceChip(
                       selected: category == _category,
+                      // Material draws the selected checkmark inside the avatar
+                      // behind a scrim, which turns the glyph into an
+                      // unreadable grey disc — and the glyph is the only reason
+                      // this chip has an avatar. The filled container says
+                      // "selected" on its own.
+                      showCheckmark: false,
                       // The glyph is on the chip because it is the glyph that
                       // will be on the map, and picking a category blind and
                       // then discovering its icon is a worse way round.
@@ -236,6 +254,57 @@ class _WaypointEditorState extends State<WaypointEditor> {
                 ],
               ),
             ),
+            // Only for lines. A point has no stroke to pattern and no direction
+            // to mark, and offering it either would suggest otherwise.
+            if (_isLine) ...[
+              _label(theme, 'Line'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TrackPreview(
+                  colour: _lineColour,
+                  stroke: _stroke,
+                  marker: _marker,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final stroke in TrackStroke.values)
+                      ChoiceChip(
+                        selected: stroke == _stroke,
+                        label: Text(stroke.label),
+                        onSelected: (_) => setState(() => _stroke = stroke),
+                      ),
+                  ],
+                ),
+              ),
+              _label(theme, 'Direction'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final marker in TrackMarker.values)
+                      ChoiceChip(
+                        selected: marker == _marker,
+                        // See the category chips: the checkmark would sit on top
+                        // of the shape being chosen.
+                        showCheckmark: false,
+                        avatar: marker.icon == null
+                            ? null
+                            : Icon(marker.icon, size: 18),
+                        label: Text(marker.label),
+                        onSelected: (_) => setState(() => _marker = marker),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             _label(theme, 'Tags'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
