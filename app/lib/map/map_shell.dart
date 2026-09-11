@@ -43,6 +43,7 @@ class _MapShellState extends State<MapShell> {
   /// list and wants to see what is around it rather than where it is.
   static const _waypointRevealZoom = 15.0;
   static const _landInfoTipDismissedKey = 'land_info_tip_dismissed';
+  static const _trackArrowsKey = 'tracks.arrows';
 
   final _loader = ProvinceLoader();
   final _overlays = OverlayController();
@@ -121,16 +122,33 @@ class _MapShellState extends State<MapShell> {
   /// rather than on every fix for as long as someone stands there.
   var _arrivalAnnounced = false;
 
+  /// Arrows on by default: a track without them says where it went but not which
+  /// way, and which way is the whole point of following one back out.
+  final _trackArrows = ValueNotifier(true);
+
   @override
   void initState() {
     super.initState();
+    _trackArrows.addListener(_applyTrackArrows);
     _bootstrap();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
+    _trackArrows.removeListener(_applyTrackArrows);
+    _trackArrows.dispose();
     super.dispose();
+  }
+
+  /// Redraws both track layers, rather than hiding an arrow layer that may not
+  /// have been added: the sync methods drop and rebuild, so off simply means the
+  /// arrow layer is never created.
+  Future<void> _applyTrackArrows() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_trackArrowsKey, _trackArrows.value);
+    await _syncSavedTrackSource();
+    await _syncFollowSource();
   }
 
   Future<void> _bootstrap() async {
@@ -151,6 +169,9 @@ class _MapShellState extends State<MapShell> {
       await _overlays.loadPreferences();
       final prefs = await SharedPreferences.getInstance();
       final tipDismissed = prefs.getBool(_landInfoTipDismissedKey) ?? false;
+      // Read before the style loads, so the first draw already honours it rather
+      // than drawing arrows and then taking them away.
+      _trackArrows.value = prefs.getBool(_trackArrowsKey) ?? true;
       final fix = await launchFix;
       if (!mounted) return;
       setState(() {
@@ -1363,8 +1384,9 @@ class _MapShellState extends State<MapShell> {
     MapLibreMapController map, {
     String source = 'owm-saved-tracks',
     String layer = 'owm-saved-track-arrows',
-  }) =>
-      map.addSymbolLayer(
+  }) async {
+    if (!_trackArrows.value) return;
+    return map.addSymbolLayer(
         source,
         layer,
         SymbolLayerProperties(
@@ -1395,6 +1417,7 @@ class _MapShellState extends State<MapShell> {
           iconIgnorePlacement: true,
         ),
       );
+  }
 
   /// The followed track, drawn heavier and pointing the way being walked.
   Future<void> _syncFollowSource() async {
@@ -1804,7 +1827,8 @@ class _MapShellState extends State<MapShell> {
       // Without this the sheet is capped near half the screen, which is shorter
       // than the layer list. The panel constrains its own height.
       isScrollControlled: true,
-      builder: (_) => LayerPanel(controller: _overlays),
+      builder: (_) =>
+          LayerPanel(controller: _overlays, trackArrows: _trackArrows),
     );
   }
 
