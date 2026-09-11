@@ -7,6 +7,26 @@ import 'waypoint_category.dart';
 import 'waypoint_editor.dart';
 import 'waypoint_store.dart';
 
+/// What the list is asking the map to do as it closes.
+///
+/// The page used to pop a bare [Waypoint], which could only ever mean "show me
+/// this". Following needs a direction as well, and a sealed result makes the
+/// map's switch exhaustive so a third request later cannot be silently ignored.
+sealed class WaypointsRequest {
+  const WaypointsRequest();
+}
+
+class RevealWaypoint extends WaypointsRequest {
+  const RevealWaypoint(this.waypoint);
+  final Waypoint waypoint;
+}
+
+class FollowTrack extends WaypointsRequest {
+  const FollowTrack(this.track, {required this.reversed});
+  final Waypoint track;
+  final bool reversed;
+}
+
 class WaypointsPage extends StatefulWidget {
   const WaypointsPage({
     super.key,
@@ -286,11 +306,23 @@ class _WaypointsPageState extends State<WaypointsPage> {
             tooltip: 'More',
             onSelected: (choice) => switch (choice) {
               'edit' => _edit(waypoint),
+              'follow' => _follow(waypoint, reversed: false),
+              'reverse' => _follow(waypoint, reversed: true),
               _ => _delete(waypoint),
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+              // Both directions are offered outright rather than behind a
+              // prompt after starting: which way you are walking it is the whole
+              // decision, and it is known before you set off.
+              if (isTrack) ...[
+                const PopupMenuItem(value: 'follow', child: Text('Follow')),
+                const PopupMenuItem(
+                  value: 'reverse',
+                  child: Text('Follow in reverse'),
+                ),
+              ],
+              const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],
@@ -299,7 +331,13 @@ class _WaypointsPageState extends State<WaypointsPage> {
   }
 
   /// Hands the waypoint back to the map, which owns the camera.
-  void _reveal(Waypoint waypoint) => Navigator.pop(context, waypoint);
+  void _reveal(Waypoint waypoint) =>
+      Navigator.pop(context, RevealWaypoint(waypoint));
+
+  /// Closes the list and asks the map to start following, since the map is where
+  /// following happens and staying on this page to watch it would be useless.
+  void _follow(Waypoint track, {required bool reversed}) =>
+      Navigator.pop(context, FollowTrack(track, reversed: reversed));
 
   /// An empty list here would otherwise read as "you never saved anything".
   void _warnUnreadable(String path) => showDialog<void>(

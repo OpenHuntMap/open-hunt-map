@@ -70,21 +70,28 @@ void main() {
     }
   }
 
-  /// Pushes the page the way the map shell does and reports what it popped, so
-  /// a test can assert on the waypoint the map would have flown to.
-  Future<Waypoint?> pumpPage(WidgetTester tester, WaypointStore store) async {
-    Waypoint? popped;
+  /// Pushes the page the way the map shell does and collects what it pops.
+  ///
+  /// The list is returned rather than the request itself because the pop happens
+  /// long after this returns: the caller taps something, then reads the list.
+  Future<List<WaypointsRequest?>> pumpPage(
+    WidgetTester tester,
+    WaypointStore store,
+  ) async {
+    final popped = <WaypointsRequest?>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => ElevatedButton(
             onPressed: () async {
-              popped = await Navigator.push<Waypoint>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => WaypointsPage(
-                    store: store,
-                    suggestedLocation: const LatLng(45, -77),
+              popped.add(
+                await Navigator.push<WaypointsRequest>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => WaypointsPage(
+                      store: store,
+                      suggestedLocation: const LatLng(45, -77),
+                    ),
                   ),
                 ),
               );
@@ -110,13 +117,18 @@ void main() {
         await store.add(point('1', 'Bonnechere stand'));
       });
 
-      await pumpPage(tester, store);
+      final popped = await pumpPage(tester, store);
       expect(find.text('Bonnechere stand'), findsOneWidget);
 
       await tester.tap(find.text('Bonnechere stand'));
       await settle(tester);
 
       expect(find.byType(WaypointsPage), findsNothing);
+      expect(popped.single, isA<RevealWaypoint>());
+      expect(
+        (popped.single! as RevealWaypoint).waypoint.name,
+        'Bonnechere stand',
+      );
     });
 
     testWidgets('so does the explicit button', (tester) async {
@@ -126,11 +138,99 @@ void main() {
         await store.add(point('1', 'Bonnechere stand'));
       });
 
-      await pumpPage(tester, store);
+      final popped = await pumpPage(tester, store);
       await tester.tap(find.byTooltip('Show on map'));
       await settle(tester);
 
       expect(find.byType(WaypointsPage), findsNothing);
+      expect(popped.single, isA<RevealWaypoint>());
+    });
+  });
+
+  group('following a track from the list', () {
+    /// A two-point line, which is the least that can be followed.
+    Waypoint walkedTrack(String id, String name) => Waypoint(
+      id: id,
+      name: name,
+      latitude: 45,
+      longitude: -77,
+      notes: '',
+      createdAt: DateTime.utc(2026, 9, 11),
+      category: WaypointCategory.trail,
+      track: const [
+        TrackPoint(latitude: 45, longitude: -77),
+        TrackPoint(latitude: 45.01, longitude: -77),
+      ],
+    );
+
+    testWidgets('a waypoint is offered no way to be followed', (tester) async {
+      // There is no line to walk, and an option that could only ever fail is
+      // worse than no option.
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.add(point('1', 'Bonnechere stand'));
+      });
+
+      await pumpPage(tester, store);
+      await tester.tap(find.byTooltip('More'));
+      await settle(tester);
+
+      expect(find.text('Follow'), findsNothing);
+      expect(find.text('Follow in reverse'), findsNothing);
+      expect(find.text('Edit'), findsOneWidget);
+    });
+
+    testWidgets('a track asks the map to follow it forwards', (tester) async {
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.add(walkedTrack('t1', 'Ridge loop'));
+      });
+
+      final popped = await pumpPage(tester, store);
+      await tester.tap(find.byTooltip('More'));
+      await settle(tester);
+      await tester.tap(find.text('Follow'));
+      await settle(tester);
+
+      expect(popped.single, isA<FollowTrack>());
+      final request = popped.single! as FollowTrack;
+      expect(request.track.name, 'Ridge loop');
+      expect(request.reversed, isFalse);
+    });
+
+    testWidgets('and in reverse when that is what was picked', (tester) async {
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.add(walkedTrack('t1', 'Ridge loop'));
+      });
+
+      final popped = await pumpPage(tester, store);
+      await tester.tap(find.byTooltip('More'));
+      await settle(tester);
+      await tester.tap(find.text('Follow in reverse'));
+      await settle(tester);
+
+      // The direction is decided here and carried, rather than the map being
+      // asked to follow and then prompting for a direction it already knows.
+      expect((popped.single! as FollowTrack).reversed, isTrue);
+    });
+
+    testWidgets('the row shows how far and how long, not a point count', (
+      tester,
+    ) async {
+      final store = WaypointStore();
+      await tester.runAsync(() async {
+        await store.load();
+        await store.add(walkedTrack('t1', 'Ridge loop'));
+      });
+
+      await pumpPage(tester, store);
+
+      expect(find.textContaining('1.1 km'), findsOneWidget);
+      expect(find.textContaining('track point'), findsNothing);
     });
   });
 

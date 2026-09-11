@@ -239,6 +239,21 @@ double? headingAt(List<TrackPoint> points, int segmentIndex) {
   return bearingDegrees(a.latitude, a.longitude, b.latitude, b.longitude);
 }
 
+const _compassPoints = [
+  'N', 'NNE', 'NE', 'ENE',
+  'E', 'ESE', 'SE', 'SSE',
+  'S', 'SSW', 'SW', 'WSW',
+  'W', 'WNW', 'NW', 'NNW',
+];
+
+/// The 16-point compass name for a bearing.
+///
+/// Paired with the degrees rather than replacing them: the degrees are what a
+/// compass is set to, and the name is what makes the number sanity-checkable at
+/// a glance when the phone is being read in the dark.
+String compassPoint(double bearing) =>
+    _compassPoints[((((bearing % 360) + 360) % 360 + 11.25) / 22.5).floor() % 16];
+
 /// Formats a distance the way a person reads one off a map.
 ///
 /// Metres below a kilometre because that is the resolution that matters when

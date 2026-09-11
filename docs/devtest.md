@@ -142,10 +142,29 @@ evidence from one run, not repo content.
   services' *fused* provider, which happily serves a cached fix hours old and
   thousands of kilometres away while `dumpsys location` shows the gps provider as
   `ProviderRequest[OFF]`. Repeating the fix during an active request does not
-  dislodge it. Check what the app actually got with
+  dislodge it. It is worse than a stale reading, because the fused answer is
+  derived from the host's network and so lands somewhere plausibly nearby — a
+  follow-along bar read "35 km off the track" for a fix that was exactly on it,
+  which looks far more like a bug in your own projection maths than like the
+  emulator lying about where the phone is.
+
+  Check what the app actually got with
   `owm.ps1 shell "dumpsys location" | Select-String fused` before trusting where
-  you think you are; if it is wrong, revoke the location permission and navigate
-  from the province's launch anchor by pan and zoom instead.
+  you think you are. To make the mock fix reach the app, leave Play services no
+  network position to prefer:
+
+  ```powershell
+  owm.ps1 shell "svc wifi disable"
+  owm.ps1 shell "svc data disable"
+  owm.ps1 shell "settings put secure location_mode 1"   # sensors only
+  owm.ps1 gps 45.095 -75.748
+  ```
+
+  Restore all three afterwards (`enable`, `enable`, `location_mode 3`) or the
+  next run's basemap and weather checks fail for reasons that have nothing to do
+  with the change under test. Re-send `gps` a few times a second apart and allow
+  a few seconds before the screenshot: the app can otherwise be read mid-move,
+  which shows up as a distance a few metres off the one you calculated.
 - **Quote shell commands carrying flags:** `owm.ps1 shell "ping -c 2 8.8.8.8"`.
   PowerShell binds a bare `-c` to the script's own parameters first.
 - **`tap` used to pick one of several equal matches, silently.** Offline packs

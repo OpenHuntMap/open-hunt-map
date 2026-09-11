@@ -13,6 +13,8 @@ import '../data/province_loader.dart';
 import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
+import '../tracks/follow_bar.dart';
+import '../tracks/track_follow.dart';
 import '../tracks/track_math.dart';
 import '../tracks/track_style.dart';
 import '../waypoints/waypoint_category.dart';
@@ -99,6 +101,25 @@ class _MapShellState extends State<MapShell> {
   /// Fixes discarded during the current recording for being too imprecise.
   /// Reported on save; see [_worstUsableAccuracyMetres].
   var _rejectedFixes = 0;
+
+  /// The track being followed, or null when not following one.
+  Waypoint? _followTrack;
+  var _followReversed = false;
+
+  /// [_followTrack]'s points in the direction being walked, with their running
+  /// distances. Held rather than recomputed because both are wanted on every
+  /// fix and a long track has thousands of points.
+  List<TrackPoint> _followPoints = const [];
+  List<double> _followCumulative = const [];
+  FollowGuidance? _followGuidance;
+
+  /// The last fix seen, so reversing direction can re-answer immediately instead
+  /// of leaving the bar blank until the next one arrives.
+  Position? _lastPosition;
+
+  /// Whether arriving at the end has already been announced, so it is said once
+  /// rather than on every fix for as long as someone stands there.
+  var _arrivalAnnounced = false;
 
   @override
   void initState() {
@@ -596,6 +617,22 @@ class _MapShellState extends State<MapShell> {
                 ),
               ),
             ),
+          // Along the top, because the bottom edge already carries the basemap
+          // attribution, the zoom pair, locate and the record button, and this
+          // bar stays on screen for as long as the walk does.
+          if (_followTrack case final track?)
+            Positioned(
+              left: 8,
+              right: 8,
+              top: 8,
+              child: FollowBar(
+                track: track,
+                reversed: _followReversed,
+                guidance: _followGuidance,
+                onReverse: _reverseFollowing,
+                onStop: _stopFollowing,
+              ),
+            ),
           if (_highlightedArea != null)
             Positioned(
               left: 8,
@@ -878,20 +915,43 @@ class _MapShellState extends State<MapShell> {
         ..add(_trackPointFrom(position));
       if (mounted) setState(() => _recording = true);
       await _syncActiveTrackSource();
-      _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 5,
-        ),
-      ).listen(
-        _recordPosition,
-        onError: (Object error) {
-          _toast('Track recording error: $error');
-        },
-      );
+      _startPositionStream();
     } catch (error) {
       _toast('Could not start track recording: $error');
     }
+  }
+
+  /// One position stream for both recording and following.
+  ///
+  /// They can run at once — recording the way in while following a route back out
+  /// is an ordinary thing to want — and two subscriptions at high accuracy would
+  /// double the GPS work for the same fixes.
+  void _startPositionStream() {
+    if (_positionSubscription != null) return;
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        // Standing still otherwise piles up fixes at one spot, which inflates a
+        // recorded track's point count and its length with pure noise.
+        distanceFilter: 5,
+      ),
+    ).listen(
+      _onPosition,
+      onError: (Object error) => _toast('Location error: $error'),
+    );
+  }
+
+  /// Drops the stream once neither recording nor following wants it.
+  Future<void> _stopPositionStreamIfIdle() async {
+    if (_recording || _followTrack != null) return;
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+  }
+
+  void _onPosition(Position position) {
+    _lastPosition = position;
+    if (_recording) _recordPosition(position);
+    if (_followTrack != null) _updateFollow(position);
   }
 
   /// The worst horizontal accuracy a fix may report and still be recorded.
@@ -938,8 +998,8 @@ class _MapShellState extends State<MapShell> {
   }
 
   Future<void> _stopTrackRecording() async {
-    await _positionSubscription?.cancel();
-    _positionSubscription = null;
+    _recording = false;
+    await _stopPositionStreamIfIdle();
     final points = List<TrackPoint>.from(_activeTrack);
     final rejected = _rejectedFixes;
     _activeTrack.clear();
@@ -980,6 +1040,92 @@ class _MapShellState extends State<MapShell> {
     }
     if (rejected > 0) summary.write(' · dropped $rejected poor fix(es)');
     _toast(summary.toString());
+  }
+
+  Future<void> _startFollowing(
+    Waypoint track, {
+    required bool reversed,
+  }) async {
+    if (track.track.length < 2) {
+      _toast('"${track.name}" has no line to follow.');
+      return;
+    }
+    if (!await _ensureLocationPermission('follow a track')) return;
+    await _enableMyLocationPuck();
+    if (!mounted) return;
+    setState(() {
+      _followTrack = track;
+      _followReversed = reversed;
+      _followPoints = orientTrack(track.track, reversed: reversed);
+      _followCumulative = cumulativeMetres(_followPoints);
+      _followGuidance = null;
+      _arrivalAnnounced = false;
+    });
+    // The whole track first, so the user can see what they have committed to
+    // before the camera is anywhere near them.
+    await _revealWaypoint(track);
+    await _syncFollowSource();
+    // Drawn without the followed track, so its arrows come only from the follow
+    // layer and point the way being walked rather than the way it was recorded.
+    await _syncSavedTrackSource();
+    _startPositionStream();
+    // Seeded from a fix of our own rather than waiting for the stream, which with
+    // a 5 m filter may not emit for as long as the user stands still reading it.
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      _lastPosition = position;
+      _updateFollow(position);
+    } catch (_) {
+      // The bar says it is waiting for a fix, which is true and is all we know.
+    }
+  }
+
+  Future<void> _stopFollowing() async {
+    setState(() {
+      _followTrack = null;
+      _followPoints = const [];
+      _followCumulative = const [];
+      _followGuidance = null;
+    });
+    await _stopPositionStreamIfIdle();
+    await _syncFollowSource();
+    await _syncSavedTrackSource();
+  }
+
+  /// Turns around without leaving the track.
+  Future<void> _reverseFollowing() async {
+    final track = _followTrack;
+    if (track == null) return;
+    setState(() {
+      _followReversed = !_followReversed;
+      _followPoints = orientTrack(track.track, reversed: _followReversed);
+      _followCumulative = cumulativeMetres(_followPoints);
+      _arrivalAnnounced = false;
+    });
+    // Re-drawn because the arrows have to turn round with the decision.
+    await _syncFollowSource();
+    final position = _lastPosition;
+    if (position != null) _updateFollow(position);
+  }
+
+  void _updateFollow(Position position) {
+    if (_followTrack == null) return;
+    final guidance = guidanceAlong(
+      _followPoints,
+      position.latitude,
+      position.longitude,
+      cumulative: _followCumulative,
+    );
+    if (mounted) setState(() => _followGuidance = guidance);
+    _syncFollowPositionSource();
+    if (guidance != null && guidance.arrived && !_arrivalAnnounced) {
+      _arrivalAnnounced = true;
+      _toast('End of "${_followTrack!.name}".');
+    }
   }
 
   String _formatTrackName(DateTime value) {
@@ -1161,8 +1307,15 @@ class _MapShellState extends State<MapShell> {
   Future<void> _syncSavedTrackSource() async {
     final map = _map;
     if (!_styleReady || map == null) return;
+    // The followed track is drawn by the follow layers instead, so its arrows
+    // come from the direction being walked rather than the direction it was
+    // recorded in. Leaving it here too would put two sets of arrows on one line,
+    // pointing opposite ways whenever it is being followed in reverse.
+    final followedId = _followTrack?.id;
     final data = _trackFeatureCollection(
-      _waypoints.items.where((item) => item.track.isNotEmpty),
+      _waypoints.items.where(
+        (item) => item.track.isNotEmpty && item.id != followedId,
+      ),
     );
     // Arrows come off before the line, because a layer cannot be removed once
     // its source has gone and leaving it behind blocks the source from being
@@ -1205,11 +1358,15 @@ class _MapShellState extends State<MapShell> {
     }
   }
 
-  /// Repeated arrows along each track, showing which way it was walked.
-  Future<void> _addTrackArrowLayer(MapLibreMapController map) =>
+  /// Repeated arrows along each track, showing which way it runs.
+  Future<void> _addTrackArrowLayer(
+    MapLibreMapController map, {
+    String source = 'owm-saved-tracks',
+    String layer = 'owm-saved-track-arrows',
+  }) =>
       map.addSymbolLayer(
-        'owm-saved-tracks',
-        'owm-saved-track-arrows',
+        source,
+        layer,
         SymbolLayerProperties(
           iconImage: trackArrowImage,
           // Placed along the line, which is also what orients each arrow: the
@@ -1238,6 +1395,120 @@ class _MapShellState extends State<MapShell> {
           iconIgnorePlacement: true,
         ),
       );
+
+  /// The followed track, drawn heavier and pointing the way being walked.
+  Future<void> _syncFollowSource() async {
+    final map = _map;
+    if (!_styleReady || map == null) return;
+    for (final layer in const ['owm-follow-arrows', 'owm-follow-line']) {
+      try {
+        await map.removeLayer(layer);
+      } catch (_) {}
+    }
+    try {
+      await map.removeSource('owm-follow');
+    } catch (_) {}
+    final track = _followTrack;
+    if (track == null || _followPoints.length < 2) return;
+
+    await map.addSource(
+      'owm-follow',
+      GeojsonSourceProperties(
+        data: {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {
+                'id': track.id,
+                'colour': track.colourHex,
+                'arrow': arrowColourFor(track.displayColour),
+              },
+              'geometry': {
+                'type': 'LineString',
+                // Already oriented, which is what turns the arrows round.
+                'coordinates': [
+                  for (final point in _followPoints)
+                    [point.longitude, point.latitude],
+                ],
+              },
+            },
+          ],
+        },
+      ),
+    );
+    await map.addLineLayer(
+      'owm-follow',
+      'owm-follow-line',
+      const LineLayerProperties(
+        lineColor: ['get', 'colour'],
+        // Heavier than an unfollowed track, so which one is being followed is
+        // visible without reading the bar.
+        lineWidth: trackLineWidth + 3,
+        lineOpacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+    try {
+      await _addTrackArrowLayer(map, source: 'owm-follow', layer: 'owm-follow-arrows');
+    } catch (error) {
+      _toast('Track direction arrows could not be drawn: $error');
+    }
+  }
+
+  /// A dot on the line at the point the guidance is measured from.
+  ///
+  /// Worth drawing rather than trusting: every number in the bar is relative to
+  /// this spot, and if the app has put it somewhere absurd the user can see that
+  /// for themselves instead of being given a confident distance to nowhere. A
+  /// circle rather than a symbol so it still draws on a software GL stack, which
+  /// renders no symbol layers at all.
+  Future<void> _syncFollowPositionSource() async {
+    final map = _map;
+    if (!_styleReady || map == null) return;
+    final guidance = _followGuidance;
+    final data = {
+      'type': 'FeatureCollection',
+      'features': [
+        if (guidance != null)
+          {
+            'type': 'Feature',
+            'properties': {
+              'colour': arrowColourFor(
+                _followTrack?.displayColour ?? const Color(0xFF000000),
+              ),
+            },
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [guidance.longitude, guidance.latitude],
+            },
+          },
+      ],
+    };
+    try {
+      await map.setGeoJsonSource('owm-follow-position', data);
+      return;
+    } catch (_) {}
+    try {
+      await map.addSource(
+        'owm-follow-position',
+        GeojsonSourceProperties(data: data),
+      );
+      await map.addCircleLayer(
+        'owm-follow-position',
+        'owm-follow-position-dot',
+        const CircleLayerProperties(
+          circleRadius: 5,
+          circleColor: ['get', 'colour'],
+          circleStrokeWidth: 2,
+          circleStrokeColor: '#FFFFFF',
+        ),
+      );
+    } catch (_) {
+      // The bar still has every number in it; only the dot is missing.
+    }
+  }
 
   Future<void> _syncActiveTrackSource() async {
     final map = _map;
@@ -1538,7 +1809,7 @@ class _MapShellState extends State<MapShell> {
   }
 
   Future<void> _showWaypoints() async {
-    final reveal = await Navigator.push<Waypoint>(
+    final request = await Navigator.push<WaypointsRequest>(
       context,
       MaterialPageRoute(
         builder:
@@ -1549,11 +1820,20 @@ class _MapShellState extends State<MapShell> {
       ),
     );
     if (!mounted) return;
+    final reveal = switch (request) {
+      RevealWaypoint(:final waypoint) => waypoint,
+      // Following frames the track itself, so there is nothing left to reveal.
+      FollowTrack() => null,
+      null => null,
+    };
     await _syncWaypointSource();
     // Deleting a track from the list used to leave its line on the map until
     // the next style load, because only the point source was re-read here.
     await _syncSavedTrackSource();
     if (reveal != null) await _revealWaypoint(reveal);
+    if (request case FollowTrack(:final track, :final reversed)) {
+      await _startFollowing(track, reversed: reversed);
+    }
   }
 
   /// Puts a saved waypoint or track on screen after the list hands one back.
