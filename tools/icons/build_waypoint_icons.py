@@ -78,6 +78,17 @@ ICONS = {
     "boundary": 0xE262,
 }
 
+# Glyphs that are not categories. Kept apart from ICONS because a Dart test
+# asserts that map one-to-one onto WaypointCategory, and an extra in there would
+# read as a category the app had forgotten to define.
+EXTRAS = {
+    # The direction arrow repeated along a track. A solid triangle rather than a
+    # chevron because it has to read at about 12 dp, and it points right because
+    # MapLibre's `symbol-placement: line` aligns a symbol's horizontal axis with
+    # the direction the line's coordinates run.
+    "track-arrow": 0xE4CB,
+}
+
 
 def resolve_font(explicit: str | None) -> Path:
     if explicit:
@@ -277,6 +288,7 @@ def write_manifest(path: Path) -> None:
         "radius": RADIUS,
         "cutoff": CUTOFF,
         "icons": dict(ICONS),
+        "extras": dict(EXTRAS),
     }
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
@@ -296,7 +308,7 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     alphas: dict[str, np.ndarray] = {}
-    for key, codepoint in ICONS.items():
+    for key, codepoint in {**ICONS, **EXTRAS}.items():
         mask = render_mask(font_path, key, codepoint)
         alpha = encode_alpha(distance_field(mask))
         peak = ring_peak(alpha)

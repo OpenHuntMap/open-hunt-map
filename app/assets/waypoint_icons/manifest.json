@@ -25,5 +25,8 @@
     "road": 57815,
     "portage": 58192,
     "boundary": 57954
+  },
+  "extras": {
+    "track-arrow": 58571
   }
 }

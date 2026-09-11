@@ -14,6 +14,7 @@ import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
 import '../tracks/track_math.dart';
+import '../tracks/track_style.dart';
 import '../waypoints/waypoint_category.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
@@ -1096,15 +1097,18 @@ class _MapShellState extends State<MapShell> {
         ),
       );
 
-  /// The glyphs are 64 px square and meant to read at 24 dp.
+  /// `icon-size` that draws a 64 px source image at [logicalPixels] on screen.
   ///
   /// MapLibre draws an added image at its own pixel size and Android decodes it
-  /// unscaled, so a fixed icon-size would make a waypoint 64 physical pixels
+  /// unscaled, so a fixed icon-size would make a glyph 64 physical pixels
   /// everywhere: cramped on a dense phone, oversized on a cheap tablet. iOS
   /// builds the image with its own scale factor and may not need the same
   /// correction, which is untested here because this project has no Mac.
-  double get _waypointIconSize =>
-      24 * MediaQuery.devicePixelRatioOf(context) / 64;
+  double _iconSizeFor(double logicalPixels) =>
+      logicalPixels * MediaQuery.devicePixelRatioOf(context) / 64;
+
+  /// Waypoint glyphs are meant to read at 24 dp.
+  double get _waypointIconSize => _iconSizeFor(24);
 
   /// Puts the waypoint glyphs into the current style, once per style.
   ///
@@ -1121,23 +1125,26 @@ class _MapShellState extends State<MapShell> {
   Future<void> _ensureWaypointIcons() async {
     final map = _map;
     if (map == null || _iconsRegistered) return;
+    final wanted = {
+      for (final category in WaypointCategory.values)
+        category.iconImage: 'assets/waypoint_icons/${category.id}.png',
+      trackArrowImage: trackArrowAsset,
+    };
     final failures = <String>[];
-    for (final category in WaypointCategory.values) {
+    for (final entry in wanted.entries) {
       try {
-        var bytes = _iconBytes[category.iconImage];
+        var bytes = _iconBytes[entry.key];
         if (bytes == null) {
-          final data = await rootBundle.load(
-            'assets/waypoint_icons/${category.id}.png',
-          );
+          final data = await rootBundle.load(entry.value);
           bytes = data.buffer.asUint8List();
-          _iconBytes[category.iconImage] = bytes;
+          _iconBytes[entry.key] = bytes;
         }
         // The third argument is what marks these as signed distance fields, and
         // it is what makes icon-color apply. Without it every waypoint draws in
         // the glyph's own white and the colours do nothing.
-        await map.addImage(category.iconImage, bytes, true);
+        await map.addImage(entry.key, bytes, true);
       } catch (error) {
-        failures.add('${category.id}: $error');
+        failures.add('${entry.key}: $error');
       }
     }
     if (failures.isEmpty) {
@@ -1157,9 +1164,17 @@ class _MapShellState extends State<MapShell> {
     final data = _trackFeatureCollection(
       _waypoints.items.where((item) => item.track.isNotEmpty),
     );
-    try {
-      await map.removeLayer('owm-saved-track-lines');
-    } catch (_) {}
+    // Arrows come off before the line, because a layer cannot be removed once
+    // its source has gone and leaving it behind blocks the source from being
+    // replaced.
+    for (final layer in const [
+      'owm-saved-track-arrows',
+      'owm-saved-track-lines',
+    ]) {
+      try {
+        await map.removeLayer(layer);
+      } catch (_) {}
+    }
     try {
       await map.removeSource('owm-saved-tracks');
     } catch (_) {}
@@ -1171,12 +1186,58 @@ class _MapShellState extends State<MapShell> {
       'owm-saved-tracks',
       'owm-saved-track-lines',
       const LineLayerProperties(
-        lineColor: '#1565C0',
-        lineWidth: 4,
+        lineColor: ['get', 'colour'],
+        lineWidth: trackLineWidth,
         lineOpacity: 0.85,
+        // Round, so a track that doubles back on itself does not grow spikes at
+        // the switchbacks where two segments meet at a sharp angle.
+        lineCap: 'round',
+        lineJoin: 'round',
       ),
     );
+    try {
+      await _addTrackArrowLayer(map);
+    } catch (error) {
+      // The line still carries the track; only its direction is lost. Worth
+      // saying so, because the same failure on a software GL stack takes the
+      // waypoint glyphs with it and the two are one diagnosis.
+      _toast('Track direction arrows could not be drawn: $error');
+    }
   }
+
+  /// Repeated arrows along each track, showing which way it was walked.
+  Future<void> _addTrackArrowLayer(MapLibreMapController map) =>
+      map.addSymbolLayer(
+        'owm-saved-tracks',
+        'owm-saved-track-arrows',
+        SymbolLayerProperties(
+          iconImage: trackArrowImage,
+          // Placed along the line, which is also what orients each arrow: the
+          // symbol's horizontal axis is aligned with the direction the
+          // coordinates run, and ours run start to finish.
+          symbolPlacement: 'line',
+          symbolSpacing: trackArrowSpacing,
+          // Rotate with the map rather than the screen. Without this the arrows
+          // stay upright as the map turns and stop agreeing with the line.
+          iconRotationAlignment: 'map',
+          // Load-bearing despite matching the default. When true, MapLibre flips
+          // a symbol to keep it reading left-to-right, which silently reverses
+          // every arrow on a westward leg — the one failure mode that would make
+          // this feature actively lie about which way the track goes.
+          iconKeepUpright: false,
+          iconColor: const ['get', 'arrow'],
+          // Halo in the track's own colour, so each arrow reads as a hole
+          // punched in the line rather than a separate mark beside it.
+          iconHaloColor: const ['get', 'colour'],
+          iconHaloWidth: 1.2,
+          iconSize: _iconSizeFor(trackArrowSizeDp),
+          // Kept rather than thinned. Collision culling makes arrows come and go
+          // as the camera moves, which reads as a rendering fault on a feature
+          // whose only job is to be legible.
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+        ),
+      );
 
   Future<void> _syncActiveTrackSource() async {
     final map = _map;
@@ -1228,7 +1289,16 @@ class _MapShellState extends State<MapShell> {
         if (waypoint.track.length >= 2)
           {
             'type': 'Feature',
-            'properties': {'name': waypoint.name, 'id': waypoint.id},
+            'properties': {
+              'name': waypoint.name,
+              'id': waypoint.id,
+              // Per feature, so one layer draws every track in its own colour
+              // rather than one layer per track.
+              'colour': waypoint.colourHex,
+              // Resolved here rather than in the style, because MapLibre has no
+              // expression for "a colour that contrasts with this one".
+              'arrow': arrowColourFor(waypoint.displayColour),
+            },
             'geometry': {
               'type': 'LineString',
               'coordinates': [
