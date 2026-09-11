@@ -17,6 +17,7 @@ Future<void> showLandInfoSheet(
   required ProvinceManifest manifest,
   ProvinceSeasons? seasons,
   Map<String, LoadedLayer> layers = const {},
+  VoidCallback? onSaveWaypoint,
 }) =>
     showModalBottomSheet<void>(
       context: context,
@@ -31,6 +32,7 @@ Future<void> showLandInfoSheet(
           manifest: manifest,
           seasons: seasons,
           layers: layers,
+          onSaveWaypoint: onSaveWaypoint,
         ),
       ),
     );
@@ -43,6 +45,7 @@ class _LandInfoReport extends StatelessWidget {
     required this.manifest,
     this.seasons,
     this.layers = const {},
+    this.onSaveWaypoint,
   });
 
   final LandInfo info;
@@ -51,6 +54,7 @@ class _LandInfoReport extends StatelessWidget {
   final ProvinceManifest manifest;
   final ProvinceSeasons? seasons;
   final Map<String, LoadedLayer> layers;
+  final VoidCallback? onSaveWaypoint;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +110,7 @@ class _LandInfoReport extends StatelessWidget {
                     loader: loader,
                     manifest: manifest,
                     layers: layers,
+                    onSaveWaypoint: onSaveWaypoint,
                   ),
                 ),
                 SelectionArea(
@@ -136,6 +141,7 @@ class _LandTab extends StatelessWidget {
     required this.loader,
     required this.manifest,
     required this.layers,
+    this.onSaveWaypoint,
   });
 
   final LandInfo info;
@@ -143,6 +149,7 @@ class _LandTab extends StatelessWidget {
   final ProvinceLoader loader;
   final ProvinceManifest manifest;
   final Map<String, LoadedLayer> layers;
+  final VoidCallback? onSaveWaypoint;
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +188,23 @@ class _LandTab extends StatelessWidget {
                     height: 1.35,
                   ),
             ),
+            // Where the coordinates already are, because a waypoint is a
+            // coordinate the user wants to keep. The card is open because they
+            // pointed at this spot, which is the moment they want to save it.
+            if (onSaveWaypoint case final save?) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    save();
+                  },
+                  icon: const Icon(Icons.add_location_alt_outlined),
+                  label: const Text('Save a waypoint here'),
+                ),
+              ),
+            ],
           ],
         ),
         // Only Ontario packs carry the schedule this is built from; without the

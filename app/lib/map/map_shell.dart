@@ -592,6 +592,10 @@ class _MapShellState extends State<MapShell> {
                 _camera = position;
               },
               onMapClick: _identify,
+              // The gesture every map app uses for "put something here". A tap
+              // cannot be it: a tap has to stay the identify gesture, which is
+              // the question this app exists to answer.
+              onMapLongClick: (_, coordinates) => _saveWaypointAt(coordinates),
               featureTapsTriggersMapClick: true,
               // Shown after the user grants location (see _goToMyLocation /
               // track recording). Compass mode draws a heading-aware arrow.
@@ -749,7 +753,8 @@ class _MapShellState extends State<MapShell> {
                             'municipal & county forest; the gaps between tracts '
                             'are private. Blue = parks. Red = no shooting. '
                             'Colour shows tenure, not permission — tap any spot '
-                            'for Land Info.',
+                            'for Land Info, or hold it to save a waypoint '
+                            'there.',
                             style: TextStyle(fontSize: 12, height: 1.3),
                           ),
                         ),
@@ -1797,6 +1802,7 @@ class _MapShellState extends State<MapShell> {
       manifest: data.manifest,
       seasons: data.seasons,
       layers: data.layers,
+      onSaveWaypoint: () => _saveWaypointAt(coordinates),
     );
   }
 
@@ -1993,6 +1999,38 @@ class _MapShellState extends State<MapShell> {
           coordinates,
         );
     }
+  }
+
+  /// Saves a waypoint at a spot on the map, wherever the ask came from.
+  ///
+  /// Reachable from a long press and from Land Info, because those are the two
+  /// moments someone is already looking at the place they want to keep. Going to
+  /// the waypoint list and pressing "Add here" saves the *camera centre*, which
+  /// means panning the thing you care about into the middle of the screen first —
+  /// four steps to record a spot you had already pointed at.
+  Future<void> _saveWaypointAt(LatLng coordinates) async {
+    final draft = Waypoint(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Waypoint',
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      notes: '',
+      createdAt: DateTime.now(),
+      category: WaypointCategory.other,
+    );
+    final saved = await showWaypointEditor(
+      context,
+      existing: draft,
+      knownTags: _waypoints.tagsInUse,
+      isNew: true,
+    );
+    if (saved == null || !mounted) return;
+    await _waypoints.add(saved);
+    await _syncWaypointSource();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved ${saved.name}.')),
+    );
   }
 
   /// Puts a saved waypoint or track on screen after the list hands one back.
