@@ -130,6 +130,22 @@ class WaypointImportExport {
                         'lat': point.latitude.toString(),
                         'lon': point.longitude.toString(),
                       },
+                      // ele then time, and both before anything else: a trkpt
+                      // is a wptType, so it is the same xsd:sequence the
+                      // waypoints above follow. Omitted entirely when the fix
+                      // had neither rather than written as zero, because a
+                      // sea-level elevation is a claim and an absent one is not.
+                      nest: () {
+                        if (point.elevation case final elevation?) {
+                          builder.element('ele', nest: elevation.toString());
+                        }
+                        if (point.time case final time?) {
+                          builder.element(
+                            'time',
+                            nest: time.toUtc().toIso8601String(),
+                          );
+                        }
+                      },
                     );
                   }
                 },
@@ -244,6 +260,13 @@ class WaypointImportExport {
             'LineString',
             nest: () {
               builder.element('tessellate', nest: '1');
+              // Altitude stays 0 even for points that have one. KML only reads
+              // the third coordinate when altitudeMode is `absolute`, and the
+              // default here is clampToGround, which is what makes a walked
+              // track lie on the terrain in Google Earth. Our elevations are
+              // heights above the ellipsoid, so switching to absolute would
+              // float or bury the line by tens of metres. GPX is the export
+              // that carries elevation properly.
               builder.element(
                 'coordinates',
                 nest: waypoint.track
@@ -297,15 +320,30 @@ class WaypointImportExport {
                       'coordinates':
                           waypoint.track.isEmpty
                               ? [waypoint.longitude, waypoint.latitude]
-                              : [
-                                for (final point in waypoint.track)
-                                  [point.longitude, point.latitude],
-                              ],
+                              : _lineCoordinates(waypoint.track),
                     },
                   },
                 )
                 .toList(),
       });
+
+  /// GeoJSON positions for a track, with altitude only when every point has it.
+  ///
+  /// RFC 7946 defines the optional third element as height in metres above the
+  /// WGS84 ellipsoid, which is exactly what the platform reports, so unlike KML
+  /// this is a place the elevation can go without reinterpretation. All or
+  /// nothing: a mixed-length array is legal but trips strict readers, and
+  /// filling the gaps with zero would be inventing sea-level readings.
+  static List<List<double>> _lineCoordinates(List<TrackPoint> points) {
+    final withElevation = points.every((point) => point.elevation != null);
+    return [
+      for (final point in points)
+        if (withElevation)
+          [point.longitude, point.latitude, point.elevation!]
+        else
+          [point.longitude, point.latitude],
+    ];
+  }
 
   List<Waypoint> fromGpx(String text) {
     final document = XmlDocument.parse(text);
@@ -347,6 +385,16 @@ class WaypointImportExport {
                         (node) => TrackPoint(
                           latitude: double.parse(node.getAttribute('lat')!),
                           longitude: double.parse(node.getAttribute('lon')!),
+                          // Unparseable rather than absent is treated as absent.
+                          // Other tools write `<ele></ele>` and non-UTC times,
+                          // and one bad element should cost that point its
+                          // elevation, not drop the whole track.
+                          elevation: double.tryParse(
+                            _childText(node, 'ele') ?? '',
+                          ),
+                          time: DateTime.tryParse(
+                            _childText(node, 'time') ?? '',
+                          ),
                         ),
                       )
                       .toList();
@@ -460,6 +508,11 @@ class WaypointImportExport {
                   return TrackPoint(
                     latitude: (coordinate[1] as num).toDouble(),
                     longitude: (coordinate[0] as num).toDouble(),
+                    // RFC 7946's optional third element. Read defensively
+                    // because plenty of writers emit two.
+                    elevation: coordinate.length > 2
+                        ? (coordinate[2] as num?)?.toDouble()
+                        : null,
                   );
                 }).toList();
             return _trackWaypoint(

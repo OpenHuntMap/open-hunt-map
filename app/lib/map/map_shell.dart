@@ -13,6 +13,7 @@ import '../data/province_loader.dart';
 import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
+import '../tracks/track_math.dart';
 import '../waypoints/waypoint_category.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
@@ -93,6 +94,10 @@ class _MapShellState extends State<MapShell> {
   bool _myLocationEnabled = false;
   StreamSubscription<Position>? _positionSubscription;
   final List<TrackPoint> _activeTrack = [];
+
+  /// Fixes discarded during the current recording for being too imprecise.
+  /// Reported on save; see [_worstUsableAccuracyMetres].
+  var _rejectedFixes = 0;
 
   @override
   void initState() {
@@ -866,14 +871,10 @@ class _MapShellState extends State<MapShell> {
           accuracy: LocationAccuracy.high,
         ),
       );
+      _rejectedFixes = 0;
       _activeTrack
         ..clear()
-        ..add(
-          TrackPoint(
-            latitude: position.latitude,
-            longitude: position.longitude,
-          ),
-        );
+        ..add(_trackPointFrom(position));
       if (mounted) setState(() => _recording = true);
       await _syncActiveTrackSource();
       _positionSubscription = Geolocator.getPositionStream(
@@ -892,12 +893,40 @@ class _MapShellState extends State<MapShell> {
     }
   }
 
+  /// The worst horizontal accuracy a fix may report and still be recorded.
+  ///
+  /// Consumer GPS manages 3-5 m under open sky and 10-20 m under canopy, so 50 m
+  /// rejects the wild fixes that put a spike in the line and add hundreds of
+  /// phantom metres to the track's length, while keeping everything a phone
+  /// plausibly knows. It is deliberately generous: dropping a real fix loses
+  /// part of the walk, and the count of what was dropped is reported on save so
+  /// a track recorded in a bad spot does not quietly look like a good one.
+  static const _worstUsableAccuracyMetres = 50.0;
+
+  /// Carries across whatever the platform reported and nothing it did not.
+  ///
+  /// `altitude` on Android is height above the WGS84 ellipsoid, which is not the
+  /// mean-sea-level elevation many GPX readers assume — the two differ by around
+  /// 35 m in southern Ontario. We write the reading through unchanged rather
+  /// than correcting it, because correcting it needs a geoid model we do not
+  /// ship; this is one of the reasons no total ascent is derived from it.
+  TrackPoint _trackPointFrom(Position position) => TrackPoint(
+    latitude: position.latitude,
+    longitude: position.longitude,
+    elevation: position.altitude,
+    time: position.timestamp,
+  );
+
   void _recordPosition(Position position) {
     if (!_recording) return;
-    final point = TrackPoint(
-      latitude: position.latitude,
-      longitude: position.longitude,
-    );
+    // A fix the device itself says it is unsure of. Counted rather than
+    // silently ignored: "saved 412 points, dropped 6 poor fixes" is the
+    // difference between a gap you know about and one you do not.
+    if (position.accuracy > _worstUsableAccuracyMetres) {
+      _rejectedFixes++;
+      return;
+    }
+    final point = _trackPointFrom(position);
     final last = _activeTrack.last;
     if (last.latitude == point.latitude && last.longitude == point.longitude) {
       return;
@@ -911,11 +940,22 @@ class _MapShellState extends State<MapShell> {
     await _positionSubscription?.cancel();
     _positionSubscription = null;
     final points = List<TrackPoint>.from(_activeTrack);
+    final rejected = _rejectedFixes;
     _activeTrack.clear();
+    _rejectedFixes = 0;
     if (mounted) setState(() => _recording = false);
     await _syncActiveTrackSource();
-    if (points.isEmpty) {
-      _toast('No positions were recorded.');
+    // One point is not a line, and saving it would leave a track in the list
+    // that draws nothing on the map. Naming the dropped fixes matters most
+    // here: under heavy canopy this is what "I walked for an hour and got
+    // nothing" actually looks like, and the user deserves the reason.
+    if (points.length < 2) {
+      _toast(
+        rejected > 0
+            ? 'Not enough usable positions to make a track. '
+                  '$rejected fix(es) were too imprecise to use.'
+            : 'Not enough positions were recorded to make a track.',
+      );
       return;
     }
     final stoppedAt = DateTime.now();
@@ -931,7 +971,14 @@ class _MapShellState extends State<MapShell> {
       ),
     );
     await _syncWaypointSource();
-    _toast('Saved track with ${points.length} point(s).');
+    final summary = StringBuffer(
+      'Saved ${formatDistance(trackLengthMetres(points))}',
+    );
+    if (trackDuration(points) case final duration?) {
+      summary.write(' in ${formatDuration(duration)}');
+    }
+    if (rejected > 0) summary.write(' · dropped $rejected poor fix(es)');
+    _toast(summary.toString());
   }
 
   String _formatTrackName(DateTime value) {

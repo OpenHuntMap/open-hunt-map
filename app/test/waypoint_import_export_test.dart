@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/waypoints/import_export.dart';
 import 'package:open_woods_map/waypoints/waypoint_category.dart';
@@ -23,16 +25,36 @@ Waypoint point(
   colour: colour,
 );
 
-Waypoint track(String id) => Waypoint(
+Waypoint track(String id, {List<TrackPoint>? points}) => Waypoint(
   id: id,
   name: 'Morning walk',
   latitude: 45.1,
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
-  track: const [
-    TrackPoint(latitude: 45.1, longitude: -77.1),
-    TrackPoint(latitude: 45.2, longitude: -77.2),
+  track: points ??
+      const [
+        TrackPoint(latitude: 45.1, longitude: -77.1),
+        TrackPoint(latitude: 45.2, longitude: -77.2),
+      ],
+);
+
+/// A track whose points carry everything a recorded one would.
+Waypoint timedTrack(String id) => track(
+  id,
+  points: [
+    TrackPoint(
+      latitude: 45.1,
+      longitude: -77.1,
+      elevation: 212.5,
+      time: DateTime.utc(2026, 9, 10, 11, 0),
+    ),
+    TrackPoint(
+      latitude: 45.2,
+      longitude: -77.2,
+      elevation: 248.25,
+      time: DateTime.utc(2026, 9, 10, 11, 42, 30),
+    ),
   ],
 );
 
@@ -114,6 +136,16 @@ void main() {
       expect(back.single.track.map((p) => p.longitude), [-77.1, -77.2]);
     });
 
+    test('altitude stays 0 even when the points have elevations', () {
+      // Deliberate, not a gap. KML reads the third coordinate only under
+      // altitudeMode `absolute`, and the default clampToGround is what puts a
+      // walked track on the terrain in Google Earth. Our elevations are heights
+      // above the ellipsoid, so absolute would float or bury the line.
+      final kml = transfer.toKml([timedTrack('t1')]);
+      expect(kml, contains('-77.1,45.1,0'));
+      expect(kml, isNot(contains('212.5')));
+    });
+
     // The reader used to take the first `coordinates` anywhere under the
     // Placemark, so anything nested alongside the geometry could win.
     test('a point inside a MultiGeometry still resolves', () {
@@ -156,6 +188,48 @@ void main() {
 
       expect(back.single.id, 't1');
       expect(back.single.track, hasLength(2));
+    });
+
+    test('elevation rides in the third position element and comes back', () {
+      // RFC 7946 defines it as metres above the WGS84 ellipsoid, which is what
+      // the platform hands us, so no reinterpretation is needed here.
+      final geoJson = transfer.toGeoJson([timedTrack('t1')]);
+      final coordinates = (jsonDecode(geoJson)['features'] as List).single
+          ['geometry']['coordinates'] as List;
+
+      expect((coordinates.first as List), hasLength(3));
+      expect((coordinates.first as List)[2], 212.5);
+      expect(
+        transfer.fromGeoJson(geoJson).single.track.map((p) => p.elevation),
+        [212.5, 248.25],
+      );
+    });
+
+    test('positions stay two long when any point lacks an elevation', () {
+      // Zero-filling the gaps would invent sea-level readings, and a mixed-length
+      // array trips strict readers, so the whole line drops to two.
+      final mixed = track(
+        't1',
+        points: const [
+          TrackPoint(latitude: 45.1, longitude: -77.1, elevation: 212.5),
+          TrackPoint(latitude: 45.2, longitude: -77.2),
+        ],
+      );
+      final coordinates = (jsonDecode(transfer.toGeoJson([mixed]))['features']
+          as List).single['geometry']['coordinates'] as List;
+
+      expect(coordinates.map((item) => (item as List).length), [2, 2]);
+    });
+
+    test('a two-element position from another writer still reads', () {
+      const geoJson = '''
+{"type":"FeatureCollection","features":[{"type":"Feature",
+"properties":{"name":"Flat"},
+"geometry":{"type":"LineString","coordinates":[[-77.1,45.1],[-77.2,45.2]]}}]}''';
+      final points = transfer.fromGeoJson(geoJson).single.track;
+
+      expect(points, hasLength(2));
+      expect(points.first.elevation, isNull);
     });
   });
 
@@ -233,6 +307,58 @@ void main() {
   <wpt lat="45.1" lon="-77.1"><name>A</name><cmt>Parked by the gate</cmt></wpt>
 </gpx>''';
         expect(transfer.fromGpx(gpx).single.tags, isEmpty);
+      });
+
+      test('a track point keeps its elevation and time through GPX', () {
+        final back = transfer.fromGpx(transfer.toGpx([timedTrack('t1')]));
+        final points = back.single.track;
+
+        expect(points.map((p) => p.elevation), [212.5, 248.25]);
+        expect(points.first.time, DateTime.utc(2026, 9, 10, 11, 0));
+        expect(points.last.time, DateTime.utc(2026, 9, 10, 11, 42, 30));
+      });
+
+      test('trkpt puts ele before time, and both before anything else', () {
+        // trkpt is a wptType, so it is the same xsd:sequence the waypoints
+        // follow: ele, time, then the rest. Garmin validates it.
+        final gpx = XmlDocument.parse(transfer.toGpx([timedTrack('t1')]));
+        final children = gpx
+            .findAllElements('trkpt')
+            .first
+            .childElements
+            .map((element) => element.name.local)
+            .toList();
+
+        expect(children, ['ele', 'time']);
+      });
+
+      test('times are written in UTC', () {
+        final gpx = transfer.toGpx([timedTrack('t1')]);
+        // A local-time stamp with no offset is the classic way a track lands an
+        // hour out in another tool.
+        expect(gpx, contains('2026-09-10T11:00:00.000Z'));
+      });
+
+      test('a point with no elevation or time writes neither element', () {
+        final gpx = XmlDocument.parse(transfer.toGpx([track('t1')]));
+        expect(gpx.findAllElements('trkpt').first.childElements, isEmpty);
+        expect(gpx, isNot(contains('<ele/>')));
+      });
+
+      test('an empty or unparseable ele or time is treated as absent', () {
+        const gpx = '''
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Odd</name><trkseg>
+    <trkpt lat="45.1" lon="-77.1"><ele></ele><time>not a date</time></trkpt>
+    <trkpt lat="45.2" lon="-77.2"><ele>210</ele></trkpt>
+  </trkseg></trk>
+</gpx>''';
+        final points = transfer.fromGpx(gpx).single.track;
+
+        expect(points, hasLength(2));
+        expect(points.first.elevation, isNull);
+        expect(points.first.time, isNull);
+        expect(points.last.elevation, 210);
       });
 
       test('a track carries its category too', () {

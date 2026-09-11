@@ -8,16 +8,48 @@ import 'waypoint_storage_stub.dart'
     if (dart.library.html) 'waypoint_storage_web.dart' as storage;
 
 class TrackPoint {
-  const TrackPoint({required this.latitude, required this.longitude});
+  const TrackPoint({
+    required this.latitude,
+    required this.longitude,
+    this.elevation,
+    this.time,
+  });
+
   final double latitude;
   final double longitude;
+
+  /// Metres above the ellipsoid, as the fix reported it, or null when it had
+  /// none — which is every point of a track imported from a file that omitted
+  /// `<ele>`.
+  ///
+  /// Carried so exports are complete and other tools can use it, but
+  /// deliberately not summarised into a total ascent anywhere in the UI. A
+  /// phone without a barometer reports elevation to a tolerance of tens of
+  /// metres, and summing the noise over thousands of points produces a
+  /// confident number that is wrong by a large factor. Storing the readings is
+  /// honest; claiming a climb from them is not.
+  final double? elevation;
+
+  /// When the fix was taken. Null for imported points with no `<time>`, which
+  /// is why [trackDuration] has to tolerate a track that has none.
+  final DateTime? time;
 
   factory TrackPoint.fromJson(Map<String, dynamic> json) => TrackPoint(
         latitude: (json['lat'] as num).toDouble(),
         longitude: (json['lng'] as num).toDouble(),
+        elevation: (json['ele'] as num?)?.toDouble(),
+        time: DateTime.tryParse(json['t'] as String? ?? ''),
       );
 
-  Map<String, dynamic> toJson() => {'lat': latitude, 'lng': longitude};
+  /// Keys are abbreviated and nulls omitted because this is written once per
+  /// fix: a few hours of walking is thousands of points, and spelling
+  /// `elevation` in every one of them costs more than the values do.
+  Map<String, dynamic> toJson() => {
+        'lat': latitude,
+        'lng': longitude,
+        if (elevation != null) 'ele': elevation,
+        if (time != null) 't': time!.toIso8601String(),
+      };
 }
 
 class Waypoint {
