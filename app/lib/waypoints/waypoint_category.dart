@@ -36,7 +36,7 @@ enum WaypointCategory {
   stand(
     id: 'stand',
     label: 'Tree stand',
-    icon: Icons.chair,
+    icon: Icons.chair_alt,
     garminSym: 'Tree Stand',
     colour: Color(0xFF6A4C1E),
   ),

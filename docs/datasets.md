@@ -637,15 +637,22 @@ per waypoint with `icon-color` instead of us shipping one PNG per colour. Source
 and licence are recorded in `app/assets/waypoint_icons/manifest.json`, which ships
 with the images.
 
-Chosen over the CC0 outdoor sets (Temaki, Maki, Osmic) for a first pass because it
-is already in the dependency tree, so it adds no download and no licence to audit.
-The category's `iconImage` is one level of indirection away from the glyph, so
-replacing a specific icon with better outdoor artwork later changes one line and
-regenerates.
+Chosen over the CC0 outdoor sets (Temaki, Maki, Osmic) because it is already in the
+dependency tree, so it adds no download and no licence to audit. Swapping one glyph
+for another Material glyph is a codepoint here and a codepoint in the generator.
+Swapping one for an SVG from another set is not: the generator rasterises by
+codepoint through PIL, which cannot read SVG, and `WaypointCategory.icon` is an
+`IconData` that the list rows, the editor chips and the map all read from, so a
+single non-font icon would need an SVG rasteriser in the build, `flutter_svg` in the
+app, a branch at every draw site, and an exemption from the test that stops the list
+glyph and the map glyph diverging. Worth it for a whole set, not for one icon.
 
-Two of the fifteen are compromises worth knowing about: Material has no tree stand
-and no ground blind, so `stand` borrows an armchair and `blind` a shelter. They are
-distinguishable and not misleading, but they are not the right pictures.
+One of the fifteen is a compromise worth knowing about: Material has no ground
+blind, so `blind` borrows a shelter — a house with a bed, which reads more like a
+hostel than a hide. Every Material alternative trades that wrong reading for
+another one (`festival` is a tent, but with a pennant, and it collides with Camp),
+so it stays until the whole set is reconsidered. `stand` uses a plain chair, which
+is not a tree stand either but is at least unambiguously a seat.
 
 Where the category goes when a waypoint leaves the app is a separate question from
 what it looks like here — see the export notes in `app/lib/waypoints/import_export.dart`.

@@ -53,7 +53,7 @@ FAR = 1e20
 # assert each one against the `IconData.codePoint` the app renders in lists.
 ICONS = {
     "other": 0xE4C9,
-    "stand": 0xE14D,
+    "stand": 0xE14E,
     "blind": 0xE42C,
     "camera": 0xE4B6,
     "sign": 0xE4A1,

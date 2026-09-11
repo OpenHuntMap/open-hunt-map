@@ -114,6 +114,15 @@ evidence from one run, not repo content.
   about your icon. Re-check with `boot -Windowed`, which uses the host GPU, and
   confirm from `dumpsys SurfaceFlinger | grep GLES` that you got a real driver
   rather than `Google SwiftShader`.
+- **Two release APKs live in the same directory, and installing the wrong one
+  looks like your change not working.** `--split-per-abi` writes
+  `app-x86_64-release.apk`, a plain `--release` writes `app-release.apk`, and
+  neither build deletes the other. `install` used to name the split one outright,
+  so after a split build every later `--target-platform android-x64` rebuild
+  installed nothing new: the app launched, the screenshot came back clean, and it
+  showed the old binary. It now installs whichever of the two is newer and prints
+  the build's age, so read that line — an install that says "58 minutes ago" is a
+  build you forgot to run.
 - **A minimized `-gpu host` emulator stops producing frames.** `screencap` then
   returns the same stale image indefinitely while the device keeps running: the
   clock inside the capture freezes while `adb shell date` advances. `boot`

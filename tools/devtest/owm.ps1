@@ -234,12 +234,29 @@ function Cmd-Boot {
 function Cmd-Kill { Invoke-Adb @('emu', 'kill') }
 
 function Cmd-Install {
-    $apk = Join-Path $Repo 'app\build\app\outputs\flutter-apk\app-x86_64-release.apk'
-    if (-not (Test-Path $apk)) {
-        throw "No x86_64 APK. Build one: cd app; flutter build apk --release --split-per-abi"
+    # Newest of the two APKs an x86_64 emulator can run, not a fixed name.
+    #
+    # `--split-per-abi` writes app-x86_64-release.apk and a plain `--release`
+    # writes app-release.apk, and both stay in the directory afterwards. Pinning
+    # one name means that after a split build you keep installing that split
+    # however many times you rebuild the other, so the screenshots come from an
+    # older binary than the code you just changed and there is nothing on screen
+    # that says so. The age is printed for the same reason: an install that says
+    # "58 minutes old" is a build you forgot to run.
+    $names = 'app-x86_64-release.apk', 'app-release.apk'
+    $apk = $names |
+        ForEach-Object { Join-Path $Repo "app\build\app\outputs\flutter-apk\$_" } |
+        Where-Object { Test-Path $_ } |
+        Get-Item |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $apk) {
+        throw "No emulator-compatible APK. Build one:`n" +
+              "  cd app; flutter build apk --release --target-platform android-x64"
     }
-    "Installing $([math]::Round((Get-Item $apk).Length / 1MB, 1)) MB..."
-    Invoke-Adb @('install', '-r', '-d', $apk)
+    $age = [math]::Round(((Get-Date) - $apk.LastWriteTime).TotalMinutes)
+    "Installing $($apk.Name), $([math]::Round($apk.Length / 1MB, 1)) MB, built $age minute$(if ($age -ne 1) { 's' }) ago..."
+    Invoke-Adb @('install', '-r', '-d', $apk.FullName)
 }
 
 function Cmd-Grant {
