@@ -254,6 +254,20 @@ String formatDistance(double metres) {
   return '${km < 10 ? km.toStringAsFixed(1) : km.round()} km';
 }
 
+/// One line describing a track, for a list row or an editor header.
+///
+/// Falls back to the point count when the points carry no times, because an
+/// imported file often has none and "3.2 km" alone reads as though the recording
+/// was instantaneous.
+String describeTrack(List<TrackPoint> points) {
+  final distance = formatDistance(trackLengthMetres(points));
+  final duration = trackDuration(points);
+  if (duration == null || duration == Duration.zero) {
+    return '$distance · ${points.length} points';
+  }
+  return '$distance · ${formatDuration(duration)}';
+}
+
 /// Formats an elapsed span. Hours only appear once there are some.
 String formatDuration(Duration duration) {
   final hours = duration.inHours;

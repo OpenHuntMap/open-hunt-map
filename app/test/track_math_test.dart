@@ -355,6 +355,24 @@ void main() {
     });
   });
 
+  group('describeTrack', () {
+    test('gives distance and elapsed time when the points are timed', () {
+      final start = DateTime.utc(2026, 9, 11, 6);
+      final points = [
+        _at(45, -75, time: start),
+        _at(45.01, -75, time: start.add(const Duration(minutes: 20))),
+      ];
+      // 0.01 degrees of latitude is a little over 1.1 km.
+      expect(describeTrack(points), '1.1 km · 20 min');
+    });
+
+    test('falls back to the point count with no times', () {
+      // "1.1 km" on its own reads as though the walk took no time at all.
+      final points = [_at(45, -75), _at(45.01, -75)];
+      expect(describeTrack(points), '1.1 km · 2 points');
+    });
+  });
+
   group('formatDuration', () {
     test('shows minutes under an hour', () {
       expect(formatDuration(Duration.zero), '0 min');

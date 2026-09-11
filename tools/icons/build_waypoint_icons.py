@@ -67,6 +67,15 @@ ICONS = {
     "fishing": 0xF0548,
     "viewpoint": 0xE365,
     "hazard": 0xE6CB,
+    # Line categories. They get glyphs too, even though a line needs no icon on
+    # the map, because a list row and a filter chip both draw one -- and because
+    # a GPX file can put a single waypoint under any of these types, and a
+    # missing image means MapLibre draws nothing at all.
+    "trail": 0xF0561,
+    "route": 0xE080,
+    "road": 0xE1D7,
+    "portage": 0xE350,
+    "boundary": 0xE262,
 }
 
 

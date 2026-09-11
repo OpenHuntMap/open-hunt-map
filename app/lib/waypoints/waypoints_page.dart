@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import '../tracks/track_math.dart';
 import 'import_export.dart';
 import 'waypoint_category.dart';
 import 'waypoint_editor.dart';
@@ -246,8 +247,10 @@ class _WaypointsPageState extends State<WaypointsPage> {
 
   Widget _row(Waypoint waypoint) {
     final isTrack = waypoint.track.isNotEmpty;
+    // How far and how long, not how many fixes: the point count is an artefact
+    // of the recording interval and tells the user nothing about the walk.
     final where = isTrack
-        ? '${waypoint.track.length} track point(s)'
+        ? describeTrack(waypoint.track)
         : '${waypoint.latitude.toStringAsFixed(5)}, '
               '${waypoint.longitude.toStringAsFixed(5)}';
     final tags = waypoint.tags.isEmpty
@@ -259,10 +262,11 @@ class _WaypointsPageState extends State<WaypointsPage> {
     return ListTile(
       // The saved colour, not the category's, because that is what the map
       // draws and the two lists have to be recognisably the same waypoints.
-      leading: Icon(
-        isTrack ? Icons.route : waypoint.category.icon,
-        color: waypoint.displayColour,
-      ),
+      // The category's glyph for tracks too, now that lines have categories of
+      // their own to be drawn as. A generic route icon on every track said less
+      // than "portage" does, and the subtitle already distinguishes a line from
+      // a place.
+      leading: Icon(waypoint.category.icon, color: waypoint.displayColour),
       title: Text(waypoint.name),
       subtitle: Text(subtitle),
       isThreeLine: waypoint.notes.isNotEmpty || waypoint.tags.isNotEmpty,

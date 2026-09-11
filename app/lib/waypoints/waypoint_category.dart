@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Whether a category describes a place, a line, or either.
+///
+/// One vocabulary covers both because the user has one filing system, not two:
+/// "delete everything tagged as a portage" should not care that portages are
+/// lines and stands are points. This only decides which categories an editor
+/// offers, and every category still has a glyph so that a point which arrives
+/// from a file under a line-only category still draws.
+enum CategoryShape { point, line, both }
+
 /// What a waypoint is, and how that survives leaving this app.
 ///
 /// Every app worth exporting to organises waypoints under a single parent — a
@@ -32,6 +41,7 @@ enum WaypointCategory {
     icon: Icons.place,
     garminSym: 'Waypoint',
     colour: Color(0xFFB3261E),
+    shape: CategoryShape.both,
   ),
   stand(
     id: 'stand',
@@ -68,6 +78,8 @@ enum WaypointCategory {
     icon: Icons.bloodtype,
     garminSym: 'Blood Trail',
     colour: Color(0xFF8E0000),
+    // A blood trail is followed, so it is as often a recorded line as a pin.
+    shape: CategoryShape.both,
   ),
   harvest(
     id: 'harvest',
@@ -133,6 +145,57 @@ enum WaypointCategory {
     icon: Icons.warning,
     garminSym: 'Skull and Crossbones',
     colour: Color(0xFFE65100),
+    // A pin on thin ice, or the line of a cliff edge walked out.
+    shape: CategoryShape.both,
+  ),
+
+  // Lines. GPX's trkType has no `sym` element at all, so garminSym is null
+  // throughout rather than guessed: nothing here would be written anyway unless
+  // a file arrives with a point filed under one of them.
+  //
+  // Their colours sit in hue regions the point categories leave empty — pink,
+  // indigo, dark brown, olive and near-black — because a track is a long thin
+  // shape competing with roads and rivers on the basemap, and two tracks the
+  // same colour are much harder to tell apart than two pins are.
+  trail(
+    id: 'trail',
+    label: 'Trail',
+    icon: Icons.route,
+    garminSym: null,
+    colour: Color(0xFFAD1457),
+    shape: CategoryShape.line,
+  ),
+  route(
+    id: 'route',
+    label: 'Planned route',
+    icon: Icons.alt_route,
+    garminSym: null,
+    colour: Color(0xFF283593),
+    shape: CategoryShape.line,
+  ),
+  road(
+    id: 'road',
+    label: 'Access road',
+    icon: Icons.directions_car,
+    garminSym: null,
+    colour: Color(0xFF3E2723),
+    shape: CategoryShape.line,
+  ),
+  portage(
+    id: 'portage',
+    label: 'Portage',
+    icon: Icons.kayaking,
+    garminSym: null,
+    colour: Color(0xFF827717),
+    shape: CategoryShape.line,
+  ),
+  boundary(
+    id: 'boundary',
+    label: 'Boundary walked',
+    icon: Icons.fence,
+    garminSym: null,
+    colour: Color(0xFF212121),
+    shape: CategoryShape.line,
   );
 
   const WaypointCategory({
@@ -141,6 +204,7 @@ enum WaypointCategory {
     required this.icon,
     required this.garminSym,
     required this.colour,
+    this.shape = CategoryShape.point,
   });
 
   /// Stable across releases: it is written into saved files and exports, so
@@ -160,8 +224,20 @@ enum WaypointCategory {
   /// The default colour. The user can override it per waypoint.
   final Color colour;
 
+  /// Whether this describes a place, a line, or either. Only filters what an
+  /// editor offers; see [CategoryShape].
+  final CategoryShape shape;
+
   /// The MapLibre image name for this category's SDF glyph.
   String get iconImage => 'owm-wp-$id';
+
+  /// The categories worth offering for a single position.
+  static List<WaypointCategory> get forPoints =>
+      values.where((c) => c.shape != CategoryShape.line).toList();
+
+  /// The categories worth offering for a recorded or imported line.
+  static List<WaypointCategory> get forLines =>
+      values.where((c) => c.shape != CategoryShape.point).toList();
 
   /// Resolves a stored or imported id, falling back to [other].
   ///

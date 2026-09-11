@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../tracks/track_math.dart';
 import 'waypoint_category.dart';
 import 'waypoint_store.dart';
 
@@ -75,6 +76,21 @@ class _WaypointEditorState extends State<WaypointEditor> {
     super.dispose();
   }
 
+  bool get _isLine => widget.existing.track.length >= 2;
+
+  /// The categories to offer, plus whatever is already set if that is not among
+  /// them.
+  ///
+  /// A file can file a line under a point category or the other way round, and
+  /// hiding the current choice would make the editor look like it had silently
+  /// reassigned it — and then saving really would.
+  List<WaypointCategory> get _offered {
+    final offered = _isLine
+        ? WaypointCategory.forLines
+        : WaypointCategory.forPoints;
+    return offered.contains(_category) ? offered : [_category, ...offered];
+  }
+
   void _save() {
     final name = _name.text.trim();
     widget.onSave(
@@ -139,12 +155,23 @@ class _WaypointEditorState extends State<WaypointEditor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
-              title: Text(widget.isNew ? 'New waypoint' : 'Edit waypoint'),
+              title: Text(
+                switch ((_isLine, widget.isNew)) {
+                  (true, _) => 'Edit track',
+                  (false, true) => 'New waypoint',
+                  (false, false) => 'Edit waypoint',
+                },
+              ),
+              // A track's own start coordinate is not what identifies it, so it
+              // gets its length and how long it took instead.
               subtitle: Text(
-                '${widget.existing.latitude.toStringAsFixed(5)}, '
-                '${widget.existing.longitude.toStringAsFixed(5)}',
+                _isLine
+                    ? describeTrack(widget.existing.track)
+                    : '${widget.existing.latitude.toStringAsFixed(5)}, '
+                          '${widget.existing.longitude.toStringAsFixed(5)}',
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
@@ -164,7 +191,7 @@ class _WaypointEditorState extends State<WaypointEditor> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final category in WaypointCategory.values)
+                  for (final category in _offered)
                     ChoiceChip(
                       selected: category == _category,
                       // The glyph is on the chip because it is the glyph that

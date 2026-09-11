@@ -107,6 +107,62 @@ void main() {
     test('are omitted where Garmin has nothing that fits', () {
       expect(WaypointCategory.camera.garminSym, isNull);
     });
+
+    // GPX's trkType has no `sym` element at all, so there is nothing for a line
+    // category's symbol to be written into and nothing to be gained by guessing.
+    test('are absent on every line category', () {
+      for (final category in WaypointCategory.values.where(
+        (category) => category.shape == CategoryShape.line,
+      )) {
+        expect(category.garminSym, isNull, reason: category.id);
+      }
+    });
+  });
+
+  group('what a category can describe', () {
+    test('points exclude the line-only categories', () {
+      expect(WaypointCategory.forPoints, contains(WaypointCategory.stand));
+      expect(
+        WaypointCategory.forPoints,
+        isNot(contains(WaypointCategory.portage)),
+      );
+    });
+
+    test('lines exclude the point-only categories', () {
+      expect(WaypointCategory.forLines, contains(WaypointCategory.trail));
+      expect(WaypointCategory.forLines, isNot(contains(WaypointCategory.stand)));
+    });
+
+    test('the ones that work as either appear in both lists', () {
+      for (final category in [
+        WaypointCategory.other,
+        WaypointCategory.hazard,
+        // Followed rather than pinned as often as not.
+        WaypointCategory.blood,
+      ]) {
+        expect(WaypointCategory.forPoints, contains(category));
+        expect(WaypointCategory.forLines, contains(category));
+      }
+    });
+
+    test('every category is offered somewhere', () {
+      for (final category in WaypointCategory.values) {
+        expect(
+          WaypointCategory.forPoints.contains(category) ||
+              WaypointCategory.forLines.contains(category),
+          isTrue,
+          reason: '${category.id} cannot be chosen at all',
+        );
+      }
+    });
+
+    test('a line category still resolves from a file', () {
+      expect(WaypointCategory.fromId('portage'), WaypointCategory.portage);
+      expect(
+        WaypointCategory.fromId('Boundary walked'),
+        WaypointCategory.boundary,
+      );
+    });
   });
 
   group('colour encoding', () {
