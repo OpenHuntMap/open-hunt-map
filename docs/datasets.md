@@ -682,19 +682,35 @@ derived.
 **License:** not one licence, and one of them is unresolved:
 
 - **TRQ layers** (parks, protected areas, public hunt territories) are
-  Attribution (CC-BY 4.0), stated on the
-  [Données Québec dataset page](https://www.donneesquebec.ca/recherche/fr/dataset/7c9fff9f-c7c0-4267-a287-f86299796aea)
-  for the Couche des territoires récréatifs.
+  Attribution (CC-BY 4.0). Confirmed rather than inferred: the Données Québec
+  package
+  [couche-des-territoires-recreatifs-du-quebec](https://www.donneesquebec.ca/recherche/fr/dataset/7c9fff9f-c7c0-4267-a287-f86299796aea)
+  (MRNF) carries that licence and lists our exact REST endpoint,
+  `servicescarto.mrnf.gouv.qc.ca/pes/rest/services/Territoire/TRQ_WMS/MapServer`,
+  among its own distributions — so the licence attaches to the thing we call, not
+  to a dataset that resembles it.
 - **Municipalities** are StatsCan [Open Licence](https://www.statcan.gc.ca/en/reference/licence).
-- **Hunting zones (GAGQ) have no licence we can cite.** The service publishes
-  only `© Gouvernement du Québec` and names none, and no Données Québec dataset
-  page for this geometry has been found; the portal's own licence page is
-  JavaScript-gated and cannot be read by a script. Sibling MRNF datasets are
-  CC-BY 4.0, but assuming it here would assert a permission nobody granted, so
-  the layer carries `license_unconfirmed` saying exactly that and
-  `audit_overlays.py` prints it on every run rather than letting it go quiet.
-  **Resolve before Quebec stops being a preview:** confirm the licence in writing
-  or drop the layer.
+- **Hunting zones (GAGQ) have no licence, and the search for one is finished.**
+  The service states only `© Gouvernement du Québec`; it is the Greffe de
+  l'arpenteur général locator service, published to help find survey documents
+  rather than to distribute data. What was established:
+  - Données Québec has no dataset for this geometry. Both ministries' complete
+    catalogues were searched (248 datasets), plus full-text queries and a
+    `resource_search` on the hostname, which returns zero.
+  - The CC-BY *territoires récréatifs* product does not contain it. All 17 of its
+    layers were enumerated; the closest are `Territoire exclusif de chasse` and
+    `Zone d'exploitation contrôlée`, neither of which is a numbered regulatory
+    zone.
+  - **The analogy argues the other way.** The same ministry licenses its
+    Territoires fauniques structurés under **CC-BY-NC-ND 4.0**, so for Quebec
+    wildlife geometry the permissive guess is the wrong one.
+
+  Redistributing it is therefore unlicensed until somebody grants it in writing.
+  The layer carries `license_unconfirmed` recording all of the above and
+  `audit_overlays.py` prints it on every run. **Resolve before Quebec stops being
+  a preview:** ask the wildlife management branch
+  (dggf@environnement.gouv.qc.ca), or drop the layer and lose zone identification
+  in Quebec.
 
 Quebec is flagged `"status": "preview"` in `data/provinces.json`, which puts a
 PREVIEW badge in the app bar and a plain-language note behind it. The green

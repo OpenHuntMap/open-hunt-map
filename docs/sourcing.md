@@ -109,11 +109,38 @@ words the answer correctly, which still needs a device pass — see
 ## Things not to do, each learned by doing them
 
 - **Do not use OpenStreetMap for anything implying tenure.** Context only.
-- **Do not fill in a licence field by analogy with a sibling dataset.** Quebec's
-  hunting zones service publishes a copyright line and names no licence; its
-  siblings are CC-BY 4.0. Assuming that would be asserting a permission nobody
-  granted, so the layer carries `license_unconfirmed` explaining the gap, and the
-  audit prints it on every run instead of letting it go quiet.
+- **Do not fill in a licence field by analogy with a sibling dataset**, and note
+  that Quebec is the case that proves the analogy runs the wrong way. Its hunting
+  zones service names no licence, and it would have been easy to write CC-BY 4.0
+  because the neighbouring products use it — but the same ministry licenses its
+  **Territoires fauniques structurés under CC-BY-NC-ND 4.0**. For Quebec wildlife
+  geometry the optimistic guess is the incorrect one.
+- **Do not swap a source for a more convenient one without re-reading its
+  licence.** TFS is the standing trap: it covers ZECs, outfitters and réserves
+  fauniques — the same subject matter as our Quebec public-territories layer —
+  and it offers ready-made GeoJSON, GPKG and SQLite downloads where the layer we
+  actually use requires paginating an ArcGIS service. Switching to it would look
+  like a tidy simplification and would quietly put non-commercial, no-derivatives
+  data in the app. We use the **territoires récréatifs (TRQ)** product instead,
+  which is CC-BY 4.0 and whose Données Québec package lists our exact REST
+  endpoint among its own distributions.
+
+### Checking a licence properly, when the portal fights you
+
+`donneesquebec.ca` is JavaScript-gated and cannot be read by a script, which is
+what makes it tempting to give up and assume. It runs CKAN, and the CKAN JSON API
+is open:
+
+```
+https://www.donneesquebec.ca/recherche/api/3/action/package_search?q=...
+https://www.donneesquebec.ca/recherche/api/3/action/package_show?id=<slug>
+https://www.donneesquebec.ca/recherche/api/3/action/resource_search?query=url:<host>
+```
+
+`resource_search` on the hostname is the decisive one: it answers "which licensed
+dataset publishes the endpoint I am actually calling", rather than "which dataset
+sounds like the thing I want". That is how the TRQ licence was tied to our own URL,
+and how the hunting zones were shown to have no dataset behind them at all.
 - **Do not cut a boundary before simplifying it.** Simplifying afterwards moves
   the cut edges independently and they stop meeting; that produced 1,015 slivers
   along the divide, each one a false "not permitted".

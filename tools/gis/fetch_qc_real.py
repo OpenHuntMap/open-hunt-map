@@ -26,7 +26,11 @@ from shapely.geometry import mapping, shape
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
-# Stated on the dataset's Données Québec page as "Attribution (CC-BY 4.0)".
+# Confirmed, not inferred: the Données Québec package
+# couche-des-territoires-recreatifs-du-quebec (7c9fff9f-c7c0-4267-a287-f86299796aea,
+# MRNF) is "Attribution (CC-BY 4.0)", and its own resource list names the REST
+# service TRQ below as one of its distributions. So the licence attaches to this
+# exact endpoint rather than to a dataset that merely resembles it.
 CC_BY_4_URL = "https://creativecommons.org/licenses/by/4.0/"
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -177,12 +181,19 @@ def build_wmu(simplify: float) -> None:
             "coverage": "Quebec hunting/fishing zones (province-wide)",
             "license": "© Gouvernement du Québec — open licence not stated",
             "license_unconfirmed": (
-                "The GAGQ service publishes only the copyright line "
-                "'© Gouvernement du Québec' and names no licence, and no Données "
-                "Québec dataset page for this geometry has been found. Sibling "
-                "MRNF datasets are CC-BY 4.0, but assuming it for this one would "
-                "be asserting a permission nobody granted. Resolve before Quebec "
-                "stops being a preview: either cite the licence or drop the layer."
+                "Searched for, and not found. The GAGQ service states only "
+                "'© Gouvernement du Québec'; it is the Greffe de l'arpenteur "
+                "général locator service, published to help find survey "
+                "documents rather than to distribute data. Données Québec has no "
+                "dataset for this geometry (both ministries' full catalogues, "
+                "plus resource-URL and full-text searches), and the CC-BY "
+                "territoires récréatifs product does not contain it — none of "
+                "its 17 layers is the numbered regulatory zone. Worse, the same "
+                "ministry licenses its Territoires fauniques structurés under "
+                "CC-BY-NC-ND 4.0, so for wildlife geometry the optimistic guess "
+                "is the wrong one. Redistributing this is unlicensed until "
+                "somebody grants it in writing. Resolve before Quebec stops "
+                "being a preview: ask (dggf@environnement.gouv.qc.ca) or drop it."
             ),
             "source": GAGQ_ZONES,
         },
