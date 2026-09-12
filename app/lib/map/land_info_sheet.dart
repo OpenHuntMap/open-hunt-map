@@ -6,6 +6,7 @@ import '../data/models.dart';
 import '../data/province_loader.dart';
 import '../data/seasons.dart';
 import 'land_info.dart';
+import 'policy_markdown.dart';
 import 'seasons_tab.dart';
 import 'weather_tab.dart';
 
@@ -506,11 +507,11 @@ class _FeatureReport extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    text ??
-                        'No policy document is bundled for $policyId. Open the '
-                            'official report to read it.',
-                  ),
+                  if (text case final markdown?)
+                    PolicyMarkdown(markdown)
+                  else
+                    Text('No policy document is bundled for $policyId. Open the '
+                        'official report to read it.'),
                   if (text != null && officialUrl != null) ...[
                     const SizedBox(height: 14),
                     Text(
