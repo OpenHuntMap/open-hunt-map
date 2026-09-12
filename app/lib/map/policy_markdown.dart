@@ -39,9 +39,15 @@ class PolicyTable extends PolicyBlock {
   final List<List<String>> rows;
 }
 
+/// A `---` thematic break. The files end with one before the licence note.
+class PolicyRule extends PolicyBlock {
+  const PolicyRule();
+}
+
 final _heading = RegExp(r'^(#{1,6})\s+(.*)$');
 final _field = RegExp(r'^\*\*(.+?):\*\*\s*(.*)$');
 final _tableRule = RegExp(r'^\|[\s\-:|]+\|$');
+final _thematicBreak = RegExp(r'^(-{3,}|\*{3,}|_{3,})$');
 
 List<PolicyBlock> parsePolicyMarkdown(String source) {
   final blocks = <PolicyBlock>[];
@@ -80,6 +86,11 @@ List<PolicyBlock> parsePolicyMarkdown(String source) {
 
     if (line.trim().isEmpty) {
       flushParagraph();
+      continue;
+    }
+    if (_thematicBreak.hasMatch(line.trim())) {
+      flushParagraph();
+      blocks.add(const PolicyRule());
       continue;
     }
     if (_heading.firstMatch(line) case final match?) {
@@ -163,6 +174,7 @@ class PolicyMarkdown extends StatelessWidget {
           ),
         PolicyParagraph(:final text) =>
           Text(text, style: const TextStyle(height: 1.4)),
+        PolicyRule() => Divider(height: 0.5, color: Theme.of(context).dividerColor),
         PolicyTable() => _columnWidths(block).any((w) => w > _proseColumnChars)
             ? _StackedTable(block, underHeading: heading)
             : _Grid(block),
@@ -187,45 +199,105 @@ class _StackedTable extends StatelessWidget {
   /// a one-row table whose first cell is `Hunting`.
   final String underHeading;
 
+  /// A row whose labels, values and separators come to this many characters or
+  /// fewer will fit one line of the dialog on a phone.
+  ///
+  /// Measured rather than guessed: at this dialog's width the text wraps around
+  /// thirty-four characters, and a row that overruns puts the separator alone at
+  /// the end of a line.
+  static const _oneLineChars = 32;
+
+  /// Whether *every* row fits, which is the only case one-lining is used.
+  ///
+  /// The decision belongs to the table and not to each row. Deciding per row
+  /// gave three two-line rows followed by a one-line `Sport Fishing`, and ragged
+  /// like that reads as a rendering fault rather than as a shorter entry.
+  bool get _oneLine => table.rows.every((row) {
+        var length = 0;
+        for (var column = 1; column < table.headers.length; column++) {
+          if (column >= row.length || row[column].isEmpty) continue;
+          if (length > 0) length += 3;
+          length += table.headers[column].length + 2 + row[column].length;
+        }
+        return length <= _oneLineChars;
+      });
+
   @override
   Widget build(BuildContext context) {
     final rule = Theme.of(context).dividerColor;
+    final children = <Widget>[];
+    final oneLine = _oneLine;
+
+    // Consecutive rows sharing their first cell are one group under one title.
+    // The permitted-use tables run sixty rows deep with six distinct classes, so
+    // titling every row repeats `Commercial Activities` fifty times and buries
+    // the uses it is meant to introduce.
+    var groupTitle = Object();
+    for (final row in table.rows) {
+      final title = row.isEmpty ? '' : row.first;
+      final pairs = [
+        for (var column = 1; column < table.headers.length; column++)
+          if (column < row.length && row[column].isNotEmpty)
+            (table.headers[column], row[column]),
+      ];
+      if (title != groupTitle) {
+        if (children.isNotEmpty) {
+          children.add(Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            child: Divider(height: 0.5, color: rule),
+          ));
+        }
+        if (title.isNotEmpty && title != underHeading) {
+          children.add(Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700, height: 1.35),
+          ));
+        }
+        groupTitle = title;
+      } else if (children.isNotEmpty) {
+        children.add(SizedBox(height: oneLine ? 3 : 9));
+      }
+
+      Widget labelled((String, String) pair) => Text.rich(
+            TextSpan(children: [
+              TextSpan(
+                text: '${pair.$1}: ',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              TextSpan(text: pair.$2),
+            ]),
+            style: const TextStyle(height: 1.4),
+          );
+
+      if (oneLine && pairs.length > 1) {
+        // Every label is kept. This is a legal document, and a column header is
+        // part of what a cell means.
+        children.add(Text.rich(
+          TextSpan(children: [
+            for (final (index, pair) in pairs.indexed) ...[
+              if (index > 0) const TextSpan(text: '  ·  '),
+              TextSpan(
+                text: '${pair.$1}: ',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              TextSpan(text: pair.$2),
+            ],
+          ]),
+          style: const TextStyle(height: 1.4),
+        ));
+      } else {
+        for (final (index, pair) in pairs.indexed) {
+          children.add(Padding(
+            padding: EdgeInsets.only(top: index == 0 ? 1 : 3),
+            child: labelled(pair),
+          ));
+        }
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final (index, row) in table.rows.indexed) ...[
-          if (index > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 0.5, color: rule),
-            ),
-          // The first cell titles the block. It is the subject of the row in
-          // every table these scripts emit, so repeating its header above it
-          // would only add a word.
-          if (row.isNotEmpty &&
-              row.first.isNotEmpty &&
-              row.first != underHeading)
-            Text(
-              row.first,
-              style: const TextStyle(fontWeight: FontWeight.w700, height: 1.35),
-            ),
-          for (var column = 1; column < table.headers.length; column++)
-            if (column < row.length && row[column].isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(
-                      text: '${table.headers[column]}: ',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    TextSpan(text: row[column]),
-                  ]),
-                  style: const TextStyle(height: 1.4),
-                ),
-              ),
-        ],
-      ],
+      children: children,
     );
   }
 }

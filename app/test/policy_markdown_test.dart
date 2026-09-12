@@ -40,6 +40,7 @@ management.
           PolicyField(:final label, :final value) => '$label $value',
           PolicyTable(:final headers, :final rows) =>
             [...headers, for (final row in rows) ...row].join(' '),
+          PolicyRule() => '',
         };
         expect(text, isNot(contains('**')));
         expect(text, isNot(contains('|')));
@@ -109,6 +110,57 @@ management.
       ));
       // The heading, and not the row's first cell as well.
       expect(find.text('Hunting'), findsOneWidget);
+    });
+
+    // The permitted-use table runs sixty rows deep with six distinct classes.
+    // Titling each row repeats the class fifty times and buries the uses.
+    testWidgets('rows sharing a class name it once', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PolicyMarkdown(
+              '| Class | Use | Permitted |\n|---|---|---|\n'
+              '| Commercial Activities | Commercial Tourism (Services '
+              'and/or Facilities), Existing | Yes |\n'
+              '| Commercial Activities | Bait Fishing | Yes |\n'
+              '| Recreation Activities | Hunting | Yes |\n',
+            ),
+          ),
+        ),
+      ));
+      expect(find.text('Commercial Activities'), findsOneWidget);
+      expect(find.text('Recreation Activities'), findsOneWidget);
+      // Both labels survive, on one line, because a column header is part of
+      // what a cell means.
+      expect(find.textContaining('Use: Bait Fishing'), findsOneWidget);
+      expect(find.textContaining('Permitted: Yes'), findsWidgets);
+    });
+
+    test('a thematic break is a rule, not three hyphens of text', () {
+      final blocks = parsePolicyMarkdown('one\n\n---\n\nLicence note.\n');
+      expect(blocks.whereType<PolicyRule>(), hasLength(1));
+      expect(blocks.whereType<PolicyParagraph>().map((p) => p.text),
+          ['one', 'Licence note.']);
+    });
+
+    // Ragged reads as a rendering fault rather than as a shorter entry, so the
+    // one-line form is all rows or none.
+    testWidgets('rows are not a mix of one-line and two-line', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PolicyMarkdown(
+              '| Class | Use | Permitted |\n|---|---|---|\n'
+              '| Recreation | Road Development and Maintenance, Existing '
+              '| Yes |\n'
+              '| Recreation | Sport Fishing | Yes |\n',
+            ),
+          ),
+        ),
+      ));
+      // The longer row cannot be one-lined, so neither is.
+      expect(find.textContaining('·'), findsNothing);
+      expect(find.textContaining('Use: Sport Fishing'), findsOneWidget);
     });
 
     testWidgets('a table of short values keeps its grid', (tester) async {
