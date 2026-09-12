@@ -69,8 +69,10 @@ anything. The ones most often violated by accident:
 | `docs/` | Constraints, architecture, datasets, packs, APK build, devtest |
 | `.agents/skills/` | Agent skills, vendor-neutral location |
 
-Generated overlays under `data/{cc}/overlays/` are gitignored. Do not commit
-them, and do not commit the `_tmp*` archives the fetch scripts download.
+The large generated overlays under `data/{cc}/overlays/` are gitignored, named
+one by one in `.gitignore`; a minified 30 MB GeoJSON has no reviewable diff. The
+small ones stay tracked on purpose, so commit those along with the manifest when
+you regenerate. Never commit the `_tmp*` archives the fetch scripts download.
 
 ## Commands
 

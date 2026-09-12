@@ -148,11 +148,11 @@
       "label": "Sunday gun hunting permitted",
       "path": "overlays/sunday_gun.geojson",
       "format": "geojson",
-      "feature_count": 241,
+      "feature_count": 243,
       "crs": "EPSG:4326",
-      "coverage": "Municipalities and geographic townships south of the French and Mattawa rivers where Sunday gun hunting is permitted",
+      "coverage": "Municipalities south of the French and Mattawa rivers (O. Reg. 663/98 Part 7) plus the area north of the rivers (O. Reg. 665/98 s. 66(1))",
       "boundary_accuracy": "mapped",
-      "note": "Drawn only where Sunday gun hunting is permitted. North of the French and Mattawa rivers it is permitted everywhere and nothing is drawn; south of them an area with no polygon is a prohibition. Ontario publishes the list of municipalities but not its geometry, so these are municipal and survey township boundaries matched to O. Reg. 663/98 Part 7 Schedule 1 by name."
+      "note": "Drawn where Sunday gun hunting is permitted. South of the French and Mattawa rivers, 241 features are municipal and survey township boundaries matched to O. Reg. 663/98 Part 7, Schedule 1 by name. North of the rivers, Sunday gun hunting is permitted everywhere (the s. 66(1) prohibition only applies south of the rivers); the north polygon is derived from the WMU boundary fabric that traces the rivers, plus a 500 m near-divide band that carries approximate boundary accuracy so the card can say the answer is uncertain that close to the river."
     },
     {
       "id": "municipalities",
