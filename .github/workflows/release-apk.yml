@@ -51,7 +51,11 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          # 21 because maplibre_gl compiles with sourceCompatibility 21, and javac
+          # refuses a source release newer than itself. 17 built everything else
+          # here and failed only on that one subproject, which is a slow way to
+          # find out — the plugin's floor is the floor for the whole build.
+          java-version: "21"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2

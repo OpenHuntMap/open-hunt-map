@@ -16,6 +16,12 @@ flutter doctor
 
 `Android toolchain` should be green.
 
+The build needs **JDK 21 or newer**, because `maplibre_gl` compiles against Java
+21 and `javac` refuses a source release newer than itself. Android Studio's
+bundled JBR is well past that, so installing Android Studio is usually enough. If
+you point `JAVA_HOME` somewhere else, point it at 21+ or the build fails on that
+one subproject after several minutes of looking healthy.
+
 ## 2. Sync data + build debug APK
 
 ```powershell
