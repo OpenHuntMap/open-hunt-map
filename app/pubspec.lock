@@ -364,26 +364,26 @@ packages:
     dependency: "direct main"
     description:
       name: maplibre_gl
-      sha256: "8b24dce6a050ba44779154c550e0318654ee12c572fa5fd1ad0c12e90d061356"
+      sha256: "52e5c873137f8bcb2646802cf1d811575cb4b5bab52d1373d8d23a48f656f166"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.0"
+    version: "0.27.1"
   maplibre_gl_platform_interface:
     dependency: transitive
     description:
       name: maplibre_gl_platform_interface
-      sha256: "8a1952b77ce841162fcd2601dc857f5b3f8eea46d34025b901ef803bb15d2adc"
+      sha256: "476b1a8bd62465d7891218845118cb106df29c17f9034ff1a0cce7dd153179e3"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.0"
+    version: "0.27.1"
   maplibre_gl_web:
     dependency: transitive
     description:
       name: maplibre_gl_web
-      sha256: c9c7bb1183cc9c6baafcef0b5b741420db869ca45e474ca80edf732168a286ee
+      sha256: "3c0e9084edbe7d860f2366f8d6658722c79f3722a4e1234f3e49251a57f8297a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.0"
+    version: "0.27.1"
   matcher:
     dependency: transitive
     description:
