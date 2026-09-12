@@ -104,6 +104,16 @@ class Waypoint {
   /// The direction marker repeated along the line.
   final TrackMarker marker;
 
+  /// Whether this is a track, decided in one place.
+  ///
+  /// Two points are the least that makes a line, and the map has always drawn it
+  /// that way. Four screens each had their own test — some `isNotEmpty`, some
+  /// `length >= 2` — so a one-point track was listed as a track, described by its
+  /// distance, offered a Follow menu, and drew nothing at all. Import now folds a
+  /// lone point back into a point waypoint, which is what it is, and everything
+  /// asks this.
+  bool get isTrack => track.length >= 2;
+
   Color get displayColour => colour?.value ?? icon.colour;
 
   /// What MapLibre's `icon-color` gets.
@@ -168,8 +178,8 @@ class Waypoint {
         // Written only for lines, and only when not the default. A file of
         // several hundred points has no business carrying "solid" on every one
         // of them, and a point has no line to draw.
-        if (track.isNotEmpty && stroke != TrackStroke.solid) 'stroke': stroke.id,
-        if (track.isNotEmpty && marker != TrackMarker.arrow) 'marker': marker.id,
+        if (isTrack && stroke != TrackStroke.solid) 'stroke': stroke.id,
+        if (isTrack && marker != TrackMarker.arrow) 'marker': marker.id,
       };
 
   /// [clearColour] exists because passing `colour: null` cannot mean "unset" —
@@ -214,6 +224,37 @@ List<String> normaliseTags(Iterable<String> tags) {
     result.add(clean);
   }
   return result;
+}
+
+/// Names a collection by what is actually in it: "3 waypoints and 1 track".
+///
+/// Tracks and waypoints share one store and one page, and that is right — they
+/// are the same kind of belonging and people look for them in the same place.
+/// But the copy was written when only points existed, so someone who had just
+/// recorded a walk was told they had "1 waypoint", and a confirmation offered to
+/// delete "2 waypoints" when one of them was an afternoon's walking. Whether that
+/// matters is not ours to judge: the sentence should say what it will do.
+String describeItems(Iterable<Waypoint> items) {
+  var points = 0;
+  var tracks = 0;
+  for (final item in items) {
+    if (item.isTrack) {
+      tracks++;
+    } else {
+      points++;
+    }
+  }
+  return describeItemCount(points: points, tracks: tracks);
+}
+
+String describeItemCount({required int points, required int tracks}) {
+  String plural(int n, String noun) => n == 1 ? '1 $noun' : '$n ${noun}s';
+  return switch ((points, tracks)) {
+    (0, 0) => 'nothing',
+    (0, final t) => plural(t, 'track'),
+    (final p, 0) => plural(p, 'waypoint'),
+    (final p, final t) => '${plural(p, 'waypoint')} and ${plural(t, 'track')}',
+  };
 }
 
 class WaypointStore {

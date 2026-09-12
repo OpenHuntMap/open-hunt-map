@@ -36,7 +36,10 @@ class WaypointImportExport {
       ShareParams(
         files: [XFile.fromData(utf8.encode(content), mimeType: mime)],
         fileNameOverrides: [name],
-        subject: 'OpenWoodsMap waypoints',
+        // Says what is in the file. This is the line the recipient sees before
+        // opening anything, and it was claiming waypoints when the file might be
+        // nothing but tracks.
+        subject: 'OpenWoodsMap — ${describeItems(waypoints)}',
       ),
     );
   }
@@ -74,7 +77,7 @@ class WaypointImportExport {
         'xmlns': 'http://www.topografix.com/GPX/1/1',
       },
       nest: () {
-        for (final waypoint in waypoints.where((item) => item.track.isEmpty)) {
+        for (final waypoint in waypoints.where((item) => !item.isTrack)) {
           builder.element(
             'wpt',
             attributes: {
@@ -111,7 +114,7 @@ class WaypointImportExport {
           );
         }
         for (final waypoint in waypoints.where(
-          (item) => item.track.isNotEmpty,
+          (item) => item.isTrack,
         )) {
           builder.element(
             'trk',
@@ -194,7 +197,10 @@ class WaypointImportExport {
         builder.element(
           'Document',
           nest: () {
-            builder.element('name', nest: 'OpenWoodsMap waypoints');
+            builder.element(
+              'name',
+              nest: 'OpenWoodsMap — ${describeItems(waypoints)}',
+            );
             for (final hex in styles) {
               builder.element(
                 'Style',
@@ -260,7 +266,7 @@ class WaypointImportExport {
             }
           },
         );
-        if (waypoint.track.isEmpty) {
+        if (!waypoint.isTrack) {
           builder.element(
             'Point',
             nest: () {
@@ -330,7 +336,7 @@ class WaypointImportExport {
                       // no element for a stroke pattern and KML's LineStyle has
                       // colour and width but no dashes, so writing it into either
                       // would mean inventing an extension no other tool reads.
-                      if (waypoint.track.isNotEmpty) ...{
+                      if (waypoint.isTrack) ...{
                         'stroke-style': waypoint.stroke.id,
                         'direction-marker': waypoint.marker.id,
                       },
@@ -340,7 +346,7 @@ class WaypointImportExport {
                       'marker-color': waypoint.colourHex,
                     },
                     'geometry': {
-                      'type': waypoint.track.isEmpty ? 'Point' : 'LineString',
+                      'type': waypoint.isTrack ? 'LineString' : 'Point',
                       'coordinates':
                           waypoint.track.isEmpty
                               ? [waypoint.longitude, waypoint.latitude]
@@ -719,7 +725,13 @@ class WaypointImportExport {
       icon: icon,
       tags: tags,
       colour: colour,
-      track: points,
+      // A single-point track is kept as the point it is. Other people's files do
+      // contain one — a `trk` with one `trkpt` is what a recording that never got
+      // a second fix looks like — and keeping the track list would have produced
+      // an item listed as a track, described by its length, offered a Follow
+      // menu, and drawing nothing whatsoever on the map. The coordinate is real
+      // and worth keeping; the line is not there.
+      track: points.length >= 2 ? points : const [],
       stroke: stroke,
       marker: marker,
     );

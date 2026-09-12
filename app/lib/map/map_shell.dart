@@ -534,7 +534,7 @@ class _MapShellState extends State<MapShell> {
             onPressed: _showLayers,
           ),
           IconButton(
-            tooltip: 'Waypoints',
+            tooltip: 'Waypoints & tracks',
             icon: const Icon(Icons.location_on_outlined),
             onPressed: _showWaypoints,
           ),
@@ -1145,17 +1145,22 @@ class _MapShellState extends State<MapShell> {
       return;
     }
     final stoppedAt = DateTime.now();
-    await _waypoints.add(
-      Waypoint(
-        id: stoppedAt.microsecondsSinceEpoch.toString(),
-        name: 'Track ${_formatTrackName(stoppedAt)}',
-        latitude: points.first.latitude,
-        longitude: points.first.longitude,
-        notes: '',
-        createdAt: stoppedAt,
-        track: points,
-      ),
+    final recorded = Waypoint(
+      id: stoppedAt.microsecondsSinceEpoch.toString(),
+      name: 'Track ${_formatTrackName(stoppedAt)}',
+      latitude: points.first.latitude,
+      longitude: points.first.longitude,
+      notes: '',
+      createdAt: stoppedAt,
+      track: points,
     );
+    // Saved before it is named, and that order is the point. Naming a walk is
+    // worth offering, but an hour on the ground must not depend on the user
+    // getting through a form — a dismissed sheet, a backgrounded app or a flat
+    // battery at the trailhead all have to leave the track on disk. So the
+    // recording lands first under its timestamp, and the editor then edits
+    // something that already exists.
+    await _waypoints.add(recorded);
     await _syncWaypointSource();
     final summary = StringBuffer(
       'Saved ${formatDistance(trackLengthMetres(points))}',
@@ -1165,13 +1170,26 @@ class _MapShellState extends State<MapShell> {
     }
     if (rejected > 0) summary.write(' · dropped $rejected poor fix(es)');
     _toast(summary.toString());
+    if (!mounted) return;
+    final named = await showWaypointEditor(
+      context,
+      existing: recorded,
+      knownTags: _waypoints.tagsInUse,
+      // Not new: it is already saved, so the sheet's action reads Done rather
+      // than Save, and dismissing it keeps the track rather than discarding it.
+      isNew: false,
+    );
+    if (named == null) return;
+    await _waypoints.update(named);
+    await _syncWaypointSource();
+    await _syncSavedTrackSource();
   }
 
   Future<void> _startFollowing(
     Waypoint track, {
     required bool reversed,
   }) async {
-    if (track.track.length < 2) {
+    if (!track.isTrack) {
       _toast('"${track.name}" has no line to follow.');
       return;
     }
@@ -1285,7 +1303,7 @@ class _MapShellState extends State<MapShell> {
       'features': [
         for (final waypoint in _waypoints.items.where(
           (item) =>
-              item.track.isEmpty &&
+              !item.isTrack &&
               !_visibility.isHiddenOnMap(item.id, item.tags),
         ))
           {
@@ -1495,7 +1513,7 @@ class _MapShellState extends State<MapShell> {
     final data = trackFeatureCollection(
       _waypoints.items.where(
         (item) =>
-            item.track.isNotEmpty &&
+            item.isTrack &&
             item.id != followedId &&
             !_visibility.isHiddenOnMap(item.id, item.tags),
       ),

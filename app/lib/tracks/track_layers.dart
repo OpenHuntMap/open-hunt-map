@@ -16,7 +16,7 @@ Map<String, dynamic> trackFeatureCollection(Iterable<Waypoint> tracks) => {
     // A one-point track has no line to draw. It is kept in the list, where its
     // single fix is still a place the user went.
     for (final waypoint in tracks)
-      if (waypoint.track.length >= 2)
+      if (waypoint.isTrack)
         {
           'type': 'Feature',
           'properties': {

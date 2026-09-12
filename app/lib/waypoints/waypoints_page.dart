@@ -160,7 +160,11 @@ class _WaypointsPageState extends State<WaypointsPage> {
     final rows = _rows;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Waypoints'),
+        // Named for both, because both have always been in here. A recorded walk
+        // is saved to this list and drawn from it, and someone looking for one
+        // scans for the word track — which appeared nowhere in the page that
+        // held it.
+        title: const Text('Waypoints & tracks'),
         actions: [
           PopupMenuButton<WaypointFormat>(
             tooltip: 'Export',
@@ -211,8 +215,9 @@ class _WaypointsPageState extends State<WaypointsPage> {
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text(
-                  'No waypoints yet.\nAdd one at the last identified point '
-                  'or current map center.',
+                  'Nothing saved yet.\nAdd a waypoint at the last identified '
+                  'point or the current map center, or record a track from '
+                  'the map.',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -230,7 +235,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
                     ),
                   )
                 else ...[
-                  _tally(visible.length, rows.whereType<Waypoint>().length),
+                  _tally(visible, rows.whereType<Waypoint>().length),
                   Expanded(child: _list(rows)),
                 ],
               ],
@@ -238,32 +243,28 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
   }
 
-  /// How many waypoints there are, said plainly.
+  /// How much is in here, said plainly and by kind.
   ///
   /// Load-bearing rather than decoration. The section counts deliberately add
-  /// up to more than the number of waypoints, so without a stated total the
-  /// list implies it holds more than it does — and the number of waypoints you
-  /// have is the one figure nobody should have to work out.
-  Widget _tally(int shown, int rows) {
-    final held = widget.store.items.length;
+  /// up to more than the number of items, so without a stated total the list
+  /// implies it holds more than it does — and how much you have is the one
+  /// figure nobody should have to work out.
+  Widget _tally(List<Waypoint> shown, int rows) {
     final counted = _filtered
-        ? '$shown of ${_count(held, 'waypoint')} shown'
-        : _count(shown, 'waypoint');
+        ? '${shown.length} of ${describeItems(widget.store.items)} shown'
+        : describeItems(shown);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Text(
-        rows > shown
-            ? '$counted · $rows rows below, because a waypoint appears under '
+        rows > shown.length
+            ? '$counted · $rows rows below, because an item appears under '
                   '${_filtered ? 'each of the tags you picked' : 'each of its tags'}'
             : counted,
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
-
-  static String _count(int n, String noun) =>
-      n == 1 ? '1 $noun' : '$n ${noun}s';
 
   Widget _filterBar() {
     final counts = widget.store.tagCounts;
@@ -383,8 +384,8 @@ class _WaypointsPageState extends State<WaypointsPage> {
               icon: const Icon(Icons.more_vert, size: 20),
               onSelected: (choice) => switch (choice) {
                 'style' => _styleTag(tag),
-                'untag' => _removeTag(tag, count),
-                _ => _deleteTagged(tag, count),
+                'untag' => _removeTag(tag),
+                _ => _deleteTagged(tag),
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
@@ -403,7 +404,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
                 ),
                 PopupMenuItem(
                   value: 'delete',
-                  child: Text('Delete these ${_count(count, 'waypoint')}'),
+                  child: Text('Delete these ${describeItems(_inSection(tag))}'),
                 ),
               ],
             ),
@@ -424,7 +425,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
   );
 
   Widget _row(Waypoint waypoint) {
-    final isTrack = waypoint.track.isNotEmpty;
+    final isTrack = waypoint.isTrack;
     final vis = _itemVisibility(waypoint);
     // How far and how long, not how many fixes: the point count is an artefact
     // of the recording interval and tells the user nothing about the walk.
@@ -450,10 +451,21 @@ class _WaypointsPageState extends State<WaypointsPage> {
         : '$hiddenByTagNote$where\n${waypoint.notes}$tags';
     return ListTile(
       // The waypoint's own glyph and its own colour, never the section's. The
-      // same waypoint appears under every tag it carries, and it has to be
-      // recognisable as one waypoint in all of them and as the same symbol the
-      // map draws.
-      leading: Icon(waypoint.icon.icon, color: waypoint.displayColour),
+      // same item appears under every tag it carries, and it has to be
+      // recognisable as one item in all of them and, for a point, as the same
+      // symbol the map draws.
+      leading: Icon(
+        // A track is drawn as a line here because that is all the map draws for
+        // one — there is no symbol layer for tracks, so any glyph in this slot
+        // was a picture of something that appears nowhere, and the only thing
+        // telling a recorded walk apart from a point was the subtitle. This is
+        // not conditional on whether the user picked a glyph, because the model
+        // cannot tell: the default and the pin are the same value. The colour is
+        // still theirs, and unlike the glyph the map really does draw the line in
+        // it.
+        waypoint.isTrack ? Icons.polyline : waypoint.icon.icon,
+        color: waypoint.displayColour,
+      ),
       title: Text(waypoint.name),
       subtitle: Text(subtitle),
       isThreeLine: waypoint.notes.isNotEmpty || waypoint.tags.isNotEmpty ||
@@ -665,42 +677,45 @@ class _WaypointsPageState extends State<WaypointsPage> {
   List<Waypoint> _inSection(String tag) =>
       _visible.where((item) => item.tags.contains(tag)).toList();
 
-  /// Says so when the filter is hiding waypoints that carry the tag and will
+  /// Says so when the filter is hiding items that carry the tag and will
   /// therefore be left alone. Empty the rest of the time, which is most of it.
-  String _scopeNote(String tag, int acting) {
-    final held = widget.store.tagCounts[tag] ?? 0;
-    if (held <= acting) return '';
-    return '\n\n${_count(held - acting, 'waypoint')} carrying "$tag" '
-        '${held - acting == 1 ? 'is' : 'are'} hidden by the filter and will '
+  String _scopeNote(String tag, Set<String> acting) {
+    final untouched = widget.store.items
+        .where((item) => item.tags.contains(tag) && !acting.contains(item.id))
+        .toList();
+    if (untouched.isEmpty) return '';
+    return '\n\n${describeItems(untouched)} carrying "$tag" '
+        '${untouched.length == 1 ? 'is' : 'are'} hidden by the filter and will '
         'not be touched.';
   }
 
-  /// Takes a tag off a group of waypoints without deleting any of them.
+  /// Takes a tag off a group of items without deleting any of them.
   ///
   /// Confirmed as well as undoable, like the delete below, because it silently
-  /// changes many waypoints at once — but worded so that nobody reaches for this
-  /// expecting the waypoints to go, or for the delete expecting them to stay.
-  Future<void> _removeTag(String tag, int count) async {
-    final ids = _inSection(tag).map((item) => item.id).toSet();
+  /// changes many items at once — but worded so that nobody reaches for this
+  /// expecting them to go, or for the delete expecting them to stay.
+  Future<void> _removeTag(String tag) async {
+    final section = _inSection(tag);
+    final ids = section.map((item) => item.id).toSet();
     final confirmed = await _confirm(
-      title: 'Remove "$tag" from ${_count(count, 'waypoint')}?',
+      title: 'Remove "$tag" from ${describeItems(section)}?',
       body:
-          'The waypoints stay exactly as they are. They lose this one tag, so '
-          'any that had no other tag will move to the Untagged section.'
-          '${_scopeNote(tag, ids.length)}',
+          'They stay exactly as they are. They lose this one tag, so any that '
+          'had no other tag will move to the Untagged section.'
+          '${_scopeNote(tag, ids)}',
       action: 'Remove the tag',
     );
     if (confirmed != true) return;
     // The whole list, so undo restores the tags in the order they were in
-    // rather than appending this one at the end of each waypoint.
+    // rather than appending this one at the end of each item.
     final before = widget.store.items.toList();
-    final changed = await widget.store.removeTagFrom(tag, ids);
+    await widget.store.removeTagFrom(tag, ids);
     if (!mounted) return;
     setState(_pruneFilter);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Removed "$tag" from ${_count(changed, 'waypoint')}. '
+          'Removed "$tag" from ${describeItems(section)}. '
           'Nothing was deleted.',
         ),
         action: SnackBarAction(
@@ -714,19 +729,20 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
   }
 
-  /// Deletes every waypoint carrying a tag. Asks first, then still offers undo.
+  /// Deletes every item carrying a tag. Asks first, then still offers undo.
   ///
   /// Both, not one or the other: the confirmation is because this removes work
   /// that took a season to collect, and the undo is because a confirmation
   /// dialog is something people dismiss on reflex.
-  Future<void> _deleteTagged(String tag, int count) async {
-    final ids = _inSection(tag).map((item) => item.id).toSet();
+  Future<void> _deleteTagged(String tag) async {
+    final section = _inSection(tag);
+    final ids = section.map((item) => item.id).toSet();
     final confirmed = await _confirm(
-      title: 'Delete ${_count(count, 'waypoint')} tagged "$tag"?',
+      title: 'Delete ${describeItems(section)} tagged "$tag"?',
       body:
-          'This deletes the waypoints themselves, including any that also '
-          'carry other tags, so they will go from those sections too. You will '
-          'get one chance to undo it.${_scopeNote(tag, ids.length)}',
+          'This deletes the items themselves, including any that also carry '
+          'other tags, so they will go from those sections too. You will get '
+          'one chance to undo it.${_scopeNote(tag, ids)}',
       action: 'Delete them',
     );
     if (confirmed != true) return;
@@ -740,7 +756,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
     setState(_pruneFilter);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Deleted ${_count(removed.length, 'waypoint')}.'),
+        content: Text('Deleted ${describeItems(removed)}.'),
         action: SnackBarAction(
           label: 'UNDO',
           onPressed: () async {
@@ -828,8 +844,9 @@ class _WaypointsPageState extends State<WaypointsPage> {
         SnackBar(
           content: Text(
             skipped == 0
-                ? 'Imported ${fresh.length} waypoint(s).'
-                : 'Imported ${fresh.length}, skipped $skipped already here.',
+                ? 'Imported ${describeItems(fresh)}.'
+                : 'Imported ${describeItems(fresh)}, skipped $skipped already '
+                      'here.',
           ),
         ),
       );

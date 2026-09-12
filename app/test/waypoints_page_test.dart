@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:open_woods_map/settings/visibility_settings.dart';
+import 'package:open_woods_map/waypoints/waypoint_colour.dart';
 import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 import 'package:open_woods_map/waypoints/waypoints_page.dart';
@@ -34,6 +35,26 @@ Waypoint point(
   createdAt: DateTime.utc(2026, 9, 10),
   icon: icon,
   tags: tags,
+);
+
+Waypoint track(
+  String id,
+  String name, {
+  WaypointIcon icon = WaypointIcon.fallback,
+  List<String> tags = const [],
+}) => Waypoint(
+  id: id,
+  name: name,
+  latitude: 45.5,
+  longitude: -77.5,
+  notes: '',
+  createdAt: DateTime.utc(2026, 9, 10),
+  icon: icon,
+  tags: tags,
+  track: const [
+    TrackPoint(latitude: 45.5, longitude: -77.5),
+    TrackPoint(latitude: 45.51, longitude: -77.51),
+  ],
 );
 
 void main() {
@@ -539,6 +560,101 @@ void main() {
       await tester.tap(find.byTooltip('Export'));
       await settle(tester);
       expect(find.text('Exports all 3'), findsOneWidget);
+    });
+  });
+
+  // Tracks have always been saved to this list and drawn from it, but nothing on
+  // the page said so: the title, the tally and every confirmation spoke only of
+  // waypoints, so a confirmation offered to delete "2 waypoints" when one of them
+  // was an afternoon's walking.
+  group('the page admits tracks exist', () {
+    testWidgets('is titled for both', (tester) async {
+      await pumpPage(tester, await stockedWith(tester, [point('1', 'Stand')]));
+      expect(find.text('Waypoints & tracks'), findsOneWidget);
+    });
+
+    testWidgets('the tally counts each kind by name', (tester) async {
+      await pumpPage(
+        tester,
+        await stockedWith(tester, [
+          point('1', 'Stand'),
+          point('2', 'Spring'),
+          track('3', 'Morning walk'),
+        ]),
+      );
+      expect(find.text('2 waypoints and 1 track'), findsOneWidget);
+    });
+
+    testWidgets('a list of only tracks is not called waypoints', (tester) async {
+      await pumpPage(
+        tester,
+        await stockedWith(tester, [track('1', 'Walk'), track('2', 'Portage')]),
+      );
+      expect(find.text('2 tracks'), findsOneWidget);
+    });
+
+    // The map draws no symbol at all for a track, only the line, so whatever
+    // glyph sat here was a picture of something that appears nowhere.
+    testWidgets('a track is shown as a line, a point is not', (tester) async {
+      await pumpPage(
+        tester,
+        await stockedWith(tester, [track('1', 'Walk'), point('2', 'Stand')]),
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(ListTile, 'Walk'),
+          matching: find.byIcon(Icons.polyline),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(ListTile, 'Stand'),
+          matching: find.byIcon(Icons.polyline),
+        ),
+        findsNothing,
+      );
+    });
+
+    // The colour is the one part of a track's look that the map really does use.
+    testWidgets('a track keeps its own colour', (tester) async {
+      final coloured = Waypoint(
+        id: '1',
+        name: 'Walk',
+        latitude: 45.5,
+        longitude: -77.5,
+        notes: '',
+        createdAt: DateTime.utc(2026, 9, 10),
+        colour: WaypointColour.values.first,
+        track: const [
+          TrackPoint(latitude: 45.5, longitude: -77.5),
+          TrackPoint(latitude: 45.51, longitude: -77.51),
+        ],
+      );
+      await pumpPage(tester, await stockedWith(tester, [coloured]));
+      final icon = tester.widget<Icon>(
+        find.descendant(
+          of: find.widgetWithText(ListTile, 'Walk'),
+          matching: find.byIcon(Icons.polyline),
+        ),
+      );
+      expect(icon.color, coloured.displayColour);
+    });
+
+    testWidgets('a mixed section says what it will delete', (tester) async {
+      await pumpPage(
+        tester,
+        await stockedWith(tester, [
+          point('1', 'Stand', tags: ['ridge']),
+          track('2', 'Walk', tags: ['ridge']),
+        ]),
+      );
+      await tester.tap(find.byTooltip('Actions for ridge'));
+      await settle(tester);
+      expect(
+        find.text('Delete these 1 waypoint and 1 track'),
+        findsOneWidget,
+      );
     });
   });
 

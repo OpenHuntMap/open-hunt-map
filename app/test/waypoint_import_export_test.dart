@@ -340,6 +340,39 @@ void main() {
     });
   });
 
+  // Other people's files do contain these: a `trk` with one `trkpt` is what a
+  // recording that never got a second fix looks like. Kept as a track it would
+  // have been listed as one, described by its length, offered a Follow menu, and
+  // drawn nowhere. The coordinate is real; the line is not there.
+  group('a track with one point', () {
+    test('arrives as the point it is, not as a line', () {
+      final imported = WaypointImportExport().fromGpx('''
+<?xml version="1.0"?>
+<gpx version="1.1"><trk><name>One fix</name><trkseg>
+<trkpt lat="45.25" lon="-77.75"><ele>212</ele></trkpt>
+</trkseg></trk></gpx>
+''');
+      expect(imported, hasLength(1));
+      expect(imported.single.isTrack, isFalse);
+      expect(imported.single.track, isEmpty);
+      expect(imported.single.name, 'One fix');
+      // The coordinate survives, which is the whole reason not to drop it.
+      expect(imported.single.latitude, 45.25);
+      expect(imported.single.longitude, -77.75);
+    });
+
+    test('a two-point track is still a track', () {
+      final imported = WaypointImportExport().fromGpx('''
+<?xml version="1.0"?>
+<gpx version="1.1"><trk><name>Two fixes</name><trkseg>
+<trkpt lat="45.25" lon="-77.75"/><trkpt lat="45.26" lon="-77.76"/>
+</trkseg></trk></gpx>
+''');
+      expect(imported.single.isTrack, isTrue);
+      expect(imported.single.track, hasLength(2));
+    });
+  });
+
   group('ids', () {
     // Generated ids used to mix the clock with `DateTime.now().hashCode`, so a
     // loop importing several waypoints inside one microsecond could repeat one.

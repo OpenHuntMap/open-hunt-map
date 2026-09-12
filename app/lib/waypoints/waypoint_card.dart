@@ -51,7 +51,7 @@ class _WaypointCard extends StatelessWidget {
 
   final Waypoint waypoint;
 
-  bool get _isTrack => waypoint.track.length >= 2;
+  bool get _isTrack => waypoint.isTrack;
 
   @override
   Widget build(BuildContext context) {

@@ -316,6 +316,62 @@ void main() {
     });
   });
 
+  // One store holds both kinds, and the copy was written when only points
+  // existed. Someone who had just recorded a walk was told they had "1
+  // waypoint", which reads as though the recording was lost.
+  group('saying what is in a collection', () {
+    Waypoint pointAt(String id) => Waypoint(
+      id: id,
+      name: id,
+      latitude: 45,
+      longitude: -77,
+      notes: '',
+      createdAt: DateTime.utc(2026),
+    );
+
+    Waypoint trackAt(String id, {int points = 2}) => Waypoint(
+      id: id,
+      name: id,
+      latitude: 45,
+      longitude: -77,
+      notes: '',
+      createdAt: DateTime.utc(2026),
+      track: [
+        for (var i = 0; i < points; i++)
+          TrackPoint(latitude: 45 + i * 0.01, longitude: -77),
+      ],
+    );
+
+    test('names one kind when that is all there is', () {
+      expect(describeItems([pointAt('a')]), '1 waypoint');
+      expect(describeItems([pointAt('a'), pointAt('b')]), '2 waypoints');
+      expect(describeItems([trackAt('a')]), '1 track');
+      expect(describeItems([trackAt('a'), trackAt('b')]), '2 tracks');
+    });
+
+    test('names both when both are there', () {
+      expect(
+        describeItems([pointAt('a'), pointAt('b'), trackAt('c')]),
+        '2 waypoints and 1 track',
+      );
+    });
+
+    test('says nothing rather than "0 waypoints"', () {
+      expect(describeItems([]), 'nothing');
+    });
+
+    // Two points is the least that makes a line, and the map has always drawn it
+    // that way. Four screens each had their own test, so a one-point track was
+    // listed as a track, described by its distance, offered a Follow menu, and
+    // drew nothing at all.
+    test('a lone point is not a track, however it is stored', () {
+      expect(trackAt('a', points: 1).isTrack, isFalse);
+      expect(trackAt('a', points: 2).isTrack, isTrue);
+      expect(pointAt('a').isTrack, isFalse);
+      expect(describeItems([trackAt('a', points: 1)]), '1 waypoint');
+    });
+  });
+
   group('counting by tag', () {
     Future<WaypointStore> stocked() async {
       final store = WaypointStore();

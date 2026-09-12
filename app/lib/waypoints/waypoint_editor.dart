@@ -88,7 +88,7 @@ class _WaypointEditorState extends State<WaypointEditor> {
     super.dispose();
   }
 
-  bool get _isLine => widget.existing.track.length >= 2;
+  bool get _isLine => widget.existing.isTrack;
 
   void _save() {
     final name = _name.text.trim();
