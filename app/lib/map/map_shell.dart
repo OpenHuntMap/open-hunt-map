@@ -1378,7 +1378,7 @@ class _MapShellState extends State<MapShell> {
           iconImage: pinBackdropImage,
           iconColor: const ['get', 'colour'],
           iconSize: _iconSizeFor(pinCanvasDp(_display.markerSize)),
-          iconOffset: pinImageOffset,
+          iconOffset: _iconOffsetFor(pinImageOffset),
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
           // A pin in one of the darker colours on satellite imagery is a dark
@@ -1400,7 +1400,7 @@ class _MapShellState extends State<MapShell> {
         // takes whichever of white and near-black reads against it.
         iconColor: inPin ? const ['get', 'glyph'] : const ['get', 'colour'],
         iconSize: _iconSizeFor(glyphCanvasDp(_display.markerSize)),
-        iconOffset: glyphImageOffset(_display.markerStyle),
+        iconOffset: _iconOffsetFor(glyphImageOffset(_display.markerStyle)),
         // Waypoints cluster where the hunting is good, and a symbol layer
         // drops colliding icons by default. Losing the one you are looking
         // for because it sits near another is worse than a little overlap —
@@ -1428,7 +1428,10 @@ class _MapShellState extends State<MapShell> {
   /// builds the image with its own scale factor and may not need the same
   /// correction, which is untested here because this project has no Mac.
   double _iconSizeFor(double logicalPixels) =>
-      logicalPixels * MediaQuery.devicePixelRatioOf(context) / 64;
+      iconSizeFor(logicalPixels, MediaQuery.devicePixelRatioOf(context));
+
+  List<double> _iconOffsetFor(List<double> imagePixels) =>
+      iconOffsetFor(imagePixels, MediaQuery.devicePixelRatioOf(context));
 
   /// Puts the waypoint glyphs into the current style, once per style.
   ///

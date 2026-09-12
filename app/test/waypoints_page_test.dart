@@ -846,8 +846,34 @@ void main() {
       await pumpPage(tester, store, visibility: vis);
 
       expect(
-        find.textContaining('Hidden on map by #ridge'),
+        find.textContaining('#ridge (hidden)'),
         findsAtLeast(1),
+      );
+    });
+
+    // Told apart by shape, not by tint. The two hidden states first differed
+    // only by colour, and on this theme that was rgb(61,99,115) against
+    // rgb(64,73,67) — measured off a phone screen, and no difference at arm's
+    // length in sunlight, which is where this app gets used.
+    testWidgets('the two hidden states are different glyphs', (tester) async {
+      final byTag = VisibilitySettings();
+      await byTag.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: byTag);
+
+      // Scoped to the row, because the section header's own eye is legitimately
+      // a slashed eye: the tag really is hidden and that is what the user just
+      // did there.
+      // Rows, plural: a waypoint appears under every tag it carries, and North
+      // stand carries two.
+      final row = find.widgetWithText(ListTile, 'North stand');
+      expect(
+        find.descendant(of: row, matching: find.byIcon(Icons.label_off)),
+        findsWidgets,
+      );
+      expect(
+        find.descendant(of: row, matching: find.byIcon(Icons.visibility_off)),
+        findsNothing,
       );
     });
 
@@ -947,7 +973,7 @@ void main() {
       // North stand carries [ridge, opening day]. Ridge is hidden, so the
       // row must show the tag-hidden indicator.
       expect(
-        find.textContaining('Hidden on map by #ridge'),
+        find.textContaining('#ridge (hidden)'),
         findsAtLeast(1),
       );
       // Spring (creek only) is not affected.

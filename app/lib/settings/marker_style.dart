@@ -71,6 +71,52 @@ double glyphCanvasDp(WaypointMarkerSize size) => 24.0 * size.multiplier;
 double pinCanvasDp(WaypointMarkerSize size) =>
     glyphCanvasDp(size) * _pinPerGlyphCanvas;
 
+/// `icon-size` that draws a 64 px source image at [logicalPixels] on screen.
+///
+/// The images are rasterised at 64 *physical* pixels and MapLibre draws an SDF
+/// image unscaled, so the ratio has to be folded in here or a glyph is 64
+/// physical pixels everywhere: cramped on a dense phone, oversized on a cheap
+/// tablet.
+double iconSizeFor(double logicalPixels, double devicePixelRatio) =>
+    logicalPixels * devicePixelRatio / 64;
+
+/// `icon-offset` in the units MapLibre will actually apply, given an
+/// `icon-size` from [iconSizeFor].
+///
+/// MapLibre multiplies each component of `icon-offset` by that layer's
+/// `icon-size` before applying it. Since [iconSizeFor] carries a factor of the
+/// device pixel ratio, an offset passed in raw image pixels travels that ratio
+/// too far. It is not a subtle difference and it is not visibly wrong either: a
+/// pin measured on a phone at 2.625 put its point 117 physical pixels above the
+/// coordinate, which looks like a waypoint saved somewhere it was not.
+List<double> iconOffsetFor(
+  List<double> imagePixels,
+  double devicePixelRatio,
+) => [for (final component in imagePixels) component / devicePixelRatio];
+
+/// Where an offset and size pair actually puts the image's [imagePixelY], in
+/// logical pixels from the coordinate, positive downwards.
+///
+/// Exists so a test can assert the thing that matters — that the pin's point
+/// lands on the coordinate — rather than the arithmetic that is supposed to
+/// achieve it.
+double drawnOffsetFromAnchor({
+  required double imagePixelY,
+  required List<double> iconOffset,
+  required double iconSize,
+  required double devicePixelRatio,
+}) {
+  // The two terms do not share units, which is the whole reason this went wrong.
+  // `icon-size` scales the image in its own raster pixels, so a distance
+  // measured inside the image converts to logical pixels through the ratio;
+  // `icon-offset` is multiplied by `icon-size` and applied in logical pixels
+  // already. Centre anchoring puts the image's midpoint on the coordinate before
+  // the offset moves it.
+  final fromCentre =
+      (imagePixelY - sdfCanvasPx / 2) * iconSize / devicePixelRatio;
+  return fromCentre + iconOffset[1] * iconSize;
+}
+
 /// `icon-offset` for the pin layer, in the pin image's own pixels.
 ///
 /// The point of a pin marks the spot, where a bare glyph is centred on it. The

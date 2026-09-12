@@ -356,4 +356,49 @@ void main() {
       expect(glyphCanvasDp(WaypointMarkerSize.fallback), 24.0);
     });
   });
+
+  // What the offsets are for, asserted as an outcome rather than as arithmetic.
+  // The constants were right and the map still drew the pin 117 physical pixels
+  // high, because MapLibre multiplies icon-offset by icon-size and icon-size
+  // carries the device pixel ratio, so the offset travelled that ratio too far.
+  // Every screen ratio is checked because a bug that scales with the ratio looks
+  // like nothing at all at 1.0.
+  group('where the pin actually lands', () {
+    for (final ratio in [1.0, 2.0, 2.625, 3.0, 3.5]) {
+      for (final size in WaypointMarkerSize.values) {
+        test('the point is on the coordinate at ${ratio}x, ${size.name}', () {
+          final pinDp = pinCanvasDp(size);
+          final landed = drawnOffsetFromAnchor(
+            imagePixelY: pinTipY,
+            iconOffset: iconOffsetFor(pinImageOffset, ratio),
+            iconSize: iconSizeFor(pinDp, ratio),
+            devicePixelRatio: ratio,
+          );
+          // Within a quarter of a logical pixel: closer than the screen can
+          // draw, and far tighter than the metre or so this would mean on the
+          // ground at any zoom someone navigates by.
+          expect(landed, closeTo(0, 0.25));
+        });
+
+        test('the glyph sits in the head at ${ratio}x, ${size.name}', () {
+          final glyphDp = glyphCanvasDp(size);
+          final pinDp = pinCanvasDp(size);
+          // The glyph's own centre, measured against the pin's head centre
+          // expressed as a displacement from the coordinate the point is on.
+          final glyphCentre = drawnOffsetFromAnchor(
+            imagePixelY: sdfCanvasPx / 2,
+            iconOffset: iconOffsetFor(
+              glyphImageOffset(WaypointMarkerStyle.pin),
+              ratio,
+            ),
+            iconSize: iconSizeFor(glyphDp, ratio),
+            devicePixelRatio: ratio,
+          );
+          final headCentre =
+              (pinHeadCentreY - pinTipY) / sdfCanvasPx * pinDp;
+          expect(glyphCentre, closeTo(headCentre, 0.25));
+        });
+      }
+    }
+  });
 }

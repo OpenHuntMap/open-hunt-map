@@ -432,16 +432,19 @@ class _WaypointsPageState extends State<WaypointsPage> {
         ? describeTrack(waypoint.track)
         : '${waypoint.latitude.toStringAsFixed(5)}, '
               '${waypoint.longitude.toStringAsFixed(5)}';
+    // A tag that is keeping this item off the map is marked in the tag list
+    // rather than announced on a line of its own. The row already lists its
+    // tags, and naming one twice inside five lines reads as a glitch.
+    final hidingTags =
+        vis.individuallyHidden ? const <String>[] : vis.hidingTags;
     final tags = waypoint.tags.isEmpty
         ? ''
-        : '\n${waypoint.tags.map((tag) => '#$tag').join(' ')}';
+        : '\n${waypoint.tags.map((tag) => hidingTags.contains(tag) ? '#$tag (hidden)' : '#$tag').join(' ')}';
     // When a tag is hiding this item but the item itself was never toggled,
     // say so on the row rather than leaving the user to work out why the map
     // disagrees with the list.
     final hiddenByTagNote =
-        !vis.individuallyHidden && vis.hidingTags.isNotEmpty
-            ? 'Hidden on map by ${vis.hidingTags.map((t) => '#$t').join(', ')}\n'
-            : '';
+        hidingTags.isEmpty ? '' : 'Not drawn on the map\n';
     final subtitle = waypoint.notes.isEmpty
         ? '$hiddenByTagNote$where$tags'
         : '$hiddenByTagNote$where\n${waypoint.notes}$tags';
@@ -523,10 +526,17 @@ class _WaypointsPageState extends State<WaypointsPage> {
     if (vis.hidingTags.isNotEmpty) {
       return IconButton(
         tooltip: 'Hidden by ${vis.hidingTags.map((t) => '#$t').join(', ')}',
-        icon: Icon(
-          Icons.visibility_off,
+        // A crossed-out tag rather than a differently tinted eye. This state has
+        // to be told apart from "you hid this one" at a glance in sunlight, and
+        // the theme's tertiary slot in this green scheme is a muted blue-teal
+        // measured at rgb(61,99,115) against rgb(64,73,67) for a plain icon —
+        // no distinction at all on a phone held at arm's length outdoors. The
+        // shape says which of the two it is without relying on colour, and the
+        // glyph is also the truth: the item's own eye was never touched.
+        icon: const Icon(
+          Icons.label_off,
           size: 20,
-          color: Theme.of(context).colorScheme.tertiary,
+          color: Color(0xFF8D6E00),
         ),
         visualDensity: VisualDensity.compact,
         onPressed: () => _offerUnhideTag(waypoint, vis.hidingTags),
