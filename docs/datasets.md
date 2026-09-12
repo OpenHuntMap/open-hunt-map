@@ -673,7 +673,7 @@ derived.
 
 | Layer | Source | Notes |
 |-------|--------|-------|
-| Hunting zones | GAGQ (MRNF) | `fetch_qc_real.py` — zones de chasse merged by name |
+| Hunting zones | — | **Not shipped.** No licence permits redistribution; see below. `fetch_qc_real.py --zones` still builds it if that changes |
 | Parks & protected | TRQ_WMS | National/provincial parks, reserves, refuges |
 | Public hunt territories | TRQ ZECs / exclusive / outfitters | Green overlay proxy until full Crown tenure fabric ships |
 | Municipalities (CSD) | StatsCan 2021 cartographic CSD | `fetch_municipalities_qc.py` (EPSG:3347 → WGS84) |
@@ -705,12 +705,22 @@ derived.
     Territoires fauniques structurés under **CC-BY-NC-ND 4.0**, so for Quebec
     wildlife geometry the permissive guess is the wrong one.
 
-  Redistributing it is therefore unlicensed until somebody grants it in writing.
-  The layer carries `license_unconfirmed` recording all of the above and
-  `audit_overlays.py` prints it on every run. **Resolve before Quebec stops being
-  a preview:** ask the wildlife management branch
-  (dggf@environnement.gouv.qc.ca), or drop the layer and lose zone identification
-  in Quebec.
+  Redistributing it is therefore unlicensed until somebody grants it in writing,
+  **so it is not shipped.** `build_wmu` is kept whole and reachable via
+  `fetch_qc_real.py --zones`, because the answer may yet be yes; note that
+  `build_pack.py` packs every GeoJSON in the overlays directory rather than only
+  the ones the manifest names, so dropping the manifest entry alone would not have
+  been enough — the fetch is what had to stop.
+
+  Now was the cheapest possible moment to drop it. Quebec ships no seasons and no
+  policy documents, so nothing was keyed to a zone and the layer only printed a
+  number. The cost is a line missing from the card rather than an answer going
+  wrong, and `LandInfo.wmuId` is nullable, so the card simply omits it.
+
+  A request is outstanding with the Direction générale de la gestion de la faune
+  (dggf@environnement.gouv.qc.ca). **To restore:** `fetch_qc_real.py --zones`, add
+  the layer back to `data/qc/manifest.json`, and mention hunting zones again in
+  the Quebec `statusNote` in `data/provinces.json`.
 
 Quebec is flagged `"status": "preview"` in `data/provinces.json`, which puts a
 PREVIEW badge in the app bar and a plain-language note behind it. The green

@@ -312,8 +312,28 @@ def build_empty_townships() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--simplify", type=float, default=0.002)
+    parser.add_argument(
+        "--zones",
+        action="store_true",
+        help="Also fetch the hunting zones (needs a licence first, see below)",
+    )
     args = parser.parse_args()
-    build_wmu(args.simplify)
+    # Not fetched by default, and the reason is a licence rather than a bug.
+    #
+    # Nothing publishes this geometry under a licence that permits
+    # redistribution: the GAGQ service names none, Données Québec has no dataset
+    # for it, and the CC-BY territoires récréatifs product does not contain it.
+    # The same ministry ships its Territoires fauniques structurés as
+    # CC-BY-NC-ND, so the permissive assumption is the wrong one here. Since
+    # build_pack.py packs every GeoJSON in the overlays directory rather than
+    # only the ones the manifest names, leaving the file on disk would ship it —
+    # so the fetch has to be the thing that stops.
+    #
+    # build_wmu is kept whole because the answer may yet be yes. To restore:
+    # pass --zones, add the layer back to data/qc/manifest.json, and mention
+    # hunting zones again in the Quebec statusNote in data/provinces.json.
+    if args.zones:
+        build_wmu(args.simplify)
     build_trq(args.simplify)
     build_empty_municipal_forest()
     build_empty_townships()

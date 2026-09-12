@@ -14,7 +14,7 @@
       "bbox": [-79.76, 44.99, -57.10, 62.58],
       "packUrl": "https://github.com/OpenWoodsMap/open-woods-map/releases/download/packs-latest/qc-overlays.zip",
       "status": "preview",
-      "statusNote": "Quebec is a work in progress. Hunting zones, parks and municipalities are real, but there are no seasons or policy documents yet, and the green layer shows managed territories (ZECs, outfitters, exclusive areas) rather than public land you may simply walk onto. Verify everything against official Quebec sources."
+      "statusNote": "Quebec is a work in progress. Parks and municipalities are real, but there are no seasons or policy documents yet, hunting zone boundaries are not included, and the green layer shows managed territories (ZECs, outfitters, exclusive areas) rather than public land you may simply walk onto. Verify everything against official Quebec sources."
     }
   ]
 }
