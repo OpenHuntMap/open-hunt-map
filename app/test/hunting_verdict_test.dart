@@ -196,6 +196,47 @@ void main() {
       });
     });
 
+    // Two regulations are in play and only one decides any given point. The
+    // section used to print the layer's citation whichever feature answered,
+    // which credited the list of municipalities for a verdict that came from the
+    // prohibition — a list the answer is not in.
+    group('the provision it credits', () {
+      test('is the prohibition wherever the schedule was not what answered', () {
+        for (final props in [
+          {'basis': 'reg665_s66', 'near_divide': false},
+          {'basis': 'reg665_s66', 'near_divide': true},
+        ]) {
+          final verdict = sundayGunVerdict(
+            LandFeature(
+              layerId: 'sunday_gun',
+              properties: props,
+              geometry: const {},
+            ),
+          );
+          expect(verdict.citation, contains('665/98'));
+          expect(verdict.citation, isNot(contains('663/98')));
+        }
+      });
+
+      test('is the schedule itself inside a listed municipality', () {
+        final verdict = sundayGunVerdict(
+          LandFeature(
+            layerId: 'sunday_gun',
+            properties: const {'basis': 'reg663_part7'},
+            geometry: const {},
+          ),
+        );
+        // Null defers to the layer's own citation, which is that schedule.
+        expect(verdict.citation, isNull);
+      });
+
+      test('names both where the answer is an absence from the schedule', () {
+        final citation = sundayGunVerdict(null).citation;
+        expect(citation, contains('665/98'));
+        expect(citation, contains('663/98'));
+      });
+    });
+
     // Absence is the prohibition, which is the whole reason the section cannot
     // stay quiet when nothing covers the point.
     test('no covering feature reads as not permitted', () {

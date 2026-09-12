@@ -676,12 +676,23 @@ class SundayGunVerdict {
     required this.body,
     required this.colour,
     required this.icon,
+    this.citation,
   });
 
   final String headline;
   final String body;
   final Color colour;
   final IconData icon;
+
+  /// The provision that governs *this* answer, where it is not the schedule the
+  /// layer as a whole is built from.
+  ///
+  /// Two regulations are in play and only one of them decides any given point.
+  /// The schedule of municipalities answers inside a listed one; everywhere else
+  /// the answer comes from the prohibition, which the schedule is merely an
+  /// exception to. Citing the schedule for a point that is north of the rivers
+  /// sends someone to a list their answer is not in.
+  final String? citation;
 }
 
 /// Reads the verdict off the covering feature, or off its absence.
@@ -702,6 +713,10 @@ SundayGunVerdict sundayGunVerdict(LandFeature? feature) {
   const uncertain = Color(0xFF8D6E00);
   const prohibited = Color(0xFFB3261E);
 
+  const prohibition = 'O. Reg. 665/98 (Hunting) s. 66 (1), which prohibits '
+      'Sunday gun hunting only in the area south of the French and Mattawa '
+      'rivers';
+
   if (feature == null) {
     return const SundayGunVerdict(
       headline: 'Not permitted here on Sundays',
@@ -710,6 +725,10 @@ SundayGunVerdict sundayGunVerdict(LandFeature? feature) {
           'with anything other than a bow or crossbow is an offence.',
       colour: prohibited,
       icon: Icons.block_outlined,
+      // Both provisions matter here: one prohibits, and the other would have
+      // excepted this place if it were listed.
+      citation: '$prohibition, and O. Reg. 663/98 Part 7 Schedule 1, which '
+          'does not list this municipality',
     );
   }
   if (feature.basis == 'reg663_part7') {
@@ -733,6 +752,7 @@ SundayGunVerdict sundayGunVerdict(LandFeature? feature) {
           'hunting, or check whether the municipality you are in is listed.',
       colour: uncertain,
       icon: Icons.help_outline,
+      citation: prohibition,
     );
   }
   return const SundayGunVerdict(
@@ -742,6 +762,7 @@ SundayGunVerdict sundayGunVerdict(LandFeature? feature) {
         'needed here.',
     colour: permitted,
     icon: Icons.check_circle_outline,
+    citation: prohibition,
   );
 }
 
@@ -786,8 +807,17 @@ class _SundayGun extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           [
-            if (layer.citation case final citation?) citation,
-            if (layer.currencyDate case final date?) 'consolidated $date',
+            // The verdict's own provision wins. The layer's citation is the
+            // schedule this was built from, which only governs a point inside a
+            // listed municipality.
+            if (verdict.citation ?? layer.citation case final citation?)
+              citation,
+            // The consolidation date belongs to the schedule the layer was built
+            // from, so it travels with that citation and not with a substituted
+            // one. Trailing it after a different regulation would be asserting a
+            // currency for that regulation which nothing here establishes.
+            if (verdict.citation == null)
+              if (layer.currencyDate case final date?) 'consolidated $date',
           ].join(', '),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.black54,
