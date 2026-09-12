@@ -31,6 +31,7 @@ RULES = ROOT / "data/on/rules/reg663.json"
 PPCRA_RULES = ROOT / "data/on/rules/ppcra.json"
 REG_URL = "https://www.ontario.ca/laws/regulation/980663"
 PPCRA_URL = "https://www.ontario.ca/laws/statute/06p12"
+OGL_URL = "https://www.ontario.ca/page/open-government-licence-ontario"
 
 # One park is opened in part by the Act rather than by the regulation, so a card
 # assembled only from O. Reg. 663/98 Part 3 quotes Schedule 42 — the McRae
@@ -140,7 +141,10 @@ def write_wmu(features: list[dict]) -> None:
                     "crs": "EPSG:4326",
                     "layer": "wmu",
                     "feature_count": len(out_features),
+                    "source": "Ontario LIO - Wildlife Management Unit",
+                    "source_url": WMU_URL,
                     "license": "OGL-Ontario",
+                    "license_url": OGL_URL,
                 },
                 "features": out_features,
             }
@@ -337,7 +341,10 @@ def write_parks(features: list[dict]) -> None:
                     "crs": "EPSG:4326",
                     "layer": "parks",
                     "feature_count": len(out_features),
+                    "source": "Ontario LIO - Provincial Park Regulated",
+                    "source_url": PARK_URL,
                     "license": "OGL-Ontario",
+                    "license_url": OGL_URL,
                     "hunting_source": (
                         "O. Reg. 663/98 (Area Descriptions) Part 3 under the Fish "
                         "and Wildlife Conservation Act, 1997"

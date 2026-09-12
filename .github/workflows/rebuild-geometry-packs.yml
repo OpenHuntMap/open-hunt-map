@@ -1,10 +1,27 @@
 # Rebuild province geometry overlays and publish downloadable packs.
 #
-# Schedule: ~every 4 weeks (1st of each month). Seasons/policies are NOT
-# refreshed here — use the refresh-seasons-policies skill / manual edits, then
-# workflow_dispatch if you only need to re-pack, or a dedicated seasons path.
-#
+# Schedule: ~every 4 weeks (1st of each month).
 # On-demand: Actions → Rebuild geometry packs → Run workflow
+#
+# What a run refreshes, since the answer is not obvious from the steps:
+#   yes  geometry and tenure, rebuilt from each source's live endpoint
+#   yes  the regulation-derived layers, via the e-Laws v2 API, so an amendment
+#        to O. Reg. 663/98 or 665/98 is picked up
+#   yes  policy markdown, rebuilt from the CLUPAPRO download
+#   NO   hunting seasons — those come from data/{cc}/seasons/*.json as committed,
+#        and are refreshed by the Refresh hunting seasons workflow or the
+#        refresh-seasons-policies skill. A pack published here carries whatever
+#        seasons are in the repo at the time.
+#
+# rebuild_geometry.py runs tools/gis/audit_overlays.py before it packs anything,
+# so a run that would publish invalid geometry, an unattributed layer or a hole
+# near the French and Mattawa rivers fails instead. Nothing is uploaded and the
+# packs-latest release is left alone.
+#
+# Regenerated data is deliberately NOT committed back: the pack zip is
+# self-contained, so users get the new data from the release while the repo keeps
+# the last human-reviewed snapshot. Commit a regenerated data/ yourself when you
+# want the tracked copy to match.
 
 name: Rebuild geometry packs
 

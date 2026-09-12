@@ -103,7 +103,11 @@ def main() -> int:
             "feature_count": len(out),
             "coverage": "Ontario geographic townships (survey)",
             "license": "OGL-Ontario",
-            "source": LAYER,
+            "license_url": (
+                "https://www.ontario.ca/page/open-government-licence-ontario"
+            ),
+            "source": "Ontario LIO - Geographic Township Improved",
+            "source_url": LAYER,
             "note": "Survey townships — not municipal bylaw jurisdiction.",
         },
         "features": out,

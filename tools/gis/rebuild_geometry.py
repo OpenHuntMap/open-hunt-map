@@ -165,6 +165,11 @@ def main() -> int:
         action="store_true",
         help="Reuse existing CLUPAPRO zip/extract under _tmp_clupapro (ON)",
     )
+    parser.add_argument(
+        "--skip-audit",
+        action="store_true",
+        help="Skip the pre-pack audit (for iterating on one script, not for CI)",
+    )
     args = parser.parse_args()
 
     try:
@@ -172,6 +177,12 @@ def main() -> int:
             rebuild_on(skip_clupa_download=args.skip_clupa_download)
         if args.province in ("qc", "all"):
             rebuild_qc()
+        # Before anything is packaged, not after. Every check in the audit exists
+        # because the build scripts once produced the thing it looks for from
+        # sound upstream data, so a rebuild is exactly the moment it can come
+        # back — and the pack is what reaches phones.
+        if not args.skip_audit:
+            run("audit_overlays.py", "--province", args.province)
         if args.pack:
             provinces = (
                 ["on", "qc"] if args.province == "all" else [args.province]

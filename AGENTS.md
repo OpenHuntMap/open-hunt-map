@@ -66,7 +66,7 @@ anything. The ones most often violated by accident:
 | `tools/gis/` | Python fetch and build scripts, one per source |
 | `tools/devtest/` | Emulator harness for on-device sanity checks (`owm.ps1`) |
 | `data/{cc}/` | Generated per-province manifest, overlays, policies, seasons |
-| `docs/` | Constraints, architecture, datasets, packs, APK build, devtest |
+| `docs/` | Constraints, architecture, datasets, sourcing, packs, APK build, devtest |
 | `.agents/skills/` | Agent skills, vendor-neutral location |
 
 The large generated overlays under `data/{cc}/overlays/` are gitignored, named
@@ -91,8 +91,13 @@ powershell -File tools\devtest\owm.ps1 shot before-change
 # Refresh the only bundled asset after editing data/provinces.json
 powershell -File scripts\sync_assets.ps1
 
-# Rebuild all province geometry from source (slow, large downloads)
+# Rebuild all province geometry from source (slow, large downloads).
+# Audits the result before packing and fails rather than publishing bad data.
 python tools\gis\rebuild_geometry.py
+
+# Audit overlays on their own: validity, attribution, the Sunday gun divide
+# corridor, and coordinates whose answers were checked by hand
+python tools\gis\audit_overlays.py
 
 # Package a province pack for release
 python tools\gis\build_pack.py

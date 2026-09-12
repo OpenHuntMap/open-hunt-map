@@ -280,6 +280,8 @@ def main() -> int:
             "province": "on",
             "layer": "municipalities",
             "feature_count": len(features),
+            "source": "Ontario LIO - Municipal Boundary Lower and Single Tier",
+            "source_url": LAYER_URL,
             "license": "OGL-Ontario",
             "license_url": "https://www.ontario.ca/page/open-government-licence-ontario",
             "note": "Use for local bylaw jurisdiction (not geographic survey townships).",

@@ -26,6 +26,9 @@ from shapely.geometry import mapping, shape
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
+# Stated on the dataset's Données Québec page as "Attribution (CC-BY 4.0)".
+CC_BY_4_URL = "https://creativecommons.org/licenses/by/4.0/"
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "data/qc/overlays"
 
@@ -172,7 +175,15 @@ def build_wmu(simplify: float) -> None:
         out,
         {
             "coverage": "Quebec hunting/fishing zones (province-wide)",
-            "license": "Données ouvertes du Québec",
+            "license": "© Gouvernement du Québec — open licence not stated",
+            "license_unconfirmed": (
+                "The GAGQ service publishes only the copyright line "
+                "'© Gouvernement du Québec' and names no licence, and no Données "
+                "Québec dataset page for this geometry has been found. Sibling "
+                "MRNF datasets are CC-BY 4.0, but assuming it for this one would "
+                "be asserting a permission nobody granted. Resolve before Quebec "
+                "stops being a preview: either cite the licence or drop the layer."
+            ),
             "source": GAGQ_ZONES,
         },
     )
@@ -237,6 +248,7 @@ def build_trq(simplify: float) -> None:
         {
             "coverage": "Quebec parks, reserves, refuges (TRQ)",
             "license": "CC-BY 4.0 / Données ouvertes du Québec",
+            "license_url": CC_BY_4_URL,
             "source": TRQ,
         },
     )
@@ -250,6 +262,7 @@ def build_trq(simplify: float) -> None:
                 "rights, outfitters) — not full Crown tenure fabric"
             ),
             "license": "CC-BY 4.0 / Données ouvertes du Québec",
+            "license_url": CC_BY_4_URL,
             "source": TRQ,
             "note": (
                 "Full provincial Crown tenure is a later pack. This layer "

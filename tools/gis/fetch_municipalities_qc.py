@@ -132,6 +132,7 @@ def main() -> int:
             "feature_count": len(out),
             "coverage": "Quebec census subdivisions (2021)",
             "license": "Statistics Canada Open Licence",
+            "license_url": "https://www.statcan.gc.ca/en/reference/licence",
             "source": ZIP_URL,
             "source_crs": SRC_CRS,
             "simplify_degrees": args.simplify,

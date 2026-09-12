@@ -2,6 +2,12 @@
 
 Pipeline goal: GeoJSON/PMTiles with **hunting-relevant attributes** for the offline Land Info sheet (WMU, crown land use, park status, township/municipality names, etc.).
 
+This file records **what** each layer is and where it came from.
+[`sourcing.md`](sourcing.md) records **how** to find the next one and how to tell
+whether it is right — which endpoints work, why a boundary is only half a layer
+without the provision that governs it, and what `tools/gis/audit_overlays.py`
+refuses to publish.
+
 ## Ontario (primary)
 
 | Layer | Source | Notes |
@@ -673,7 +679,22 @@ derived.
 | Municipalities (CSD) | StatsCan 2021 cartographic CSD | `fetch_municipalities_qc.py` (EPSG:3347 → WGS84) |
 | Municipal forests | — | Empty schema; no province-wide open layer yet |
 
-**License:** [Licence ouverte du Québec](https://www.donneesquebec.ca/fr/licence/); StatsCan [Open Licence](https://www.statcan.gc.ca/en/reference/licence/).
+**License:** not one licence, and one of them is unresolved:
+
+- **TRQ layers** (parks, protected areas, public hunt territories) are
+  Attribution (CC-BY 4.0), stated on the
+  [Données Québec dataset page](https://www.donneesquebec.ca/recherche/fr/dataset/7c9fff9f-c7c0-4267-a287-f86299796aea)
+  for the Couche des territoires récréatifs.
+- **Municipalities** are StatsCan [Open Licence](https://www.statcan.gc.ca/en/reference/licence).
+- **Hunting zones (GAGQ) have no licence we can cite.** The service publishes
+  only `© Gouvernement du Québec` and names none, and no Données Québec dataset
+  page for this geometry has been found; the portal's own licence page is
+  JavaScript-gated and cannot be read by a script. Sibling MRNF datasets are
+  CC-BY 4.0, but assuming it here would assert a permission nobody granted, so
+  the layer carries `license_unconfirmed` saying exactly that and
+  `audit_overlays.py` prints it on every run rather than letting it go quiet.
+  **Resolve before Quebec stops being a preview:** confirm the licence in writing
+  or drop the layer.
 
 Quebec is flagged `"status": "preview"` in `data/provinces.json`, which puts a
 PREVIEW badge in the app bar and a plain-language note behind it. The green
