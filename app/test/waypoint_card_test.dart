@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/track_preview.dart';
 import 'package:open_woods_map/tracks/track_style.dart';
 import 'package:open_woods_map/waypoints/waypoint_card.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 
 Waypoint _point({
@@ -16,7 +16,7 @@ Waypoint _point({
   longitude: -77.87654321,
   notes: notes,
   createdAt: DateTime.utc(2026, 9, 10),
-  category: WaypointCategory.stand,
+  icon: WaypointIcon.stand,
   tags: tags,
 );
 
@@ -27,7 +27,7 @@ Waypoint _track() => Waypoint(
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
-  category: WaypointCategory.trail,
+  icon: WaypointIcon.trail,
   stroke: TrackStroke.dotted,
   marker: TrackMarker.chevron,
   track: const [
@@ -76,7 +76,11 @@ void main() {
       expect(find.text('Field edge stand'), findsOneWidget);
       // Five places is about a metre, which is finer than any consumer fix and
       // coarse enough to read out loud over a radio.
-      expect(find.text('Tree stand · 45.12346, -77.87654'), findsOneWidget);
+      //
+      // The icon's label no longer leads this line. It did when the icon was a
+      // category and was the nearest thing to a description; naming a picture
+      // says nothing the glyph beside it has not already said.
+      expect(find.text('45.12346, -77.87654'), findsOneWidget);
     });
 
     testWidgets('offers editing and land info but not following',
@@ -116,7 +120,7 @@ void main() {
         (tester) async {
       await open(tester, _track());
       expect(find.text('Ridge loop'), findsOneWidget);
-      expect(find.textContaining('Trail · '), findsOneWidget);
+      expect(find.textContaining('km'), findsOneWidget);
       expect(find.textContaining('45.1,'), findsNothing);
     });
 
@@ -157,7 +161,7 @@ void main() {
       longitude: -77.1,
       notes: '',
       createdAt: DateTime.utc(2026, 9, 10),
-      category: WaypointCategory.trail,
+      icon: WaypointIcon.trail,
       track: const [TrackPoint(latitude: 45.1, longitude: -77.1)],
     );
     await open(tester, stub);

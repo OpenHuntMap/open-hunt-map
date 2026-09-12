@@ -61,13 +61,17 @@ class _WaypointCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
-          leading: Icon(waypoint.category.icon, color: waypoint.displayColour),
+          leading: Icon(waypoint.icon.icon, color: waypoint.displayColour),
           title: Text(waypoint.name),
+          // Where it is, or how far it goes. The icon's label used to lead this
+          // line, back when it was a category and was the nearest thing to a
+          // description; it is a picture now, and naming the picture would say
+          // nothing the glyph beside it has not already said. What the waypoint
+          // is, if the user said, is in the tags below.
           subtitle: Text(
             _isTrack
-                ? '${waypoint.category.label} · ${describeTrack(waypoint.track)}'
-                : '${waypoint.category.label} · '
-                      '${waypoint.latitude.toStringAsFixed(5)}, '
+                ? describeTrack(waypoint.track)
+                : '${waypoint.latitude.toStringAsFixed(5)}, '
                       '${waypoint.longitude.toStringAsFixed(5)}',
           ),
         ),

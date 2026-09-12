@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../tracks/track_style.dart';
-import 'waypoint_category.dart';
+import 'legacy_categories.dart';
+import 'waypoint_colour.dart';
+import 'waypoint_icon.dart';
 import 'waypoint_storage_stub.dart'
     if (dart.library.io) 'waypoint_storage_io.dart'
     if (dart.library.html) 'waypoint_storage_web.dart' as storage;
@@ -61,7 +63,7 @@ class Waypoint {
     required this.longitude,
     required this.notes,
     required this.createdAt,
-    this.category = WaypointCategory.other,
+    this.icon = WaypointIcon.fallback,
     this.tags = const [],
     this.colour,
     this.track = const [],
@@ -76,18 +78,20 @@ class Waypoint {
   final String notes;
   final DateTime createdAt;
 
-  /// Single-valued and always set, because every app this exports to files
-  /// waypoints under exactly one parent. [WaypointCategory.other] is the
-  /// unclassified case rather than a null.
-  final WaypointCategory category;
+  /// The glyph this draws as, and nothing more.
+  ///
+  /// Single-valued because a symbol on a map has to be one picture, which is
+  /// the one thing the old single-valued category was genuinely needed for.
+  /// What the waypoint *is* lives in [tags].
+  final WaypointIcon icon;
 
-  /// The loose layer over [category]. Lowercased and de-duplicated on the way
-  /// in, so "Ridge" and "ridge" are one tag rather than two.
+  /// The only classification a waypoint has. Lowercased and de-duplicated on
+  /// the way in, so "Ridge" and "ridge" are one tag rather than two.
   final List<String> tags;
 
-  /// Null means "whatever the category's colour is", which is different from
-  /// having chosen that same colour: a later change to the category's default
-  /// follows the first and not the second.
+  /// Null means the glyph's own colour, which is different from having chosen
+  /// that same colour: picking a different glyph repaints the first and leaves
+  /// the second alone.
   final WaypointColour? colour;
 
   final List<TrackPoint> track;
@@ -100,35 +104,51 @@ class Waypoint {
   /// The direction marker repeated along the line.
   final TrackMarker marker;
 
-  Color get displayColour => colour?.value ?? category.colour;
+  Color get displayColour => colour?.value ?? icon.colour;
 
   /// What MapLibre's `icon-color` gets.
   String get colourHex => hexColour(displayColour);
 
   /// Every field here is tolerant of absence, because this reads files written
-  /// by builds that predate the field. A waypoint saved before categories
-  /// existed is not corrupt, it is just uncategorised.
-  factory Waypoint.fromJson(Map<String, dynamic> json) => Waypoint(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        latitude: (json['lat'] as num).toDouble(),
-        longitude: (json['lng'] as num).toDouble(),
-        notes: json['notes'] as String? ?? '',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        category: WaypointCategory.fromId(json['category'] as String?),
-        tags: normaliseTags(
-          (json['tags'] as List<dynamic>? ?? const [])
-              .map((tag) => tag.toString()),
-        ),
-        colour: WaypointColour.fromId(json['colour'] as String?),
-        track: (json['track'] as List<dynamic>? ?? const [])
-            .map((item) => TrackPoint.fromJson(item as Map<String, dynamic>))
-            .toList(),
-        // Absent means a track saved before the look was choosable, which is a
-        // solid line with arrows — what those tracks have always been drawn as.
-        stroke: TrackStroke.fromId(json['stroke'] as String?),
-        marker: TrackMarker.fromId(json['marker'] as String?),
-      );
+  /// by builds that predate the field. A waypoint saved before icons existed is
+  /// not corrupt, it just has a category instead.
+  ///
+  /// A stored `category` is migrated here rather than in the store, so that
+  /// every path that reads a waypoint — the file, an old GeoJSON backup —
+  /// migrates the same way. It becomes two things: the glyph that category drew
+  /// as, and a tag carrying its label, because that label is the only record of
+  /// how the user had classified the waypoint. The migrated form reaches disk on
+  /// the next save; nothing is rewritten on load.
+  factory Waypoint.fromJson(Map<String, dynamic> json) {
+    final storedIcon = json['icon'] as String?;
+    final legacy = storedIcon == null ? json['category'] as String? : null;
+    return Waypoint(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      latitude: (json['lat'] as num).toDouble(),
+      longitude: (json['lng'] as num).toDouble(),
+      notes: json['notes'] as String? ?? '',
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      icon: storedIcon == null
+          ? legacyCategoryIcon(legacy)
+          : WaypointIcon.fromId(storedIcon),
+      // The category's label goes on the end rather than the front: a waypoint
+      // the user had already tagged keeps reading in the order they typed.
+      tags: normaliseTags([
+        ...(json['tags'] as List<dynamic>? ?? const [])
+            .map((tag) => tag.toString()),
+        ...legacyCategoryTags(legacy),
+      ]),
+      colour: WaypointColour.fromId(json['colour'] as String?),
+      track: (json['track'] as List<dynamic>? ?? const [])
+          .map((item) => TrackPoint.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      // Absent means a track saved before the look was choosable, which is a
+      // solid line with arrows — what those tracks have always been drawn as.
+      stroke: TrackStroke.fromId(json['stroke'] as String?),
+      marker: TrackMarker.fromId(json['marker'] as String?),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -137,10 +157,12 @@ class Waypoint {
         'lng': longitude,
         'notes': notes,
         'createdAt': createdAt.toIso8601String(),
-        'category': category.id,
+        // No 'category'. Writing one would be writing a classification the app
+        // no longer has, and an older build reading it back would trust it.
+        'icon': icon.id,
         'tags': tags,
         // Omitted rather than written as the resolved colour, so "follows the
-        // category" stays distinguishable from "happens to be that colour".
+        // default" stays distinguishable from "happens to be that colour".
         if (colour != null) 'colour': colour!.id,
         'track': track.map((point) => point.toJson()).toList(),
         // Written only for lines, and only when not the default. A file of
@@ -155,7 +177,7 @@ class Waypoint {
   Waypoint copyWith({
     String? name,
     String? notes,
-    WaypointCategory? category,
+    WaypointIcon? icon,
     List<String>? tags,
     WaypointColour? colour,
     bool clearColour = false,
@@ -168,7 +190,7 @@ class Waypoint {
         longitude: longitude,
         notes: notes ?? this.notes,
         createdAt: createdAt,
-        category: category ?? this.category,
+        icon: icon ?? this.icon,
         tags: tags == null ? this.tags : normaliseTags(tags),
         colour: clearColour ? null : (colour ?? this.colour),
         track: track,
@@ -248,27 +270,69 @@ class WaypointStore {
   List<String> get tagsInUse =>
       normaliseTags(_items.expand((item) => item.tags));
 
-  /// How many items sit in each category. Absent categories are absent rather
-  /// than zero, so a filter row can show only what the user actually has.
-  Map<WaypointCategory, int> get categoryCounts {
-    final counts = <WaypointCategory, int>{};
+  /// How many waypoints carry each tag. Unused tags are absent rather than
+  /// zero, so a filter row shows only what the user actually has.
+  ///
+  /// These do not sum to the number of waypoints, and cannot: a waypoint with
+  /// three tags is counted three times, which is the point of tags. Anywhere
+  /// these are shown has to say so, or the list appears to hold more than it
+  /// does.
+  Map<String, int> get tagCounts {
+    final counts = <String, int>{};
     for (final item in _items) {
-      counts[item.category] = (counts[item.category] ?? 0) + 1;
+      for (final tag in item.tags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
     }
     return counts;
   }
 
+  /// How many waypoints carry no tags at all.
+  ///
+  /// Counted separately because they belong to no tag section, and a grouped
+  /// view that only walks the tags loses every one of them.
+  int get untaggedCount => _items.where((item) => item.tags.isEmpty).length;
+
   /// Deletes everything matching [test] and hands back what went.
   ///
-  /// The return value is the whole point: clearing a category removes many
-  /// waypoints on one tap, with no per-row confirmation, so the caller has to be
-  /// able to put them all back.
+  /// The return value is the whole point: clearing a tag removes many waypoints
+  /// on one tap, with no per-row confirmation, so the caller has to be able to
+  /// put them all back.
   Future<List<Waypoint>> deleteWhere(bool Function(Waypoint) test) async {
     final removed = _items.where(test).toList();
     if (removed.isEmpty) return removed;
     _items = _items.where((item) => !test(item)).toList();
     await _save();
     return removed;
+  }
+
+  /// Strips one tag from the waypoints named by [ids], keeping all of them.
+  ///
+  /// Exists as its own operation because with tags the two things a list
+  /// section can be asked to do are genuinely different: unfiling a set of
+  /// waypoints and destroying them. Returns how many were changed, so the
+  /// caller can say what happened rather than "done".
+  ///
+  /// Scoped by id rather than sweeping every carrier of the tag, because the
+  /// caller offers this from a section header that states a number, and a
+  /// filtered list can be showing fewer than the tag has. Acting on more than
+  /// the number in the menu is the kind of surprise that costs a season's work.
+  Future<int> removeTagFrom(String tag, Set<String> ids) async {
+    bool affected(Waypoint item) =>
+        ids.contains(item.id) && item.tags.contains(tag);
+    final changed = _items.where(affected).length;
+    if (changed == 0) return 0;
+    _items = [
+      for (final item in _items)
+        if (affected(item))
+          item.copyWith(
+            tags: item.tags.where((other) => other != tag).toList(),
+          )
+        else
+          item,
+    ];
+    await _save();
+    return changed;
   }
 
   Future<void> replaceAll(Iterable<Waypoint> waypoints) async {

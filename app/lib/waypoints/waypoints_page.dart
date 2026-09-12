@@ -3,8 +3,10 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../tracks/track_math.dart';
 import 'import_export.dart';
-import 'waypoint_category.dart';
+import 'tag_style.dart';
+import 'waypoint_colour.dart';
 import 'waypoint_editor.dart';
+import 'waypoint_icon.dart';
 import 'waypoint_store.dart';
 
 /// What the list is asking the map to do as it closes.
@@ -41,27 +43,39 @@ class WaypointsPage extends StatefulWidget {
   State<WaypointsPage> createState() => _WaypointsPageState();
 }
 
-/// A header row in the grouped list.
+/// A header row in the grouped list. A null [tag] is the untagged section.
 class _Section {
-  const _Section(this.category, this.count);
-  final WaypointCategory category;
+  const _Section(this.tag, this.count);
+  final String? tag;
   final int count;
 }
 
 class _WaypointsPageState extends State<WaypointsPage> {
   final _transfer = WaypointImportExport();
+  final _tagStyles = TagStyleStore();
   var _loading = true;
 
-  /// Null means every category. The filter doubles as the export selection,
-  /// which is how "export a subset" works without a second selection mode to
-  /// learn: what you can see is what leaves.
-  WaypointCategory? _category;
-  String? _tag;
+  /// The tags being filtered on. Empty means everything.
+  ///
+  /// The filter doubles as the export selection, which is how "export a subset"
+  /// works without a second selection mode to learn: what you can see is what
+  /// leaves. Several tags at once, because one tag was never how anyone
+  /// describes what they are looking for.
+  final _selected = <String>{};
+
+  /// Whether a waypoint has to carry every selected tag or just one of them.
+  ///
+  /// Both are useful — "ridge and opening day" narrows, "ridge or creek" widens
+  /// — so both are offered, and the chip that switches them says which one is
+  /// in force rather than being a setting to remember.
+  var _matchAll = false;
 
   @override
   void initState() {
     super.initState();
-    widget.store.load().then((_) {
+    // Styling loads alongside the waypoints and is allowed to fail quietly.
+    // Nothing here depends on it: a tag with no style draws a plain label.
+    Future.wait([widget.store.load(), _tagStyles.load()]).then((_) {
       if (!mounted) return;
       setState(() => _loading = false);
       if (widget.store.unreadableFilePath case final path?) {
@@ -70,39 +84,58 @@ class _WaypointsPageState extends State<WaypointsPage> {
     });
   }
 
-  List<Waypoint> get _visible => widget.store.items
-      .where((item) => _category == null || item.category == _category)
-      .where((item) => _tag == null || item.tags.contains(_tag))
-      .toList();
+  bool get _filtered => _selected.isNotEmpty;
 
-  bool get _filtered => _category != null || _tag != null;
+  bool _matches(Waypoint item) {
+    if (_selected.isEmpty) return true;
+    return _matchAll
+        ? _selected.every(item.tags.contains)
+        : _selected.any(item.tags.contains);
+  }
 
-  /// Headers interleaved with waypoints, sorted by category then name.
+  /// Each matching waypoint once, which is what export and every count of "how
+  /// many are there" has to be built from.
+  List<Waypoint> get _visible =>
+      widget.store.items.where(_matches).toList();
+
+  /// Headers interleaved with waypoints: one section per tag, then untagged.
   ///
-  /// Sorted by the enum's own order rather than alphabetically, so the list
-  /// reads in the order the category chips do and the two stay recognisable as
-  /// the same set.
+  /// A waypoint with three tags appears in three sections. That is what a tag
+  /// is, and it is why [_visible] and not this is the answer to how many
+  /// waypoints there are.
+  ///
+  /// Which tags get a section depends on whether a filter is on. With nothing
+  /// filtered, every tag in use does, because the list is then the whole of what
+  /// the user has. With a filter on, only the tags being filtered on do: asking
+  /// for the ridge and being shown a `north` section nobody asked for is noise,
+  /// and it made the `ridge` chip say 2 while the `ridge` section said 1. Now
+  /// the chip and the section agree, and two tags picked under "any of these"
+  /// give exactly the two sections that were asked for.
+  ///
+  /// Sections are alphabetical because tags have no inherent order and looking
+  /// one up by eye is the only thing the order has to support. Untagged is last
+  /// rather than first or alphabetical: it is the section nobody is looking for,
+  /// and it exists so that a waypoint with no tags cannot silently vanish out
+  /// of the list.
   List<Object> get _rows {
     final items = _visible
-      ..sort((a, b) {
-        final byCategory = a.category.index.compareTo(b.category.index);
-        return byCategory != 0
-            ? byCategory
-            : a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      });
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final tags = _filtered
+        ? (_selected.toList()..sort())
+        : (<String>{for (final item in items) ...item.tags}.toList()..sort());
     final rows = <Object>[];
-    WaypointCategory? current;
-    for (final item in items) {
-      if (item.category != current) {
-        current = item.category;
-        rows.add(
-          _Section(
-            current,
-            items.where((other) => other.category == current).length,
-          ),
-        );
-      }
-      rows.add(item);
+    for (final tag in tags) {
+      final inTag = items.where((item) => item.tags.contains(tag)).toList();
+      // A selected tag can match nothing at all under "any of these", and a
+      // header reading "creek · 0" over nothing is not a section.
+      if (inTag.isEmpty) continue;
+      rows.add(_Section(tag, inTag.length));
+      rows.addAll(inTag);
+    }
+    final untagged = items.where((item) => item.tags.isEmpty).toList();
+    if (untagged.isNotEmpty) {
+      rows.add(_Section(null, untagged.length));
+      rows.addAll(untagged);
     }
     return rows;
   }
@@ -110,6 +143,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
+    final rows = _rows;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Waypoints'),
@@ -136,7 +170,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
               ),
               const PopupMenuItem(
                 value: WaypointFormat.kml,
-                child: Text('KML — Google Earth, folders per category'),
+                child: Text('KML — Google Earth, folders per icon'),
               ),
               const PopupMenuItem(
                 value: WaypointFormat.geoJson,
@@ -181,16 +215,45 @@ class _WaypointsPageState extends State<WaypointsPage> {
                       ),
                     ),
                   )
-                else
-                  Expanded(child: _list()),
+                else ...[
+                  _tally(visible.length, rows.whereType<Waypoint>().length),
+                  Expanded(child: _list(rows)),
+                ],
               ],
             ),
     );
   }
 
+  /// How many waypoints there are, said plainly.
+  ///
+  /// Load-bearing rather than decoration. The section counts deliberately add
+  /// up to more than the number of waypoints, so without a stated total the
+  /// list implies it holds more than it does — and the number of waypoints you
+  /// have is the one figure nobody should have to work out.
+  Widget _tally(int shown, int rows) {
+    final held = widget.store.items.length;
+    final counted = _filtered
+        ? '$shown of ${_count(held, 'waypoint')} shown'
+        : _count(shown, 'waypoint');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Text(
+        rows > shown
+            ? '$counted · $rows rows below, because a waypoint appears under '
+                  '${_filtered ? 'each of the tags you picked' : 'each of its tags'}'
+            : counted,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
+  static String _count(int n, String noun) =>
+      n == 1 ? '1 $noun' : '$n ${noun}s';
+
   Widget _filterBar() {
-    final counts = widget.store.categoryCounts;
-    final tags = widget.store.tagsInUse;
+    final counts = widget.store.tagCounts;
+    final tags = counts.keys.toList()..sort();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -199,71 +262,125 @@ class _WaypointsPageState extends State<WaypointsPage> {
           FilterChip(
             label: Text('All ${widget.store.items.length}'),
             selected: !_filtered,
-            onSelected: (_) => setState(() {
-              _category = null;
-              _tag = null;
-            }),
+            onSelected: (_) => setState(_selected.clear),
           ),
-          // Only categories in use, so the row does not open with fifteen
-          // chips of which twelve match nothing.
-          for (final category in WaypointCategory.values)
-            if (counts[category] case final count?) ...[
-              const SizedBox(width: 8),
-              FilterChip(
-                avatar: Icon(category.icon, size: 18, color: category.colour),
-                label: Text('${category.label} $count'),
-                selected: _category == category,
-                onSelected: (on) =>
-                    setState(() => _category = on ? category : null),
+          // Shown whether or not it currently changes anything, because a
+          // filter whose rule is invisible until it bites is worse than a chip
+          // that sometimes says something obvious.
+          if (tags.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            ActionChip(
+              avatar: Icon(
+                _matchAll ? Icons.join_inner : Icons.join_left,
+                size: 16,
               ),
-            ],
+              label: Text(_matchAll ? 'All of these tags' : 'Any of these tags'),
+              tooltip: _matchAll
+                  ? 'Matching every selected tag. Tap to match any.'
+                  : 'Matching any selected tag. Tap to match all.',
+              onPressed: () => setState(() => _matchAll = !_matchAll),
+            ),
+          ],
           for (final tag in tags) ...[
             const SizedBox(width: 8),
-            FilterChip(
-              avatar: const Icon(Icons.label_outline, size: 16),
-              label: Text(tag),
-              selected: _tag == tag,
-              onSelected: (on) => setState(() => _tag = on ? tag : null),
-            ),
+            _tagChip(tag, counts[tag]!),
           ],
         ],
       ),
     );
   }
 
-  Widget _list() {
-    final rows = _rows;
-    return ListView.builder(
-      itemCount: rows.length,
-      itemBuilder: (context, index) => switch (rows[index]) {
-        _Section(:final category, :final count) => _header(category, count),
-        final Waypoint waypoint => _row(waypoint),
-        _ => const SizedBox.shrink(),
-      },
+  /// A tag's own chip, wearing the tag's own styling.
+  ///
+  /// This and the section header are the only two places tag styling appears.
+  /// It describes the tag, so it belongs where the tag is the thing on screen;
+  /// a waypoint can carry several tags, and a row or a map symbol drawn from one
+  /// of them would be picking a winner with nothing to pick on.
+  Widget _tagChip(String tag, int count) {
+    final style = _tagStyles.styleFor(tag);
+    return FilterChip(
+      avatar: Icon(
+        style.icon?.icon ?? Icons.label_outline,
+        size: 16,
+        color: style.colour?.value,
+      ),
+      label: Text('$tag $count'),
+      selected: _selected.contains(tag),
+      onSelected: (on) => setState(() {
+        if (on) {
+          _selected.add(tag);
+        } else {
+          _selected.remove(tag);
+        }
+      }),
     );
   }
 
-  Widget _header(WaypointCategory category, int count) => Container(
-    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-    padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
-    child: Row(
-      children: [
-        Icon(category.icon, size: 18, color: category.colour),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            '${category.label} · $count',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-        ),
-        IconButton(
-          tooltip: 'Delete all ${category.label}',
-          icon: const Icon(Icons.delete_sweep_outlined, size: 20),
-          onPressed: () => _deleteCategory(category),
-        ),
-      ],
-    ),
+  Widget _list(List<Object> rows) => ListView.builder(
+    itemCount: rows.length,
+    itemBuilder: (context, index) => switch (rows[index]) {
+      _Section(:final tag, :final count) => _header(tag, count),
+      final Waypoint waypoint => _row(waypoint),
+      _ => const SizedBox.shrink(),
+    },
   );
+
+  Widget _header(String? tag, int count) {
+    final style = tag == null ? const TagStyle() : _tagStyles.styleFor(tag);
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
+      child: Row(
+        children: [
+          Icon(
+            style.icon?.icon ?? (tag == null ? Icons.label_off_outlined : Icons.label_outline),
+            size: 18,
+            color: style.colour?.value,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${tag ?? 'Untagged'} · $count',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          // Only a tag gets bulk actions. There is no tag to take off an
+          // untagged waypoint, and "delete everything with no tags" would put
+          // the most destructive sweep on the list's least considered group.
+          if (tag != null)
+            PopupMenuButton<String>(
+              tooltip: 'Actions for $tag',
+              icon: const Icon(Icons.more_vert, size: 20),
+              onSelected: (choice) => switch (choice) {
+                'style' => _styleTag(tag),
+                'untag' => _removeTag(tag, count),
+                _ => _deleteTagged(tag, count),
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'style',
+                  child: Text('Style this tag…'),
+                ),
+                const PopupMenuDivider(),
+                // Worded apart on purpose. The old single "Delete all {label}"
+                // was unambiguous only while a waypoint could be in one group:
+                // now that it can be in several, "delete these" and "take this
+                // tag off these" are different enough that the wording has to
+                // carry the difference on its own.
+                PopupMenuItem(
+                  value: 'untag',
+                  child: Text('Remove "$tag" from these $count, keep them'),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete these ${_count(count, 'waypoint')}'),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _row(Waypoint waypoint) {
     final isTrack = waypoint.track.isNotEmpty;
@@ -280,13 +397,11 @@ class _WaypointsPageState extends State<WaypointsPage> {
         ? '$where$tags'
         : '$where\n${waypoint.notes}$tags';
     return ListTile(
-      // The saved colour, not the category's, because that is what the map
-      // draws and the two lists have to be recognisably the same waypoints.
-      // The category's glyph for tracks too, now that lines have categories of
-      // their own to be drawn as. A generic route icon on every track said less
-      // than "portage" does, and the subtitle already distinguishes a line from
-      // a place.
-      leading: Icon(waypoint.category.icon, color: waypoint.displayColour),
+      // The waypoint's own glyph and its own colour, never the section's. The
+      // same waypoint appears under every tag it carries, and it has to be
+      // recognisable as one waypoint in all of them and as the same symbol the
+      // map draws.
+      leading: Icon(waypoint.icon.icon, color: waypoint.displayColour),
       title: Text(waypoint.name),
       subtitle: Text(subtitle),
       isThreeLine: waypoint.notes.isNotEmpty || waypoint.tags.isNotEmpty,
@@ -369,6 +484,20 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
     if (edited == null) return;
     await widget.store.update(edited);
+    if (mounted) setState(_pruneFilter);
+  }
+
+  /// Gives a tag an icon and a colour, or takes them away again.
+  Future<void> _styleTag(String tag) async {
+    final chosen = await showDialog<TagStyle>(
+      context: context,
+      builder: (context) => _TagStyleDialog(
+        tag: tag,
+        existing: _tagStyles.styleFor(tag),
+      ),
+    );
+    if (chosen == null) return;
+    await _tagStyles.setStyle(tag, chosen);
     if (mounted) setState(() {});
   }
 
@@ -380,7 +509,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
     await widget.store.delete(waypoint.id);
     if (!mounted) return;
-    setState(() {});
+    setState(_pruneFilter);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Deleted ${waypoint.name}.'),
@@ -397,49 +526,53 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
   }
 
-  /// Clearing a whole category asks first, then still offers an undo.
+  /// The waypoints under one tag's header: the shown ones, which with a filter
+  /// on can be fewer than carry the tag.
   ///
-  /// Both, not one or the other: the confirmation is because this removes work
-  /// that took a season to collect, and the undo is because a confirmation
-  /// dialog is something people dismiss on reflex.
-  Future<void> _deleteCategory(WaypointCategory category) async {
-    final doomed = widget.store.items
-        .where((item) => item.category == category)
-        .length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete $doomed ${category.label} waypoint(s)?'),
-        content: const Text(
-          'This removes every waypoint in the category. You will get one '
-          'chance to undo it.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep them'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  /// Both bulk actions are scoped to this rather than to every carrier of the
+  /// tag, because the header they are offered from states this number and the
+  /// menu items say "these".
+  List<Waypoint> _inSection(String tag) =>
+      _visible.where((item) => item.tags.contains(tag)).toList();
+
+  /// Says so when the filter is hiding waypoints that carry the tag and will
+  /// therefore be left alone. Empty the rest of the time, which is most of it.
+  String _scopeNote(String tag, int acting) {
+    final held = widget.store.tagCounts[tag] ?? 0;
+    if (held <= acting) return '';
+    return '\n\n${_count(held - acting, 'waypoint')} carrying "$tag" '
+        '${held - acting == 1 ? 'is' : 'are'} hidden by the filter and will '
+        'not be touched.';
+  }
+
+  /// Takes a tag off a group of waypoints without deleting any of them.
+  ///
+  /// Confirmed as well as undoable, like the delete below, because it silently
+  /// changes many waypoints at once — but worded so that nobody reaches for this
+  /// expecting the waypoints to go, or for the delete expecting them to stay.
+  Future<void> _removeTag(String tag, int count) async {
+    final ids = _inSection(tag).map((item) => item.id).toSet();
+    final confirmed = await _confirm(
+      title: 'Remove "$tag" from ${_count(count, 'waypoint')}?',
+      body:
+          'The waypoints stay exactly as they are. They lose this one tag, so '
+          'any that had no other tag will move to the Untagged section.'
+          '${_scopeNote(tag, ids.length)}',
+      action: 'Remove the tag',
     );
     if (confirmed != true) return;
-    // The whole list, so undo restores the original order rather than appending
-    // the deleted ones at the end.
+    // The whole list, so undo restores the tags in the order they were in
+    // rather than appending this one at the end of each waypoint.
     final before = widget.store.items.toList();
-    final removed = await widget.store.deleteWhere(
-      (item) => item.category == category,
-    );
+    final changed = await widget.store.removeTagFrom(tag, ids);
     if (!mounted) return;
-    setState(() {
-      if (_category == category) _category = null;
-    });
+    setState(_pruneFilter);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Deleted ${removed.length} ${category.label}.'),
+        content: Text(
+          'Removed "$tag" from ${_count(changed, 'waypoint')}. '
+          'Nothing was deleted.',
+        ),
         action: SnackBarAction(
           label: 'UNDO',
           onPressed: () async {
@@ -451,6 +584,75 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
   }
 
+  /// Deletes every waypoint carrying a tag. Asks first, then still offers undo.
+  ///
+  /// Both, not one or the other: the confirmation is because this removes work
+  /// that took a season to collect, and the undo is because a confirmation
+  /// dialog is something people dismiss on reflex.
+  Future<void> _deleteTagged(String tag, int count) async {
+    final ids = _inSection(tag).map((item) => item.id).toSet();
+    final confirmed = await _confirm(
+      title: 'Delete ${_count(count, 'waypoint')} tagged "$tag"?',
+      body:
+          'This deletes the waypoints themselves, including any that also '
+          'carry other tags, so they will go from those sections too. You will '
+          'get one chance to undo it.${_scopeNote(tag, ids.length)}',
+      action: 'Delete them',
+    );
+    if (confirmed != true) return;
+    // The whole list, so undo restores the original order rather than appending
+    // the deleted ones at the end.
+    final before = widget.store.items.toList();
+    final removed = await widget.store.deleteWhere(
+      (item) => ids.contains(item.id),
+    );
+    if (!mounted) return;
+    setState(_pruneFilter);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Deleted ${_count(removed.length, 'waypoint')}.'),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () async {
+            await widget.store.replaceAll(before);
+            if (mounted) setState(() {});
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _confirm({
+    required String title,
+    required String body,
+    required String action,
+  }) => showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(body),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(action),
+        ),
+      ],
+    ),
+  );
+
+  /// Drops filters for tags nothing carries any more.
+  ///
+  /// Otherwise the list is left filtered to a tag that no longer exists, showing
+  /// "nothing matches this filter" over a list that has waypoints in it.
+  void _pruneFilter() {
+    final alive = widget.store.tagCounts.keys.toSet();
+    _selected.removeWhere((tag) => !alive.contains(tag));
+  }
+
   Future<void> _add() async {
     final location = widget.suggestedLocation;
     final draft = Waypoint(
@@ -460,10 +662,11 @@ class _WaypointsPageState extends State<WaypointsPage> {
       longitude: location.longitude,
       notes: '',
       createdAt: DateTime.now(),
-      // Opens on whatever the filter is showing: adding three stands in a row
-      // should not mean picking "Tree stand" three times.
-      category: _category ?? WaypointCategory.other,
-      tags: _tag == null ? const [] : [_tag!],
+      // Carried over only when exactly one tag is being filtered on: adding
+      // three waypoints along one ridge should not mean typing "ridge" three
+      // times, but a waypoint born with four tags because four chips were lit
+      // is a guess at what the user meant.
+      tags: _selected.length == 1 ? [_selected.single] : const [],
     );
     final saved = await showWaypointEditor(
       context,
@@ -507,4 +710,177 @@ class _WaypointsPageState extends State<WaypointsPage> {
       ).showSnackBar(SnackBar(content: Text('Import failed: $error')));
     }
   }
+}
+
+/// Picks the icon and colour for a tag.
+///
+/// Says out loud what the styling does and does not do, because "give this tag
+/// a colour" is a sentence most people would expect to colour the waypoints
+/// carrying it, and it deliberately does not.
+class _TagStyleDialog extends StatefulWidget {
+  const _TagStyleDialog({required this.tag, required this.existing});
+
+  final String tag;
+  final TagStyle existing;
+
+  @override
+  State<_TagStyleDialog> createState() => _TagStyleDialogState();
+}
+
+class _TagStyleDialogState extends State<_TagStyleDialog> {
+  late WaypointIcon? _icon = widget.existing.icon;
+  late WaypointColour? _colour = widget.existing.colour;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: Text('Style "${widget.tag}"'),
+      content: SizedBox(
+        width: 360,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Shown on this tag\'s chip and on its section heading. It does '
+                'not change how the waypoints themselves are drawn — a waypoint '
+                'can carry several tags, so it keeps its own icon and colour.',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              Text('Colour', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _NoneChip(
+                    label: 'No colour',
+                    selected: _colour == null,
+                    onTap: () => setState(() => _colour = null),
+                  ),
+                  for (final colour in WaypointColour.values)
+                    _ColourDot(
+                      colour: colour,
+                      selected: _colour == colour,
+                      onTap: () => setState(() => _colour = colour),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text('Icon', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  _NoneChip(
+                    label: 'No icon',
+                    selected: _icon == null,
+                    onTap: () => setState(() => _icon = null),
+                  ),
+                  // Glyph only, with the name in the tooltip and the semantics
+                  // label: thirty labelled chips would be a longer dialog than
+                  // the screen, and here the glyph is all that will be shown.
+                  for (final icon in WaypointIcon.values)
+                    IconButton(
+                      tooltip: icon.label,
+                      isSelected: _icon == icon,
+                      icon: Icon(icon.icon, semanticLabel: icon.label),
+                      onPressed: () => setState(() => _icon = icon),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(
+            context,
+            TagStyle(icon: _icon, colour: _colour),
+          ),
+          child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoneChip extends StatelessWidget {
+  const _NoneChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ChoiceChip(
+    label: Text(label),
+    selected: selected,
+    onSelected: (_) => onTap(),
+  );
+}
+
+class _ColourDot extends StatelessWidget {
+  const _ColourDot({
+    required this.colour,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final WaypointColour colour;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: colour.label,
+    child: InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Semantics(
+        label: colour.label,
+        selected: selected,
+        button: true,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: colour.value,
+            shape: BoxShape.circle,
+            // An outline on every dot rather than only the selected one, so
+            // white and black both stay visible against the dialog.
+            border: Border.all(
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Colors.black26,
+              width: selected ? 3 : 1,
+            ),
+          ),
+          child: selected
+              ? Icon(
+                  Icons.check,
+                  size: 16,
+                  color:
+                      ThemeData.estimateBrightnessForColor(colour.value) ==
+                          Brightness.dark
+                      ? Colors.white
+                      : Colors.black87,
+                )
+              : null,
+        ),
+      ),
+    ),
+  );
 }

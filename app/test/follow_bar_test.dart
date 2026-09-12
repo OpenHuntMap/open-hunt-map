@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/follow_bar.dart';
 import 'package:open_woods_map/tracks/track_follow.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 
 final _track = Waypoint(
@@ -12,7 +12,7 @@ final _track = Waypoint(
   longitude: -77,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 11),
-  category: WaypointCategory.trail,
+  icon: WaypointIcon.trail,
   track: const [
     TrackPoint(latitude: 45, longitude: -77),
     TrackPoint(latitude: 45.02, longitude: -77),

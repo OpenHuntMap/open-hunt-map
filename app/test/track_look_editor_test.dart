@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/track_preview.dart';
 import 'package:open_woods_map/tracks/track_style.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_colour.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_editor.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 
@@ -13,7 +14,7 @@ Waypoint _point() => Waypoint(
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
-  category: WaypointCategory.stand,
+  icon: WaypointIcon.stand,
 );
 
 Waypoint _track({
@@ -27,7 +28,7 @@ Waypoint _track({
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
-  category: WaypointCategory.trail,
+  icon: WaypointIcon.trail,
   colour: colour,
   stroke: stroke,
   marker: marker,
@@ -164,14 +165,13 @@ void main() {
   });
 
   group('the preview', () {
-    // Null colour means "follow the category", and a preview that read the raw
-    // field would draw every unoverridden track in the same default.
-    testWidgets('resolves a category colour rather than showing a default',
-        (tester) async {
+    // Null colour means "whatever the glyph draws in", and a preview that read
+    // the raw field would have no colour at all to draw with.
+    testWidgets('resolves an unset colour to the glyph\'s', (tester) async {
       await pumpEditor(tester, _track());
 
       final preview = tester.widget<TrackPreview>(find.byType(TrackPreview));
-      expect(preview.colour, WaypointCategory.trail.colour);
+      expect(preview.colour, WaypointIcon.trail.colour);
     });
 
     testWidgets('follows a colour override', (tester) async {

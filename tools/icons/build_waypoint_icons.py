@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the waypoint category icons as MapLibre SDF sprites.
+"""Render the waypoint icons as MapLibre SDF sprites.
 
 Glyphs come out of the Material Icons font the Flutter SDK already bundles, so
 the map markers and the Dart `IconData` constants stay the same artwork. The
@@ -51,8 +51,20 @@ FAR = 1e20
 
 # Codepoints are Flutter's own, copied from icons.dart, so that a Dart test can
 # assert each one against the `IconData.codePoint` the app renders in lists.
+#
+# Keys are WaypointIcon ids, and they are also the PNG filenames the app loads,
+# so renaming one changes the glyph on every waypoint already saved under it.
 ICONS = {
+    # 'other' rather than 'pin': the id predates the icon being a picture
+    # instead of a category, and it is written into saved waypoint files.
     "other": 0xE4C9,
+    "viewpoint": 0xE365,
+    "camp": 0xE11D,
+    "tent": 0xE263,
+    "firepit": 0xE463,
+    "water": 0xF05A2,
+    "cache": 0xE34A,
+    "foraging": 0xE217,
     "stand": 0xE14E,
     "blind": 0xE42C,
     "camera": 0xE4B6,
@@ -60,17 +72,18 @@ ICONS = {
     "blood": 0xE0E3,
     "harvest": 0xE28E,
     "food": 0xE2E4,
-    "water": 0xF05A2,
-    "camp": 0xE11D,
+    "fishing": 0xF0548,
+    "dock": 0xE084,
+    "boat-launch": 0xE1D3,
     "parking": 0xE39D,
     "trailhead": 0xE313,
-    "fishing": 0xF0548,
-    "viewpoint": 0xE365,
+    "signpost": 0xF0569,
+    "ford": 0xE6D0,
     "hazard": 0xE6CB,
-    # Line categories. They get glyphs too, even though a line needs no icon on
-    # the map, because a list row and a filter chip both draw one -- and because
-    # a GPX file can put a single waypoint under any of these types, and a
-    # missing image means MapLibre draws nothing at all.
+    # Glyphs for lines. A line needs no icon on the map, but a list row, a card
+    # and a filter chip all draw one -- and a point can be given any of these
+    # glyphs, so every one of them has to exist as an image: MapLibre draws
+    # nothing at all, and says nothing, when icon-image does not resolve.
     "trail": 0xF0561,
     "route": 0xE080,
     "road": 0xE1D7,
@@ -78,9 +91,9 @@ ICONS = {
     "boundary": 0xE262,
 }
 
-# Glyphs that are not categories. Kept apart from ICONS because a Dart test
-# asserts that map one-to-one onto WaypointCategory, and an extra in there would
-# read as a category the app had forgotten to define.
+# Glyphs that are not waypoint icons. Kept apart from ICONS because a Dart test
+# asserts that map one-to-one onto WaypointIcon, and an extra in there would
+# read as an icon the app had forgotten to define.
 EXTRAS = {
     # Direction markers repeated along a track. Every one points right, because
     # MapLibre's `symbol-placement: line` aligns a symbol's horizontal axis with

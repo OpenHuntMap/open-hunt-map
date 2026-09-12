@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/track_style.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_colour.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 
 void main() {
   group('the direction marker images', () {
@@ -66,8 +67,8 @@ void main() {
       expect(TrackMarker.drawn, isNot(contains(TrackMarker.none)));
     });
 
-    test('no marker image collides with a category image name', () {
-      final names = WaypointCategory.values.map((c) => c.iconImage).toSet();
+    test('no marker image collides with a waypoint icon image name', () {
+      final names = WaypointIcon.values.map((icon) => icon.iconImage).toSet();
       for (final marker in TrackMarker.drawn) {
         expect(names, isNot(contains(marker.image)));
       }
@@ -166,28 +167,34 @@ void main() {
       }
     });
 
-    test('every category colour gets a marker that is not its own colour', () {
-      for (final category in WaypointCategory.values) {
+    // Every glyph, because an unstyled track draws in its glyph's colour and a
+    // marker that vanishes into the line is the one failure this function has.
+    test('every glyph colour gets a marker that is not itself', () {
+      for (final icon in WaypointIcon.values) {
         expect(
-          hexColour(markerColourFor(category.colour)),
-          isNot(hexColour(category.colour)),
-          reason: '${category.id} markers would vanish into the line',
+          hexColour(markerColourFor(icon.colour)),
+          isNot(hexColour(icon.colour)),
+          reason: '${icon.id} markers would vanish into the line',
         );
       }
     });
   });
 
   group('track line colour', () {
-    test('follows the category when no override is set', () {
+    test('falls back to the colour of the glyph it draws as', () {
       expect(
-        trackLineColour(null, WaypointCategory.portage),
-        hexColour(WaypointCategory.portage.colour),
+        trackLineColour(WaypointIcon.portage, null),
+        hexColour(WaypointIcon.portage.colour),
+      );
+      expect(
+        trackLineColour(WaypointIcon.trail, null),
+        isNot(trackLineColour(WaypointIcon.portage, null)),
       );
     });
 
     test('an override wins', () {
       expect(
-        trackLineColour(WaypointColour.red, WaypointCategory.portage),
+        trackLineColour(WaypointIcon.portage, WaypointColour.red),
         hexColour(WaypointColour.red.value),
       );
     });

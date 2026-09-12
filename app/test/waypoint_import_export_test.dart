@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/track_style.dart';
 import 'package:open_woods_map/waypoints/import_export.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_colour.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 import 'package:xml/xml.dart';
 
@@ -11,7 +12,7 @@ Waypoint point(
   String id, {
   String name = 'Stand',
   String notes = '',
-  WaypointCategory category = WaypointCategory.other,
+  WaypointIcon icon = WaypointIcon.pin,
   List<String> tags = const [],
   WaypointColour? colour,
 }) => Waypoint(
@@ -21,7 +22,7 @@ Waypoint point(
   longitude: -77.62932,
   notes: notes,
   createdAt: DateTime.utc(2026, 9, 10, 16, 30),
-  category: category,
+  icon: icon,
   tags: tags,
   colour: colour,
 );
@@ -75,7 +76,15 @@ void main() {
     // to be strict, and this exporter had name before time.
     test('wpt children are in the order the schema requires', () {
       final gpx = XmlDocument.parse(
-        transfer.toGpx([point('1', notes: 'Has a note, so desc is emitted')]),
+        // Tagged as well as noted, so that every element this exporter can
+        // emit is present and the order of all of them is pinned down.
+        transfer.toGpx([
+          point(
+            '1',
+            notes: 'Has a note, so desc is emitted',
+            tags: ['ridge'],
+          ),
+        ]),
       );
       final children = gpx
           .findAllElements('wpt')
@@ -352,50 +361,118 @@ void main() {
   });
 
   // What the user asked for is that the way they organise waypoints survives
-  // leaving this app. Three separate carriers do that, and each is tested for
-  // what it can and cannot promise.
-  group('categories survive the trip out and back', () {
+  // leaving this app. The icon and the tags travel by different routes, and
+  // each is tested for what it can and cannot promise.
+  group('icons and tags survive the trip out and back', () {
     group('GPX', () {
       test('sym is the exact Garmin name, so the unit draws the icon', () {
         final gpx = XmlDocument.parse(
-          transfer.toGpx([point('1', category: WaypointCategory.stand)]),
+          transfer.toGpx([point('1', icon: WaypointIcon.stand)]),
         );
         expect(gpx.findAllElements('sym').single.innerText, 'Tree Stand');
       });
 
       test('sym is omitted where Garmin has no matching symbol', () {
         final gpx = XmlDocument.parse(
-          transfer.toGpx([point('1', category: WaypointCategory.camera)]),
+          transfer.toGpx([point('1', icon: WaypointIcon.camera)]),
         );
         expect(gpx.findAllElements('sym'), isEmpty);
-        // type still carries it, which is what brings it home.
-        expect(gpx.findAllElements('type').single.innerText, 'camera');
       });
 
-      test('type carries the category home again', () {
+      // Nothing is invented for the glyphs added since the icon stopped being
+      // a category. A plausible-looking name would put a wrong icon on the unit.
+      test('sym is omitted for every glyph with no confirmed Garmin name', () {
+        for (final icon in [WaypointIcon.tent, WaypointIcon.boatLaunch]) {
+          final gpx = XmlDocument.parse(
+            transfer.toGpx([point('1', icon: icon)]),
+          );
+          expect(gpx.findAllElements('sym'), isEmpty, reason: icon.id);
+        }
+      });
+
+      test('sym brings the glyph home again', () {
         final back = transfer.fromGpx(
-          transfer.toGpx([point('1', category: WaypointCategory.blood)]),
+          transfer.toGpx([point('1', icon: WaypointIcon.blood)]),
         );
-        expect(back.single.category, WaypointCategory.blood);
+        expect(back.single.icon, WaypointIcon.blood);
       });
 
-      // A unit that dropped <type> but kept <sym> still sorts correctly,
-      // because fromId matches Garmin's names too.
-      test('a file with only sym still lands in the right category', () {
-        const gpx = '''
-<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
-  <wpt lat="45.1" lon="-77.1"><name>A</name><sym>Tree Stand</sym></wpt>
-</gpx>''';
-        expect(transfer.fromGpx(gpx).single.category, WaypointCategory.stand);
+      // A glyph Garmin has no symbol for has nowhere to go in GPX at all, so it
+      // comes back as the default pin. That is a real loss and it is the format
+      // that cannot carry it; writing a near-miss symbol instead would be worse.
+      test('a glyph with no sym is lost rather than approximated', () {
+        final back = transfer.fromGpx(
+          transfer.toGpx([point('1', icon: WaypointIcon.tent)]),
+        );
+        expect(back.single.icon, WaypointIcon.pin);
       });
 
-      test('tags round trip through cmt', () {
+      test('type carries the tags, comma separated', () {
+        final gpx = XmlDocument.parse(
+          transfer.toGpx([point('1', tags: ['ridge', 'north block'])]),
+        );
+        expect(
+          gpx.findAllElements('type').single.innerText,
+          'ridge,north block',
+        );
+      });
+
+      // An empty <type> would say "no tags" where the truth is usually "this
+      // file never had any".
+      test('type is omitted when there are no tags', () {
+        final gpx = XmlDocument.parse(transfer.toGpx([point('1')]));
+        expect(gpx.findAllElements('type'), isEmpty);
+        expect(gpx.findAllElements('cmt'), isEmpty);
+      });
+
+      test('tags round trip through type and cmt', () {
         final back = transfer.fromGpx(
           transfer.toGpx([
-            point('1', category: WaypointCategory.stand, tags: ['ridge', 'north']),
+            point('1', icon: WaypointIcon.stand, tags: ['ridge', 'north']),
           ]),
         );
         expect(back.single.tags, ['ridge', 'north']);
+      });
+
+      test('a file with only cmt still recovers its tags', () {
+        const gpx = '''
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="45.1" lon="-77.1"><name>A</name><cmt>#ridge #north</cmt></wpt>
+</gpx>''';
+        expect(transfer.fromGpx(gpx).single.tags, ['ridge', 'north']);
+      });
+
+      // An older build of this app wrote the category id here. It arrives as a
+      // tag spelled the way the file spells it, and deliberately is not
+      // translated back through the old labels: half those ids are words like
+      // "water" and "camp" that someone is very likely to have as a real tag,
+      // and rewriting a user's own tag on a round trip is the worse failure.
+      test('an old export\'s type arrives as a tag, verbatim', () {
+        const gpx = '''
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="45.1" lon="-77.1"><name>A</name>
+    <sym>Tree Stand</sym><type>stand</type></wpt>
+</gpx>''';
+        final back = transfer.fromGpx(gpx).single;
+        expect(back.icon, WaypointIcon.stand);
+        expect(back.tags, ['stand']);
+      });
+
+      test('a tag that happens to be an old category id is not rewritten', () {
+        final back = transfer.fromGpx(
+          transfer.toGpx([point('1', tags: ['water', 'camp'])]),
+        );
+        expect(back.single.tags, ['water', 'camp']);
+      });
+
+      // Only for the glyphs Garmin cannot carry: sym wins whenever it is there,
+      // so this cannot overrule a symbol the unit preserved.
+      test('an old export\'s type recovers a glyph that has no sym', () {
+        const gpx = '''
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="45.1" lon="-77.1"><name>A</name><type>camera</type></wpt>
+</gpx>''';
+        expect(transfer.fromGpx(gpx).single.icon, WaypointIcon.camera);
       });
 
       // Someone else's comment must not become tags. Only #token counts.
@@ -459,23 +536,25 @@ void main() {
         expect(points.last.elevation, 210);
       });
 
-      test('a track carries its category too', () {
+      test('a track carries its tags too', () {
         final back = transfer.fromGpx(
-          transfer.toGpx([
-            track('t1').copyWith(category: WaypointCategory.trailhead),
-          ]),
+          transfer.toGpx([track('t1').copyWith(tags: ['ridge'])]),
         );
-        expect(back.single.category, WaypointCategory.trailhead);
+        expect(back.single.tags, ['ridge']);
       });
     });
 
     group('KML', () {
-      test('one folder per category, named for a human', () {
+      // Folders are the icon now, because a placemark sits in exactly one
+      // folder and a waypoint has exactly one icon. Tags cannot be folders: a
+      // waypoint with two tags would have to be written twice, KML has no id,
+      // and re-importing would turn one waypoint into two.
+      test('one folder per icon, named for a human', () {
         final kml = XmlDocument.parse(
           transfer.toKml([
-            point('1', category: WaypointCategory.stand),
-            point('2', category: WaypointCategory.stand),
-            point('3', category: WaypointCategory.water),
+            point('1', icon: WaypointIcon.stand),
+            point('2', icon: WaypointIcon.stand),
+            point('3', icon: WaypointIcon.water),
           ]),
         );
         final folders = kml.findAllElements('Folder').toList();
@@ -488,25 +567,36 @@ void main() {
         expect(folders.first.findAllElements('Placemark'), hasLength(2));
       });
 
-      test('an empty category produces no empty folder', () {
+      // The alternative — a folder per tag — would have written this one twice.
+      test('a waypoint with two tags is written exactly once', () {
         final kml = XmlDocument.parse(
-          transfer.toKml([point('1', category: WaypointCategory.stand)]),
+          transfer.toKml([point('1', tags: ['ridge', 'creek'])]),
+        );
+        expect(kml.findAllElements('Placemark'), hasLength(1));
+        expect(transfer.fromKml(transfer.toKml([
+          point('1', tags: ['ridge', 'creek']),
+        ])), hasLength(1));
+      });
+
+      test('an unused icon produces no empty folder', () {
+        final kml = XmlDocument.parse(
+          transfer.toKml([point('1', icon: WaypointIcon.stand)]),
         );
         expect(kml.findAllElements('Folder'), hasLength(1));
       });
 
-      test('the category round trips exactly through ExtendedData', () {
+      test('the icon and the tags round trip through ExtendedData', () {
         final back = transfer.fromKml(
           transfer.toKml([
-            point('1', category: WaypointCategory.hazard, tags: ['creek']),
+            point('1', icon: WaypointIcon.hazard, tags: ['creek', 'ridge']),
           ]),
         );
-        expect(back.single.category, WaypointCategory.hazard);
-        expect(back.single.tags, ['creek']);
+        expect(back.single.icon, WaypointIcon.hazard);
+        expect(back.single.tags, ['creek', 'ridge']);
       });
 
       // Google Earth and CalTopo both rewrite KML on save, and ExtendedData is
-      // the first thing to go. The folder is the fallback.
+      // the first thing to go. The folder is the fallback for the glyph.
       test('a file stripped of ExtendedData falls back to its folder', () {
         const kml = '''
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document>
@@ -516,7 +606,46 @@ void main() {
     </Placemark>
   </Folder>
 </Document></kml>''';
-        expect(transfer.fromKml(kml).single.category, WaypointCategory.water);
+        final back = transfer.fromKml(kml).single;
+        expect(back.icon, WaypointIcon.water);
+        // And no tag. The folder is the icon's label, and the twenty old
+        // category labels are the same twenty strings, so taking a tag from a
+        // folder name would invent one for every current file that lost its
+        // ExtendedData.
+        expect(back.tags, isEmpty);
+      });
+
+      test('a folder naming a glyph added since still resolves', () {
+        const kml = '''
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+  <Folder><name>Tent</name>
+    <Placemark><name>Flat spot</name>
+      <Point><coordinates>-77.1,45.1,0</coordinates></Point>
+    </Placemark>
+  </Folder>
+</Document></kml>''';
+        expect(transfer.fromKml(kml).single.icon, WaypointIcon.tent);
+      });
+
+      // An older build of this app wrote `category` here. Unlike a folder name,
+      // nothing else has ever written that element, so it can only mean a
+      // classification the user chose — which is why this one does become a tag.
+      test('an old export\'s category becomes a glyph and a tag', () {
+        const kml = '''
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+  <Folder><name>Boundary walked</name>
+    <Placemark><name>North line</name>
+      <ExtendedData>
+        <Data name="category"><value>boundary</value></Data>
+        <Data name="tags"><value>creek</value></Data>
+      </ExtendedData>
+      <Point><coordinates>-77.1,45.1,0</coordinates></Point>
+    </Placemark>
+  </Folder>
+</Document></kml>''';
+        final back = transfer.fromKml(kml).single;
+        expect(back.icon, WaypointIcon.boundary);
+        expect(back.tags, ['creek', 'boundary walked']);
       });
 
       test('the colour is written in KML byte order, not RGB', () {
@@ -546,31 +675,70 @@ void main() {
     });
 
     group('GeoJSON', () {
-      test('keeps category, tags and the chosen colour', () {
+      // This is the app's own backup format and the only one that has to be
+      // lossless. Anything it drops is gone from a restored backup.
+      test('keeps the icon, the tags and the chosen colour', () {
         final back = transfer.fromGeoJson(
           transfer.toGeoJson([
             point(
               '1',
-              category: WaypointCategory.camera,
-              tags: ['ridge'],
+              icon: WaypointIcon.camera,
+              tags: ['ridge', 'north block'],
               colour: WaypointColour.purple,
             ),
           ]),
         );
-        expect(back.single.category, WaypointCategory.camera);
-        expect(back.single.tags, ['ridge']);
+        expect(back.single.icon, WaypointIcon.camera);
+        expect(back.single.tags, ['ridge', 'north block']);
         expect(back.single.colour, WaypointColour.purple);
       });
 
-      // "Follows the category" has to stay distinguishable from "is that
-      // colour", or a later change to a category default silently stops
-      // applying to everything exported and re-imported since.
-      test('a waypoint following its category comes back still following it', () {
+      test('every glyph round trips, including those GPX cannot carry', () {
         final back = transfer.fromGeoJson(
-          transfer.toGeoJson([point('1', category: WaypointCategory.stand)]),
+          transfer.toGeoJson([
+            for (final icon in WaypointIcon.values)
+              point(icon.id, icon: icon),
+          ]),
+        );
+        expect(
+          back.map((item) => item.icon),
+          WaypointIcon.values,
+        );
+      });
+
+      // "Follows the glyph" has to stay distinguishable from "is that colour",
+      // or every waypoint exported and re-imported quietly stops following the
+      // picture it is drawn with.
+      test('a waypoint following its glyph comes back still following it', () {
+        final back = transfer.fromGeoJson(
+          transfer.toGeoJson([point('1', icon: WaypointIcon.stand)]),
         );
         expect(back.single.colour, isNull);
-        expect(back.single.displayColour, WaypointCategory.stand.colour);
+        expect(back.single.displayColour, WaypointIcon.stand.colour);
+      });
+
+      // An older backup carries `category`. This is our own format, so the
+      // value can have come from nowhere else and migrates exactly as a stored
+      // waypoint does.
+      test('an old backup\'s category becomes a glyph and a tag', () {
+        const geoJson = '''
+{"type":"FeatureCollection","features":[{"type":"Feature",
+"properties":{"id":"a","name":"North stand","category":"stand",
+"tags":["ridge"]},
+"geometry":{"type":"Point","coordinates":[-77.1,45.1]}}]}''';
+        final back = transfer.fromGeoJson(geoJson).single;
+        expect(back.icon, WaypointIcon.stand);
+        expect(back.tags, ['ridge', 'tree stand']);
+      });
+
+      test('an icon id from a later build falls back rather than failing', () {
+        const geoJson = '''
+{"type":"FeatureCollection","features":[{"type":"Feature",
+"properties":{"id":"a","name":"From the future","icon":"mineral-lick"},
+"geometry":{"type":"Point","coordinates":[-77.1,45.1]}}]}''';
+        final back = transfer.fromGeoJson(geoJson).single;
+        expect(back.icon, WaypointIcon.pin);
+        expect(back.name, 'From the future');
       });
     });
   });

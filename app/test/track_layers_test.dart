@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_woods_map/tracks/track_layers.dart';
 import 'package:open_woods_map/tracks/track_style.dart';
-import 'package:open_woods_map/waypoints/waypoint_category.dart';
+import 'package:open_woods_map/waypoints/waypoint_colour.dart';
+import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 
 Waypoint _track(
@@ -11,7 +12,7 @@ Waypoint _track(
   TrackStroke stroke = TrackStroke.solid,
   TrackMarker marker = TrackMarker.arrow,
   WaypointColour? colour,
-  WaypointCategory category = WaypointCategory.trail,
+  WaypointIcon icon = WaypointIcon.trail,
   int points = 2,
 }) => Waypoint(
   id: id,
@@ -20,7 +21,7 @@ Waypoint _track(
   longitude: -77.1,
   notes: '',
   createdAt: DateTime.utc(2026, 9, 10),
-  category: category,
+  icon: icon,
   colour: colour,
   stroke: stroke,
   marker: marker,
@@ -48,8 +49,7 @@ void main() {
             _track('$stroke-$marker', stroke: stroke, marker: marker),
         for (final colour in WaypointColour.values)
           _track('c-$colour', colour: colour),
-        for (final category in WaypointCategory.values)
-          _track('k-$category', category: category),
+        for (final icon in WaypointIcon.values) _track('k-$icon', icon: icon),
       ];
 
       final collection = trackFeatureCollection(tracks);

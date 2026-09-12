@@ -57,7 +57,7 @@ class FollowBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(track.category.icon, color: track.displayColour, size: 20),
+                Icon(track.icon.icon, color: track.displayColour, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

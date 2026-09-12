@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../tracks/track_math.dart';
 import '../tracks/track_preview.dart';
 import '../tracks/track_style.dart';
-import 'waypoint_category.dart';
+import 'legacy_categories.dart';
+import 'waypoint_colour.dart';
+import 'waypoint_icon.dart';
 import 'waypoint_store.dart';
 
 /// Opens the waypoint editor, returning the edited waypoint or null if cancelled.
@@ -57,18 +59,22 @@ class WaypointEditor extends StatefulWidget {
 class _WaypointEditorState extends State<WaypointEditor> {
   late final TextEditingController _name;
   late final TextEditingController _notes;
-  late WaypointCategory _category;
+  late WaypointIcon _icon;
   late WaypointColour? _colour;
   late List<String> _tags;
   late TrackStroke _stroke;
   late TrackMarker _marker;
+
+  /// Collapsed to start with. Nineteen chips on show would read as a list the
+  /// user is expected to work through, which is the opposite of what they are.
+  var _showSuggestions = false;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.existing.name);
     _notes = TextEditingController(text: widget.existing.notes);
-    _category = widget.existing.category;
+    _icon = widget.existing.icon;
     _colour = widget.existing.colour;
     _tags = [...widget.existing.tags];
     _stroke = widget.existing.stroke;
@@ -84,26 +90,13 @@ class _WaypointEditorState extends State<WaypointEditor> {
 
   bool get _isLine => widget.existing.track.length >= 2;
 
-  /// The categories to offer, plus whatever is already set if that is not among
-  /// them.
-  ///
-  /// A file can file a line under a point category or the other way round, and
-  /// hiding the current choice would make the editor look like it had silently
-  /// reassigned it — and then saving really would.
-  List<WaypointCategory> get _offered {
-    final offered = _isLine
-        ? WaypointCategory.forLines
-        : WaypointCategory.forPoints;
-    return offered.contains(_category) ? offered : [_category, ...offered];
-  }
-
   void _save() {
     final name = _name.text.trim();
     widget.onSave(
       widget.existing.copyWith(
         name: name.isEmpty ? widget.existing.name : name,
         notes: _notes.text.trim(),
-        category: _category,
+        icon: _icon,
         tags: _tags,
         colour: _colour,
         clearColour: _colour == null,
@@ -114,8 +107,8 @@ class _WaypointEditorState extends State<WaypointEditor> {
   }
 
   /// What the line will actually be drawn in, which is not [_colour]: null there
-  /// means "follow the category", and a preview has to resolve that to see it.
-  Color get _lineColour => _colour?.value ?? _category.colour;
+  /// means the glyph's own colour, and a preview has to resolve that to see it.
+  Color get _lineColour => _colour?.value ?? _icon.colour;
 
   Future<void> _addTag() async {
     final controller = TextEditingController();
@@ -157,6 +150,13 @@ class _WaypointEditorState extends State<WaypointEditor> {
     final unusedKnownTags = widget.knownTags
         .where((tag) => !_tags.contains(tag))
         .toList();
+    // A suggestion the user has adopted is their tag now, and showing it in
+    // both places would say it was still only an example.
+    final unusedSuggestions = suggestedTags
+        .where(
+          (tag) => !_tags.contains(tag) && !widget.knownTags.contains(tag),
+        )
+        .toList();
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
@@ -196,38 +196,46 @@ class _WaypointEditorState extends State<WaypointEditor> {
                 ),
               ),
             ),
-            _label(theme, 'Category'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final category in _offered)
-                    ChoiceChip(
-                      selected: category == _category,
-                      // Material draws the selected checkmark inside the avatar
-                      // behind a scrim, which turns the glyph into an
-                      // unreadable grey disc — and the glyph is the only reason
-                      // this chip has an avatar. The filled container says
-                      // "selected" on its own.
-                      showCheckmark: false,
-                      // The glyph is on the chip because it is the glyph that
-                      // will be on the map, and picking a category blind and
-                      // then discovering its icon is a worse way round.
-                      avatar: Icon(
-                        category.icon,
-                        size: 18,
-                        color: category == _category
-                            ? null
-                            : category.colour,
-                      ),
-                      label: Text(category.label),
-                      onSelected: (_) => setState(() => _category = category),
-                    ),
-                ],
+            _label(theme, 'Icon'),
+            // Sectioned, because thirty pictograms in one wall is unreadable.
+            // The sections are the picker's only job: nothing downstream reads
+            // a glyph's group, and a fishing glyph on a stand is a legitimate
+            // choice rather than a mistake to be prevented.
+            for (final entry in WaypointIcon.byGroup.entries) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                child: Text(
+                  entry.key.label,
+                  style: theme.textTheme.labelMedium,
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final icon in entry.value)
+                      ChoiceChip(
+                        selected: icon == _icon,
+                        // Material draws the selected checkmark inside the
+                        // avatar behind a scrim, which turns the glyph into an
+                        // unreadable grey disc — and the glyph is the only
+                        // reason this chip has an avatar. The filled container
+                        // says "selected" on its own.
+                        showCheckmark: false,
+                        // In the glyph's own colour, because that is what the
+                        // waypoint will be drawn in unless a colour is chosen
+                        // below, and a picker that hid that would be asking
+                        // the user to pick a colour blind.
+                        avatar: Icon(icon.icon, size: 18, color: icon.colour),
+                        label: Text(icon.label),
+                        onSelected: (_) => setState(() => _icon = icon),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             _label(theme, 'Colour'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -235,12 +243,13 @@ class _WaypointEditorState extends State<WaypointEditor> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  // "Follow the category" is a real choice and not the same as
-                  // picking the category's current colour: this one keeps up if
-                  // the category's default ever changes.
+                  // Following the glyph is a real choice and not the same as
+                  // picking the colour the glyph happens to carry: this swatch
+                  // repaints itself when the glyph above changes, and a
+                  // waypoint set this way follows.
                   _Swatch(
-                    colour: _category.colour,
-                    label: 'Category',
+                    colour: _icon.colour,
+                    label: "The icon's own colour",
                     selected: _colour == null,
                     onTap: () => setState(() => _colour = null),
                   ),
@@ -335,6 +344,45 @@ class _WaypointEditorState extends State<WaypointEditor> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+              child: TextButton.icon(
+                onPressed: () =>
+                    setState(() => _showSuggestions = !_showSuggestions),
+                icon: Icon(
+                  _showSuggestions ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                ),
+                label: const Text('Example tags'),
+              ),
+            ),
+            if (_showSuggestions) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'Built-in examples, not tags you have made. Take any that '
+                  'suit how you organise your spots and ignore the rest.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final tag in unusedSuggestions)
+                      ActionChip(
+                        avatar: const Icon(Icons.lightbulb_outline, size: 16),
+                        label: Text(tag),
+                        onPressed: () => setState(
+                          () => _tags = normaliseTags([..._tags, tag]),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

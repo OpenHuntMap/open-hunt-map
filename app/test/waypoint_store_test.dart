@@ -63,9 +63,11 @@ void main() {
         'lng': -77.5,
         'notes': '',
         'createdAt': '2026-09-10T12:00:00.000Z',
-        'category': 'other',
+        // The glyph, and no 'category': classification is tags now, and
+        // writing a category would be writing something the app cannot mean.
+        'icon': 'other',
         'tags': <String>[],
-        // No 'colour' key: this waypoint follows its category, and writing the
+        // No 'colour' key: this waypoint follows the default, and writing the
         // resolved colour here would make that indistinguishable from a colour
         // the user picked.
         'track': <Object>[],
@@ -311,6 +313,104 @@ void main() {
       final reloaded = await WaypointStore().load();
       expect(reloaded, hasLength(1));
       expect(reloaded.single.name, 'New');
+    });
+  });
+
+  group('counting by tag', () {
+    Future<WaypointStore> stocked() async {
+      final store = WaypointStore();
+      await store.load();
+      await store.replaceAll([
+        point('1', name: 'A').copyWith(tags: ['ridge', 'north']),
+        point('2', name: 'B').copyWith(tags: ['ridge']),
+        point('3', name: 'C'),
+      ]);
+      return store;
+    }
+
+    test('a waypoint counts once per tag it carries', () async {
+      final store = await stocked();
+      expect(store.tagCounts, {'ridge': 2, 'north': 1});
+    });
+
+    // The counts deliberately sum to more than the number of waypoints. Stated
+    // here because anything showing them has to say so on screen, or the list
+    // looks like it holds more than it does.
+    test('the counts do not sum to the number of waypoints', () async {
+      final store = await stocked();
+      final summed = store.tagCounts.values.fold(0, (a, b) => a + b);
+      expect(summed, 3);
+      expect(store.items, hasLength(3));
+      expect(store.untaggedCount, 1);
+    });
+
+    test('an unused tag is absent rather than zero', () async {
+      final store = await stocked();
+      expect(store.tagCounts.containsKey('creek'), isFalse);
+    });
+  });
+
+  group('removing a tag from the waypoints named', () {
+    Future<WaypointStore> stocked() async {
+      final store = WaypointStore();
+      await store.load();
+      await store.replaceAll([
+        point('1', name: 'A').copyWith(tags: ['ridge', 'north']),
+        point('2', name: 'B').copyWith(tags: ['ridge']),
+        point('3', name: 'C').copyWith(tags: ['creek']),
+      ]);
+      return store;
+    }
+
+    // The whole point of the operation existing beside deleteWhere: the
+    // waypoints stay, and only the filing changes.
+    test('keeps every waypoint and takes only that tag', () async {
+      final store = await stocked();
+      final changed = await store.removeTagFrom('ridge', {'1', '2'});
+
+      expect(changed, 2);
+      expect(store.items, hasLength(3));
+      expect(store.items[0].tags, ['north']);
+      expect(store.items[1].tags, isEmpty);
+      expect(store.items[2].tags, ['creek']);
+    });
+
+    // The caller offers this from a header that states a number, and a filtered
+    // list can be showing fewer waypoints than the tag has.
+    test('leaves a carrier that was not named alone', () async {
+      final store = await stocked();
+      final changed = await store.removeTagFrom('ridge', {'1'});
+
+      expect(changed, 1);
+      expect(store.items[0].tags, ['north']);
+      expect(store.items[1].tags, ['ridge']);
+    });
+
+    test('reaches disk', () async {
+      final store = await stocked();
+      await store.removeTagFrom('ridge', {'1', '2'});
+
+      final reloaded = await WaypointStore().load();
+      expect(reloaded[1].tags, isEmpty);
+    });
+
+    test('a tag nothing carries changes nothing and writes nothing', () async {
+      final store = await stocked();
+      final before = file.readAsStringSync();
+
+      expect(
+        await store.removeTagFrom('nothing-has-this', {'1', '2', '3'}),
+        0,
+      );
+      expect(file.readAsStringSync(), before);
+    });
+
+    test('an id nothing matches changes nothing and writes nothing', () async {
+      final store = await stocked();
+      final before = file.readAsStringSync();
+
+      expect(await store.removeTagFrom('ridge', {'gone'}), 0);
+      expect(file.readAsStringSync(), before);
     });
   });
 }

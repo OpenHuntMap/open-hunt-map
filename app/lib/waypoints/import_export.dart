@@ -6,7 +6,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:xml/xml.dart';
 
 import '../tracks/track_style.dart';
-import 'waypoint_category.dart';
+import 'legacy_categories.dart';
+import 'waypoint_colour.dart';
+import 'waypoint_icon.dart';
 import 'waypoint_store.dart';
 
 enum WaypointFormat { gpx, kml, geoJson }
@@ -98,11 +100,13 @@ class WaypointImportExport {
               builder.element('src', nest: 'OpenWoodsMap');
               // sym before type: still the wptType sequence. sym is what makes a
               // Garmin unit draw the right icon, and type is the free-text
-              // category that survives a round trip back into this app.
-              if (waypoint.category.garminSym case final sym?) {
+              // field the tags survive a round trip back into this app in.
+              if (waypoint.icon.garminSym case final sym?) {
                 builder.element('sym', nest: sym);
               }
-              builder.element('type', nest: waypoint.category.id);
+              if (_typeText(waypoint) case final type?) {
+                builder.element('type', nest: type);
+              }
             },
           );
         }
@@ -120,7 +124,9 @@ class WaypointImportExport {
                 builder.element('desc', nest: waypoint.notes);
               }
               builder.element('src', nest: 'OpenWoodsMap');
-              builder.element('type', nest: waypoint.category.id);
+              if (_typeText(waypoint) case final type?) {
+                builder.element('type', nest: type);
+              }
               builder.element(
                 'trkseg',
                 nest: () {
@@ -159,19 +165,26 @@ class WaypointImportExport {
     return builder.buildDocument().toXmlString(pretty: true);
   }
 
-  /// KML, grouped into one folder per category.
+  /// KML, grouped into one folder per icon.
   ///
   /// Folders are the only grouping construct Google Earth, CalTopo and onX all
-  /// understand, and they are single-parent, which is why the category is
-  /// single-valued in the first place. Tags ride along in ExtendedData, where we
-  /// can read them back but nothing else will.
+  /// understand, and a placemark can sit in exactly one of them. Tags cannot be
+  /// folders for that reason: a waypoint carrying two tags would have to be
+  /// written twice, and KML has no id, so anything re-importing the file — this
+  /// app included — would have no way to tell the two copies apart from two
+  /// waypoints. Duplicating a user's waypoints on a round trip is worse than a
+  /// coarse folder.
+  ///
+  /// So the folder is the icon, which is the one thing a waypoint has exactly
+  /// one of. Tags ride along in ExtendedData, where we can read them back but
+  /// nothing else will.
   String toKml(List<Waypoint> waypoints) {
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-8"');
-    // Grouped up front so an empty category produces no empty folder.
-    final grouped = <WaypointCategory, List<Waypoint>>{};
+    // Grouped up front so an unused icon produces no empty folder.
+    final grouped = <WaypointIcon, List<Waypoint>>{};
     for (final waypoint in waypoints) {
-      grouped.putIfAbsent(waypoint.category, () => []).add(waypoint);
+      grouped.putIfAbsent(waypoint.icon, () => []).add(waypoint);
     }
     final styles = {for (final w in waypoints) w.colourHex};
     builder.element(
@@ -233,11 +246,12 @@ class WaypointImportExport {
         builder.element('description', nest: waypoint.notes);
         builder.element('styleUrl', nest: '#${_styleId(waypoint.colourHex)}');
         // The lossless path home. A folder name is the human label and can be
-        // renamed by anything that touches the file; this is the machine copy.
+        // renamed by anything that touches the file; this is the machine copy,
+        // and it is the only place the tags exist at all.
         builder.element(
           'ExtendedData',
           nest: () {
-            _kmlData(builder, 'category', waypoint.category.id);
+            _kmlData(builder, 'icon', waypoint.icon.id);
             if (waypoint.tags.isNotEmpty) {
               _kmlData(builder, 'tags', waypoint.tags.join(','));
             }
@@ -307,7 +321,7 @@ class WaypointImportExport {
                       'name': waypoint.name,
                       'notes': waypoint.notes,
                       'createdAt': waypoint.createdAt.toIso8601String(),
-                      'category': waypoint.category.id,
+                      'icon': waypoint.icon.id,
                       'tags': waypoint.tags,
                       if (waypoint.colour case final colour?)
                         'colour': colour.id,
@@ -367,18 +381,15 @@ class WaypointImportExport {
               final name = _childText(element, 'name') ?? 'Imported waypoint';
               final notes = _childText(element, 'desc') ?? '';
               final time = DateTime.tryParse(_childText(element, 'time') ?? '');
-              // type first, then sym: type is what we wrote, sym is what a
-              // Garmin unit is more likely to have preserved.
+              final type = _childText(element, 'type');
               return _waypoint(
                 name,
                 lat,
                 lng,
                 notes,
                 time,
-                category: WaypointCategory.fromId(
-                  _childText(element, 'type') ?? _childText(element, 'sym'),
-                ),
-                tags: _tagsFromComment(_childText(element, 'cmt')),
+                icon: _iconFromGpx(_childText(element, 'sym'), type),
+                tags: _tagsFromGpx(type, _childText(element, 'cmt')),
               );
             })
             .toList();
@@ -408,15 +419,16 @@ class WaypointImportExport {
                         ),
                       )
                       .toList();
+              final type = _childText(element, 'type');
               return _trackWaypoint(
                 _childText(element, 'name') ?? 'Imported track',
                 points,
                 _childText(element, 'desc') ?? '',
                 null,
-                category: WaypointCategory.fromId(
-                  _childText(element, 'type'),
-                ),
-                tags: _tagsFromComment(_childText(element, 'cmt')),
+                // trkType has no `sym`, so a track's glyph can only ever come
+                // from what an older build left in `<type>`.
+                icon: WaypointIcon.fromId(type),
+                tags: _tagsFromGpx(type, _childText(element, 'cmt')),
               );
             })
             .whereType<Waypoint>();
@@ -432,15 +444,22 @@ class WaypointImportExport {
           final name = _childText(element, 'name') ?? 'Imported waypoint';
           final notes = _childText(element, 'description') ?? '';
           final data = _extendedData(element);
-          // ExtendedData is ours and exact. The enclosing folder name is the
-          // fallback, and it is why a file passed through Google Earth still
-          // arrives sorted: fromId matches labels as well as ids.
-          final category = WaypointCategory.fromId(
-            data['category'] ?? _enclosingFolderName(element),
+          final icon = _iconFromKml(
+            data['icon'],
+            data['category'],
+            _enclosingFolderName(element),
           );
-          final tags = normaliseTags(
-            (data['tags'] ?? '').split(',').map((tag) => tag.trim()),
-          );
+          final tags = normaliseTags([
+            ...(data['tags'] ?? '').split(',').map((tag) => tag.trim()),
+            // Only from an explicit `category`, which nothing but an older
+            // build of this app ever wrote, so it can only mean a classification
+            // the user chose. Deliberately not taken from the folder name: a
+            // folder is the icon's label now, and the twenty old category
+            // labels are the same twenty strings, so a current file stripped of
+            // its ExtendedData would otherwise arrive carrying a tag nobody
+            // ever typed.
+            ...legacyCategoryTags(data['category']),
+          ]);
           final colour = WaypointColour.fromId(data['colour']);
           final lineString = _firstDescendant(element, 'LineString');
           if (lineString != null) {
@@ -463,7 +482,7 @@ class WaypointImportExport {
               points,
               notes,
               null,
-              category: category,
+              icon: icon,
               tags: tags,
               colour: colour,
             );
@@ -483,7 +502,7 @@ class WaypointImportExport {
             double.parse(coordinates[0]),
             notes,
             null,
-            category: category,
+            icon: icon,
             tags: tags,
             colour: colour,
           );
@@ -503,13 +522,21 @@ class WaypointImportExport {
           final geometry = feature['geometry'] as Map<String, dynamic>;
           final coordinates = geometry['coordinates'] as List<dynamic>;
           final type = geometry['type']?.toString();
-          final category = WaypointCategory.fromId(
-            properties['category']?.toString(),
-          );
-          final tags = normaliseTags(
-            (properties['tags'] as List<dynamic>? ?? const [])
+          // `category` is what an older backup carries. It migrates exactly as
+          // a stored waypoint does — the glyph it drew as, plus its label as a
+          // tag — because this is our own format and the value can have come
+          // from nowhere else.
+          final legacy = properties['icon'] == null
+              ? properties['category']?.toString()
+              : null;
+          final icon = legacy == null
+              ? WaypointIcon.fromId(properties['icon']?.toString())
+              : legacyCategoryIcon(legacy);
+          final tags = normaliseTags([
+            ...(properties['tags'] as List<dynamic>? ?? const [])
                 .map((tag) => tag.toString()),
-          );
+            ...legacyCategoryTags(legacy),
+          ]);
           final colour = WaypointColour.fromId(properties['colour']?.toString());
           if (type == 'LineString') {
             final points =
@@ -531,7 +558,7 @@ class WaypointImportExport {
               properties['notes']?.toString() ?? '',
               DateTime.tryParse(properties['createdAt']?.toString() ?? ''),
               id: properties['id']?.toString(),
-              category: category,
+              icon: icon,
               tags: tags,
               colour: colour,
               // Absent in anyone else's GeoJSON, which is why both fall back to
@@ -554,7 +581,7 @@ class WaypointImportExport {
             createdAt:
                 DateTime.tryParse(properties['createdAt']?.toString() ?? '') ??
                 DateTime.now(),
-            category: category,
+            icon: icon,
             tags: tags,
             colour: colour,
           );
@@ -563,26 +590,90 @@ class WaypointImportExport {
         .toList();
   }
 
-  /// Carries the category label and the tags as readable text.
+  /// The tags as readable text, for the one field every tool shows.
   ///
   /// Nothing in GPX or KML has a field for a many-valued grouping. Garmin's
   /// `gpxx:Categories` is the closest thing and its import side is undocumented
   /// and reported broken in BaseCamp, while onX and CalTopo have nothing at all.
   /// `<cmt>` at least shows up beside the waypoint in every one of them, so the
   /// tags stay legible to a person even though only this app parses them back.
+  ///
+  /// Null when there are no tags, because an empty comment is noise on the unit
+  /// and the icon's own label is not a classification to put here in its place.
   String? _comment(Waypoint waypoint) {
-    final tags = waypoint.tags.map((tag) => '#$tag').join(' ');
-    if (tags.isEmpty) return waypoint.category.label;
-    return '${waypoint.category.label} · $tags';
+    if (waypoint.tags.isEmpty) return null;
+    return waypoint.tags.map((tag) => '#$tag').join(' ');
   }
 
-  /// The other half of [_comment]. Anything that is not a `#tag` token is left
-  /// alone, so a comment a different app wrote does not become tags.
-  static List<String> _tagsFromComment(String? comment) => normaliseTags(
-    RegExp(r'#([\w-]+)')
-        .allMatches(comment ?? '')
-        .map((match) => match.group(1)!),
-  );
+  /// GPX `<type>`: the tags, comma separated, or nothing.
+  ///
+  /// `<type>` is free text with no agreed meaning, which is why it can carry
+  /// something the format has no field for. Commas because that is the
+  /// separator the tag editor already uses, and because the normalised form of
+  /// a tag cannot contain one. Read back by splitting on commas, so this is the
+  /// path that round trips tags through GPX exactly.
+  ///
+  /// Omitted rather than emitted empty: a `<type>` this app wrote means "these
+  /// are the tags", and an empty one would mean "no tags" where the truth is
+  /// often "this file never had any".
+  String? _typeText(Waypoint waypoint) =>
+      waypoint.tags.isEmpty ? null : waypoint.tags.join(',');
+
+  /// Tags out of a GPX `<type>` and `<cmt>`, taking whatever each can give.
+  ///
+  /// The union of both, because they are written together but do not always
+  /// arrive together: some tools drop `<type>`, others rewrite `<cmt>`. In a
+  /// file this app wrote the two agree, so the union is the same list.
+  ///
+  /// `<type>` is read verbatim, which means a foreign file's type — "Geocache",
+  /// or the category id an older build of this app wrote — becomes a tag as it
+  /// is spelled. It is deliberately *not* translated back through the old
+  /// category labels, even though the same string in a stored file is: half of
+  /// those ids are words like "water", "camp" and "trail" that someone is very
+  /// likely to have as a real tag, and rewriting a user's own tag into
+  /// something else on a round trip is a worse failure than importing an old
+  /// export's tag as "stand" rather than "tree stand".
+  ///
+  /// From `<cmt>`, only `#token` counts, so a sentence someone else wrote does
+  /// not turn into tags.
+  static List<String> _tagsFromGpx(String? type, String? comment) =>
+      normaliseTags([
+        ...(type ?? '').split(','),
+        ...RegExp(r'#([\w-]+)')
+            .allMatches(comment ?? '')
+            .map((match) => match.group(1)!),
+      ]);
+
+  /// The glyph for an imported GPX feature.
+  ///
+  /// `<sym>` first: it is the only field in GPX that has ever meant an icon,
+  /// and [WaypointIcon.fromId] matches Garmin's own names. `<type>` is the
+  /// fallback only because an older build of this app wrote the category id
+  /// there, which recovers the glyph for the handful of icons that have no
+  /// Garmin symbol to be written as. Anything unrecognised falls back to the
+  /// default pin rather than failing the import.
+  static WaypointIcon _iconFromGpx(String? sym, String? type) {
+    if (sym != null && sym.trim().isNotEmpty) return WaypointIcon.fromId(sym);
+    return WaypointIcon.fromId(type);
+  }
+
+  /// The glyph for an imported KML placemark, in descending order of trust.
+  ///
+  /// The `icon` in ExtendedData is ours and exact. A `category` there is an
+  /// older build's, and names a glyph that still exists. The folder name is
+  /// whatever survived a tool rewriting the file, and is matched against both
+  /// the current labels and the old ones, so "Tent" and "Boundary walked" both
+  /// land somewhere sensible.
+  static WaypointIcon _iconFromKml(
+    String? stored,
+    String? legacy,
+    String? folder,
+  ) {
+    if (stored != null) return WaypointIcon.fromId(stored);
+    if (legacyCategoryId(legacy) case final id?) return WaypointIcon.fromId(id);
+    if (legacyCategoryId(folder) case final id?) return WaypointIcon.fromId(id);
+    return WaypointIcon.fromId(folder);
+  }
 
   Waypoint _waypoint(
     String name,
@@ -590,7 +681,7 @@ class WaypointImportExport {
     double lng,
     String notes,
     DateTime? createdAt, {
-    WaypointCategory category = WaypointCategory.other,
+    WaypointIcon icon = WaypointIcon.fallback,
     List<String> tags = const [],
     WaypointColour? colour,
   }) => Waypoint(
@@ -600,7 +691,7 @@ class WaypointImportExport {
     longitude: lng,
     notes: notes,
     createdAt: createdAt ?? DateTime.now(),
-    category: category,
+    icon: icon,
     tags: tags,
     colour: colour,
   );
@@ -611,7 +702,7 @@ class WaypointImportExport {
     String notes,
     DateTime? createdAt, {
     String? id,
-    WaypointCategory category = WaypointCategory.other,
+    WaypointIcon icon = WaypointIcon.fallback,
     List<String> tags = const [],
     WaypointColour? colour,
     TrackStroke stroke = TrackStroke.solid,
@@ -625,7 +716,7 @@ class WaypointImportExport {
       longitude: points.first.longitude,
       notes: notes,
       createdAt: createdAt ?? DateTime.now(),
-      category: category,
+      icon: icon,
       tags: tags,
       colour: colour,
       track: points,

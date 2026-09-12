@@ -20,7 +20,7 @@ import '../tracks/track_layers.dart';
 import '../tracks/track_math.dart';
 import '../tracks/track_style.dart';
 import '../waypoints/waypoint_card.dart';
-import '../waypoints/waypoint_category.dart';
+import '../waypoints/waypoint_icon.dart';
 import '../waypoints/waypoint_editor.dart';
 import '../waypoints/waypoint_store.dart';
 import '../waypoints/waypoints_page.dart';
@@ -475,7 +475,7 @@ class _MapShellState extends State<MapShell> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Go to a coordinate',
+            tooltip: 'Search',
             icon: const Icon(Icons.search),
             onPressed: _searchCoordinate,
           ),
@@ -1225,7 +1225,7 @@ class _MapShellState extends State<MapShell> {
             'properties': {
               'name': waypoint.name,
               'id': waypoint.id,
-              'icon': waypoint.category.iconImage,
+              'icon': waypoint.icon.iconImage,
               'colour': waypoint.colourHex,
             },
             'geometry': {
@@ -1331,8 +1331,8 @@ class _MapShellState extends State<MapShell> {
     final map = _map;
     if (map == null || _iconsRegistered) return;
     final wanted = {
-      for (final category in WaypointCategory.values)
-        category.iconImage: 'assets/waypoint_icons/${category.id}.png',
+      for (final icon in WaypointIcon.values)
+        icon.iconImage: 'assets/waypoint_icons/${icon.id}.png',
       for (final marker in TrackMarker.drawn) marker.image: marker.asset!,
     };
     final failures = <String>[];
@@ -1889,7 +1889,18 @@ class _MapShellState extends State<MapShell> {
   /// "not drawn yet". The snackbar action runs the same identify a moment later,
   /// once it can tell the truth.
   Future<void> _searchCoordinate() async {
-    final found = await showCoordinateSearch(context);
+    final found = await showCoordinateSearch(
+      context,
+      // The camera centre goes in because place names repeat: Ontario has 75 Mud
+      // Lakes and Quebec 168 Lac Longs, so which one is meant is decided by
+      // where the user is looking and by nothing else available to us.
+      places: PlaceSearchContext(
+        provinceId: _provinceId,
+        loader: _loader,
+        centreLatitude: _camera.target.latitude,
+        centreLongitude: _camera.target.longitude,
+      ),
+    );
     if (!mounted || found == null) return;
     final map = _map;
     if (map == null) return;
@@ -1900,8 +1911,9 @@ class _MapShellState extends State<MapShell> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${found.latitude.toStringAsFixed(6)}, '
-          '${found.longitude.toStringAsFixed(6)}',
+          found.placeName ??
+              '${found.latitude.toStringAsFixed(6)}, '
+                  '${found.longitude.toStringAsFixed(6)}',
         ),
         action: SnackBarAction(
           label: 'Land info',
@@ -2016,7 +2028,6 @@ class _MapShellState extends State<MapShell> {
       longitude: coordinates.longitude,
       notes: '',
       createdAt: DateTime.now(),
-      category: WaypointCategory.other,
     );
     final saved = await showWaypointEditor(
       context,

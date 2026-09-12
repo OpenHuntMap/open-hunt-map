@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../waypoints/waypoint_category.dart';
+import '../waypoints/waypoint_colour.dart';
+import '../waypoints/waypoint_icon.dart';
 
 /// How a track is drawn: the stroke of its line, the marker repeated along it,
 /// and the colours both of those need.
@@ -181,6 +182,7 @@ const trackLineWidth = 5.0;
 /// smudge and the picker would be no help at all.
 const trackPreviewScale = 1.8;
 
-/// The colour a track's line is drawn in, honouring a per-track override.
-String trackLineColour(WaypointColour? colour, WaypointCategory category) =>
-    hexColour(colour?.value ?? category.colour);
+/// The colour a track's line is drawn in: the override if the user set one,
+/// otherwise the colour its glyph carries.
+String trackLineColour(WaypointIcon icon, WaypointColour? colour) =>
+    hexColour(colour?.value ?? icon.colour);
