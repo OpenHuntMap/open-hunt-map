@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../tracks/track_math.dart';
+import '../settings/visibility_settings.dart';
 import 'import_export.dart';
 import 'tag_style.dart';
 import 'waypoint_colour.dart';
@@ -34,10 +35,12 @@ class WaypointsPage extends StatefulWidget {
     super.key,
     required this.store,
     required this.suggestedLocation,
+    required this.visibility,
   });
 
   final WaypointStore store;
   final LatLng suggestedLocation;
+  final VisibilitySettings visibility;
 
   @override
   State<WaypointsPage> createState() => _WaypointsPageState();
@@ -73,6 +76,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
   @override
   void initState() {
     super.initState();
+    widget.visibility.addListener(_onVisibilityChanged);
     // Styling loads alongside the waypoints and is allowed to fail quietly.
     // Nothing here depends on it: a tag with no style draws a plain label.
     Future.wait([widget.store.load(), _tagStyles.load()]).then((_) {
@@ -82,6 +86,16 @@ class _WaypointsPageState extends State<WaypointsPage> {
         _warnUnreadable(path);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    widget.visibility.removeListener(_onVisibilityChanged);
+    super.dispose();
+  }
+
+  void _onVisibilityChanged() {
+    if (mounted) setState(() {});
   }
 
   bool get _filtered => _selected.isNotEmpty;
@@ -327,6 +341,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
 
   Widget _header(String? tag, int count) {
     final style = tag == null ? const TagStyle() : _tagStyles.styleFor(tag);
+    final tagHidden = tag != null && widget.visibility.isTagHidden(tag);
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
@@ -344,6 +359,21 @@ class _WaypointsPageState extends State<WaypointsPage> {
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
+          if (tag != null)
+            IconButton(
+              tooltip: tagHidden
+                  ? 'Show "$tag" on map'
+                  : 'Hide "$tag" from map',
+              icon: Icon(
+                tagHidden ? Icons.visibility_off : Icons.visibility,
+                size: 20,
+              ),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => widget.visibility.setTagHidden(
+                tag,
+                hidden: !tagHidden,
+              ),
+            ),
           // Only a tag gets bulk actions. There is no tag to take off an
           // untagged waypoint, and "delete everything with no tags" would put
           // the most destructive sweep on the list's least considered group.
@@ -382,8 +412,20 @@ class _WaypointsPageState extends State<WaypointsPage> {
     );
   }
 
+  /// Three visual states for a row's eye icon. The distinction matters because
+  /// a tag-hidden item cannot be shown by toggling its own eye — the tag has to
+  /// be unhidden first — and looking "shown" while invisible on the map reads
+  /// as a bug.
+  ({bool individuallyHidden, List<String> hidingTags}) _itemVisibility(
+    Waypoint waypoint,
+  ) => (
+    individuallyHidden: widget.visibility.isItemHidden(waypoint.id),
+    hidingTags: widget.visibility.hidingTagsFor(waypoint.tags),
+  );
+
   Widget _row(Waypoint waypoint) {
     final isTrack = waypoint.track.isNotEmpty;
+    final vis = _itemVisibility(waypoint);
     // How far and how long, not how many fixes: the point count is an artefact
     // of the recording interval and tells the user nothing about the walk.
     final where = isTrack
@@ -393,9 +435,16 @@ class _WaypointsPageState extends State<WaypointsPage> {
     final tags = waypoint.tags.isEmpty
         ? ''
         : '\n${waypoint.tags.map((tag) => '#$tag').join(' ')}';
+    // When a tag is hiding this item but the item itself was never toggled,
+    // say so on the row rather than leaving the user to work out why the map
+    // disagrees with the list.
+    final hiddenByTagNote =
+        !vis.individuallyHidden && vis.hidingTags.isNotEmpty
+            ? 'Hidden on map by ${vis.hidingTags.map((t) => '#$t').join(', ')}\n'
+            : '';
     final subtitle = waypoint.notes.isEmpty
-        ? '$where$tags'
-        : '$where\n${waypoint.notes}$tags';
+        ? '$hiddenByTagNote$where$tags'
+        : '$hiddenByTagNote$where\n${waypoint.notes}$tags';
     return ListTile(
       // The waypoint's own glyph and its own colour, never the section's. The
       // same waypoint appears under every tag it carries, and it has to be
@@ -404,7 +453,8 @@ class _WaypointsPageState extends State<WaypointsPage> {
       leading: Icon(waypoint.icon.icon, color: waypoint.displayColour),
       title: Text(waypoint.name),
       subtitle: Text(subtitle),
-      isThreeLine: waypoint.notes.isNotEmpty || waypoint.tags.isNotEmpty,
+      isThreeLine: waypoint.notes.isNotEmpty || waypoint.tags.isNotEmpty ||
+          hiddenByTagNote.isNotEmpty,
       // The whole row, because a coordinate pair in a list is useless until you
       // can see where it is, so that is what tapping one should do. The explicit
       // button stays because nothing else on this row hints that it is tappable.
@@ -412,6 +462,7 @@ class _WaypointsPageState extends State<WaypointsPage> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          _eyeButton(waypoint, vis),
           IconButton(
             tooltip: 'Show on map',
             icon: const Icon(Icons.travel_explore),
@@ -441,6 +492,75 @@ class _WaypointsPageState extends State<WaypointsPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// The eye icon for one row, in one of three states.
+  ///
+  /// Individually hidden: the user toggled this item off, and tapping again
+  /// toggles it back. Hidden by tag: the item's own toggle was never touched
+  /// but a tag is making it invisible; the eye is amber and tapping it offers
+  /// to unhide the responsible tag rather than silently doing nothing. Shown:
+  /// tapping hides the item individually.
+  Widget _eyeButton(
+    Waypoint waypoint,
+    ({bool individuallyHidden, List<String> hidingTags}) vis,
+  ) {
+    if (vis.individuallyHidden) {
+      return IconButton(
+        // Not "Show on map": that is the button beside this one, and it flies
+        // the camera instead. Two neighbours with one label and two jobs.
+        tooltip: 'Draw on map again',
+        icon: const Icon(Icons.visibility_off, size: 20),
+        visualDensity: VisualDensity.compact,
+        onPressed: () => widget.visibility.setItemHidden(
+          waypoint.id,
+          hidden: false,
+        ),
+      );
+    }
+    if (vis.hidingTags.isNotEmpty) {
+      return IconButton(
+        tooltip: 'Hidden by ${vis.hidingTags.map((t) => '#$t').join(', ')}',
+        icon: Icon(
+          Icons.visibility_off,
+          size: 20,
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
+        visualDensity: VisualDensity.compact,
+        onPressed: () => _offerUnhideTag(waypoint, vis.hidingTags),
+      );
+    }
+    return IconButton(
+      tooltip: 'Hide from map',
+      icon: const Icon(Icons.visibility, size: 20),
+      visualDensity: VisualDensity.compact,
+      onPressed: () => widget.visibility.setItemHidden(
+        waypoint.id,
+        hidden: true,
+      ),
+    );
+  }
+
+  void _offerUnhideTag(Waypoint waypoint, List<String> tags) {
+    final label = tags.length == 1
+        ? '#${tags.first}'
+        : '${tags.length} tags';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Hidden on the map because $label '
+          '${tags.length == 1 ? "is" : "are"} hidden.',
+        ),
+        action: SnackBarAction(
+          label: tags.length == 1 ? 'UNHIDE TAG' : 'UNHIDE TAGS',
+          onPressed: () async {
+            for (final tag in tags) {
+              await widget.visibility.setTagHidden(tag, hidden: false);
+            }
+          },
+        ),
       ),
     );
   }

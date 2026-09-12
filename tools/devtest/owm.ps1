@@ -234,25 +234,37 @@ function Cmd-Boot {
 function Cmd-Kill { Invoke-Adb @('emu', 'kill') }
 
 function Cmd-Install {
-    # Newest of the two APKs an x86_64 emulator can run, not a fixed name.
+    # Newest APK this device can actually run, not a fixed name.
     #
-    # `--split-per-abi` writes app-x86_64-release.apk and a plain `--release`
-    # writes app-release.apk, and both stay in the directory afterwards. Pinning
-    # one name means that after a split build you keep installing that split
-    # however many times you rebuild the other, so the screenshots come from an
-    # older binary than the code you just changed and there is nothing on screen
-    # that says so. The age is printed for the same reason: an install that says
-    # "58 minutes old" is a build you forgot to run.
-    $names = 'app-x86_64-release.apk', 'app-release.apk'
+    # `--split-per-abi` writes one APK per ABI and a plain `--release` writes the
+    # fat app-release.apk, and all of them stay in the directory afterwards.
+    # Pinning one name means that after a split build you keep installing that
+    # split however many times you rebuild the other, so the screenshots come
+    # from an older binary than the code you just changed and there is nothing on
+    # screen that says so. The age is printed for the same reason: an install
+    # that says "58 minutes old" is a build you forgot to run.
+    #
+    # The ABI is read off the device rather than assumed. An emulator is x86_64
+    # and a phone is arm64, and installing the wrong split fails with
+    # INSTALL_FAILED_NO_MATCHING_ABIS — which reads like a broken build rather
+    # than the harness handing over the wrong file.
+    $abis = ((Invoke-Adb @('shell', 'getprop', 'ro.product.cpu.abilist') |
+        Out-String).Trim() -split ',') | Where-Object { $_ }
+    if (-not $abis) { $abis = @('x86_64') }
+    # In the device's own order of preference, and that order beats recency. A
+    # split build writes every ABI within the same minute, so sorting by write
+    # time on an arm64 phone lands on armeabi-v7a — the 32-bit split, which the
+    # phone will refuse alongside an existing 64-bit install.
+    $names = @($abis | ForEach-Object { "app-$($_.Trim())-release.apk" }) +
+        'app-release.apk'
     $apk = $names |
         ForEach-Object { Join-Path $Repo "app\build\app\outputs\flutter-apk\$_" } |
         Where-Object { Test-Path $_ } |
         Get-Item |
-        Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
     if (-not $apk) {
-        throw "No emulator-compatible APK. Build one:`n" +
-              "  cd app; flutter build apk --release --target-platform android-x64"
+        throw "No APK for this device ($($abis -join ', ')). Build one:`n" +
+              "  cd app; flutter build apk --release --split-per-abi"
     }
     $age = [math]::Round(((Get-Date) - $apk.LastWriteTime).TotalMinutes)
     "Installing $($apk.Name), $([math]::Round($apk.Length / 1MB, 1)) MB, built $age minute$(if ($age -ne 1) { 's' }) ago..."

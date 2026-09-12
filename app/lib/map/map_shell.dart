@@ -16,6 +16,7 @@ import '../search/coordinate_search_sheet.dart';
 import '../settings/display_settings.dart';
 import '../settings/marker_style.dart';
 import '../settings/settings_page.dart';
+import '../settings/visibility_settings.dart';
 import '../tracks/follow_bar.dart';
 import '../tracks/recording_bar.dart';
 import '../tracks/track_follow.dart';
@@ -62,6 +63,7 @@ class _MapShellState extends State<MapShell> {
   final _overlays = OverlayController();
   final _waypoints = WaypointStore();
   final _display = DisplaySettings();
+  final _visibility = VisibilitySettings();
 
   /// The SDF glyphs, kept so a basemap swap does not re-read fifteen assets.
   final _iconBytes = <String, Uint8List>{};
@@ -144,6 +146,7 @@ class _MapShellState extends State<MapShell> {
   void initState() {
     super.initState();
     _display.addListener(_onDisplayChanged);
+    _visibility.addListener(_onVisibilityChanged);
     _bootstrap();
   }
 
@@ -151,7 +154,9 @@ class _MapShellState extends State<MapShell> {
   void dispose() {
     _positionSubscription?.cancel();
     _display.removeListener(_onDisplayChanged);
+    _visibility.removeListener(_onVisibilityChanged);
     _display.dispose();
+    _visibility.dispose();
     super.dispose();
   }
 
@@ -169,6 +174,11 @@ class _MapShellState extends State<MapShell> {
     // from its own source and would otherwise keep its old arrow size until
     // following stopped.
     _syncWaypointSource().then((_) => _syncFollowSource());
+  }
+
+  void _onVisibilityChanged() {
+    if (!mounted) return;
+    _syncWaypointSource();
   }
 
   Future<void> _bootstrap() async {
@@ -190,6 +200,7 @@ class _MapShellState extends State<MapShell> {
       // Before the map is allowed to build, so the first frame draws markers
       // at the size the user chose rather than at the default and then again.
       await _display.loadPreferences();
+      await _visibility.loadPreferences();
       final prefs = await SharedPreferences.getInstance();
       final tipDismissed = prefs.getBool(_landInfoTipDismissedKey) ?? false;
       // Both fall back rather than validating, because a province can be
@@ -1273,7 +1284,9 @@ class _MapShellState extends State<MapShell> {
       'type': 'FeatureCollection',
       'features': [
         for (final waypoint in _waypoints.items.where(
-          (item) => item.track.isEmpty,
+          (item) =>
+              item.track.isEmpty &&
+              !_visibility.isHiddenOnMap(item.id, item.tags),
         ))
           {
             'type': 'Feature',
@@ -1478,7 +1491,10 @@ class _MapShellState extends State<MapShell> {
     final followedId = _followTrack?.id;
     final data = trackFeatureCollection(
       _waypoints.items.where(
-        (item) => item.track.isNotEmpty && item.id != followedId,
+        (item) =>
+            item.track.isNotEmpty &&
+            item.id != followedId &&
+            !_visibility.isHiddenOnMap(item.id, item.tags),
       ),
     );
     // Markers come off before the lines, because a layer cannot be removed once
@@ -2062,6 +2078,7 @@ class _MapShellState extends State<MapShell> {
             (_) => WaypointsPage(
               store: _waypoints,
               suggestedLocation: _identifiedLocation ?? _camera.target,
+              visibility: _visibility,
             ),
       ),
     );

@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:open_woods_map/settings/visibility_settings.dart';
 import 'package:open_woods_map/waypoints/waypoint_icon.dart';
 import 'package:open_woods_map/waypoints/waypoint_store.dart';
 import 'package:open_woods_map/waypoints/waypoints_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -40,6 +42,7 @@ void main() {
   setUp(() {
     root = Directory.systemTemp.createTempSync('owm-waypoints-page');
     PathProviderPlatform.instance = _Documents(root.path);
+    SharedPreferences.setMockInitialValues({});
   });
 
   // Best effort: on Windows a write the store started but the test did not wait
@@ -76,8 +79,10 @@ void main() {
   /// long after this returns: the caller taps something, then reads the list.
   Future<List<WaypointsRequest?>> pumpPage(
     WidgetTester tester,
-    WaypointStore store,
-  ) async {
+    WaypointStore store, {
+    VisibilitySettings? visibility,
+  }) async {
+    final vis = visibility ?? VisibilitySettings();
     final popped = <WaypointsRequest?>[];
     // The filter chips scroll sideways and a grouped list repeats a waypoint
     // under each of its tags, so the default 800x600 surface leaves chips and
@@ -99,6 +104,7 @@ void main() {
                     builder: (_) => WaypointsPage(
                       store: store,
                       suggestedLocation: const LatLng(45, -77),
+                      visibility: vis,
                     ),
                   ),
                 ),
@@ -792,6 +798,188 @@ void main() {
         find.textContaining('does not change how the waypoints themselves'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('hiding from the map', () {
+    Future<WaypointStore> stocked(WidgetTester tester) => stockedWith(tester, [
+      point('1', 'North stand', tags: ['ridge', 'opening day']),
+      point('2', 'South stand', tags: ['ridge']),
+      point('3', 'Spring', tags: ['creek']),
+      point('4', 'Truck', tags: const []),
+    ]);
+
+    testWidgets('a hidden item is still in the list', (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setItemHidden('1', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      expect(find.text('North stand'), findsNWidgets(2));
+    });
+
+    testWidgets('the export menu counts a hidden item', (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setItemHidden('1', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      await tester.tap(find.byTooltip('Export'));
+      await settle(tester);
+      expect(find.text('Exports all 4'), findsOneWidget);
+    });
+
+    testWidgets('hiding a tag hides every item under it', (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      // The section header's eye shows the hidden state.
+      expect(find.byTooltip('Show "ridge" on map'), findsOneWidget);
+    });
+
+    testWidgets('a tag-hidden item says so on its row', (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      expect(
+        find.textContaining('Hidden on map by #ridge'),
+        findsAtLeast(1),
+      );
+    });
+
+    // The central trap: an item hidden only by a tag must not have a "shown"
+    // eye that appears to do nothing, and tapping it must do something useful.
+    testWidgets('tapping the eye on a tag-hidden item offers to unhide the tag',
+        (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      // The eye tooltip on a tag-hidden item names the responsible tag.
+      await tester.tap(find.byTooltip('Hidden by #ridge').first);
+      await settle(tester);
+
+      expect(
+        find.textContaining('hidden'),
+        findsAtLeast(1),
+      );
+      expect(find.text('UNHIDE TAG'), findsOneWidget);
+    });
+
+    testWidgets('the unhide-tag action works from the row', (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      await tester.tap(find.byTooltip('Hidden by #ridge').first);
+      await settle(tester);
+      await tester.tap(find.text('UNHIDE TAG'));
+      await settle(tester);
+
+      expect(vis.isTagHidden('ridge'), isFalse);
+    });
+
+    testWidgets('toggling a tag eye hides and shows it', (tester) async {
+      final vis = VisibilitySettings();
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      // Initially all tags are visible.
+      expect(find.byTooltip('Hide "ridge" from map'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Hide "ridge" from map'));
+      await settle(tester);
+
+      expect(vis.isTagHidden('ridge'), isTrue);
+      expect(find.byTooltip('Show "ridge" on map'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Show "ridge" on map'));
+      await settle(tester);
+
+      expect(vis.isTagHidden('ridge'), isFalse);
+    });
+
+    testWidgets('toggling an item eye hides and shows it', (tester) async {
+      final vis = VisibilitySettings();
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      await tester.tap(find.byTooltip('Hide from map').first);
+      await settle(tester);
+
+      expect(vis.hiddenItemIds, isNotEmpty);
+
+      await tester.tap(find.byTooltip('Draw on map again').first);
+      await settle(tester);
+
+      expect(vis.hiddenItemIds, isEmpty);
+    });
+
+    // The eye sits next to a button that flies the camera to the waypoint, and
+    // for a while both were labelled "Show on map". One label on two adjacent
+    // controls that do different things is a bug in the row, not in the test.
+    testWidgets('the eye and the camera button are not both called the same',
+        (tester) async {
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: VisibilitySettings());
+
+      expect(find.byTooltip('Show on map'), findsWidgets);
+      expect(find.byTooltip('Hide from map'), findsWidgets);
+      await tester.tap(find.byTooltip('Hide from map').first);
+      await settle(tester);
+
+      expect(find.byTooltip('Draw on map again'), findsOneWidget);
+    });
+
+    testWidgets('an item with one hidden and one shown tag is hidden',
+        (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('ridge', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      // North stand carries [ridge, opening day]. Ridge is hidden, so the
+      // row must show the tag-hidden indicator.
+      expect(
+        find.textContaining('Hidden on map by #ridge'),
+        findsAtLeast(1),
+      );
+      // Spring (creek only) is not affected.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(ListTile, 'Spring'),
+          matching: find.textContaining('Hidden on map'),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('hiding a tag no waypoint carries does nothing visible',
+        (tester) async {
+      final vis = VisibilitySettings();
+      await vis.setTagHidden('nonexistent', hidden: true);
+      final store = await stocked(tester);
+      await pumpPage(tester, store, visibility: vis);
+
+      expect(find.textContaining('Hidden on map'), findsNothing);
+      expect(find.textContaining('4 waypoints'), findsOneWidget);
+    });
+
+    // The untagged section has no tag to hide, so no eye on its header.
+    testWidgets('the untagged section has no visibility toggle', (
+      tester,
+    ) async {
+      final store = await stockedWith(tester, [point('1', 'Truck')]);
+      await pumpPage(tester, store);
+
+      expect(find.text('Untagged · 1'), findsOneWidget);
+      expect(find.byTooltip('Hide "Untagged" from map'), findsNothing);
     });
   });
 }
