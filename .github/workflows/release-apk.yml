@@ -131,6 +131,41 @@ jobs:
             echo "keyPassword=${KEY_PASSWORD}"
           } > app/android/key.properties
 
+      - name: Check the keystore and both passwords before building
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # Gradle only reaches the signing step after compiling everything, so a
+        # mistyped password costs the better part of ten minutes to discover and
+        # arrives as a KeytoolException with the values masked. keytool answers the
+        # same question in about a second, and distinguishes which password is
+        # wrong: opening the store proves one, recovering the private key the other.
+        run: |
+          set -euo pipefail
+          KS=app/android/owm-release.jks
+          # :env rather than a bare argument so neither password appears in the
+          # process list. Verified as supported rather than assumed.
+          if ! keytool -list -keystore "$KS" -storepass:env KEYSTORE_PASSWORD \
+                 -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::Could not open the keystore with ANDROID_KEYSTORE_PASSWORD," \
+                 "or it holds no entry named '${KEY_ALIAS}'. Check both that secret" \
+                 "and ANDROID_KEY_ALIAS." >&2
+            exit 1
+          fi
+          # -certreq needs the private key, which the store password alone cannot
+          # unlock, so this is the check the store listing above cannot make.
+          if ! keytool -certreq -alias "$KEY_ALIAS" -keystore "$KS" \
+                 -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_PASSWORD \
+                 > /dev/null 2>&1; then
+            echo "::error::The keystore opened, but ANDROID_KEY_PASSWORD cannot" \
+                 "unlock the key (keytool calls this 'Cannot recover key'). If you" \
+                 "pressed RETURN at keytool's key password prompt, the key password" \
+                 "is the same as the store password: set both secrets to that value." >&2
+            exit 1
+          fi
+          echo "Keystore opens, alias exists, and both passwords work."
+
       - name: Build the APK
         working-directory: app
         run: flutter build apk --release
