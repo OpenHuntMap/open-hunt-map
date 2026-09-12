@@ -4,6 +4,7 @@
   "size": 64,
   "radius": 8,
   "cutoff": 0.25,
+  "ink_fraction": 0.8,
   "icons": {
     "other": 58569,
     "viewpoint": 58213,
@@ -38,5 +39,14 @@
     "track-arrow": 58571,
     "track-chevron": 57695,
     "track-chevron-double": 57855
+  },
+  "backdrops": {
+    "pin-backdrop": {
+      "codepoint": 58569,
+      "holes_filled": true,
+      "tip_y": 57.5,
+      "head_centre_y": 24.375,
+      "head_diameter": 36.0
+    }
   }
 }

@@ -57,11 +57,29 @@ void main() {
     expect(find.text('1h 01m'), findsOneWidget);
   });
 
-  testWidgets('waits rather than claiming a distance it has not walked',
-      (tester) async {
-    await pumpBar(tester, points: _walk(1));
-    expect(find.text('Waiting for a second fix…'), findsOneWidget);
-    expect(find.text('1 points'), findsNothing);
+  group('before the second point', () {
+    testWidgets('does not claim a distance it has not walked', (tester) async {
+      await pumpBar(tester, points: _walk(1));
+      expect(find.text('1 points'), findsNothing);
+    });
+
+    // With a five metre filter a stationary phone stays at one point however
+    // good its lock is, so blaming the satellites sends someone looking for sky
+    // they already have.
+    testWidgets('names movement, not the satellites', (tester) async {
+      await pumpBar(tester, points: _walk(1));
+      expect(find.text('Ready · the line starts once you move'), findsOneWidget);
+      expect(find.textContaining('fix'), findsNothing);
+    });
+
+    testWidgets('says so when fixes are arriving and being dropped',
+        (tester) async {
+      await pumpBar(tester, points: _walk(1), rejected: 3);
+      expect(
+        find.text('3 poor fixes dropped · waiting for one accurate enough'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('dropped fixes', () {

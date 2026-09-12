@@ -155,6 +155,53 @@ void main() {
       expect(info.sundayGun, isNull);
     });
 
+    group('where more than one feature covers the point', () {
+      LandFeature scheduled() => feature('sunday_gun', {
+            'name': 'Municipality of Killarney',
+            'listed_as': 'Killarney, Town of',
+            'basis': 'reg663_part7',
+          });
+      LandFeature north() => feature('sunday_gun', {
+            'name': 'North of the French and Mattawa rivers',
+            'basis': 'reg665_s66',
+            'near_divide': false,
+          });
+      LandFeature band() => feature('sunday_gun', {
+            'name': 'Near the French-Mattawa divide',
+            'basis': 'reg665_s66',
+            'near_divide': true,
+          });
+
+      // Killarney straddles the mouth of the French River, so it is both listed
+      // in the schedule and inside the north polygon. Either answer is a yes,
+      // but the schedule is the one that does not depend on which bank you are
+      // standing on.
+      test('the schedule outranks geography', () {
+        expect(infoWith([north(), scheduled()]).sundayGun!.basis,
+            'reg663_part7');
+        expect(infoWith([scheduled(), north()]).sundayGun!.basis,
+            'reg663_part7');
+      });
+
+      // The band only ever says "we cannot tell". Letting it win over a
+      // definite answer would turn a yes into a shrug.
+      test('anything definite outranks the uncertainty band', () {
+        expect(infoWith([band(), scheduled()]).sundayGun!.basis,
+            'reg663_part7');
+        expect(
+          infoWith([band(), north()]).sundayGun!.properties['near_divide'],
+          isFalse,
+        );
+      });
+
+      test('the band still answers when it is all there is', () {
+        expect(
+          infoWith([band()]).sundayGun!.properties['near_divide'],
+          isTrue,
+        );
+      });
+    });
+
     test('does not appear in the land use list', () {
       final info = infoWith([
         feature('sunday_gun', {'sunday_gun': true}),

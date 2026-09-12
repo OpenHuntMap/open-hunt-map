@@ -133,6 +133,9 @@ enum TrackMarker {
 /// of the marker is lost on exactly the tracks whose colour the user chose most
 /// deliberately. White reads on everything except a white or yellow track, so
 /// the choice is made per track from its own luminance rather than fixed.
+///
+/// Also the glyph inside a waypoint pin, which is the same problem: see
+/// `pinGlyphColour` in `settings/marker_style.dart`. Retuning this moves both.
 Color markerColourFor(Color track) =>
     ThemeData.estimateBrightnessForColor(track) == Brightness.dark
     ? Colors.white

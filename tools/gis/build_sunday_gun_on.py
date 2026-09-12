@@ -25,12 +25,17 @@ import argparse
 import json
 import re
 import sys
+from collections import defaultdict
 from pathlib import Path
+
+from shapely.geometry import mapping, shape
+from shapely.ops import unary_union
 
 ROOT = Path(__file__).resolve().parents[2]
 RULES = ROOT / "data/on/rules/reg663.json"
 MUNI = ROOT / "data/on/overlays/municipalities.geojson"
 TWP = ROOT / "data/on/overlays/townships.geojson"
+NORTH = ROOT / "data/on/overlays/sunday_gun_north.geojson"
 OUT = ROOT / "data/on/overlays/sunday_gun.geojson"
 
 # "Armour, Township of" -> ("Armour", "Township")
@@ -78,6 +83,33 @@ def load(path: Path) -> list[dict]:
     return json.loads(path.read_text(encoding="utf-8"))["features"]
 
 
+def merge_multipart(features: list[dict]) -> list[dict]:
+    """LIO splits multi-part municipalities into separate features sharing one
+    id. A dedup pass that keeps only the first feature for each id silently
+    drops the main polygon when a small island sorts first. Merge all parts
+    into one geometry per id so that downstream dedup cannot lose coverage."""
+    by_id: dict[str, list[dict]] = defaultdict(list)
+    props_by_id: dict[str, dict] = {}
+    for f in features:
+        fid = f["properties"].get("id")
+        by_id[fid].append(f)
+        if fid not in props_by_id:
+            props_by_id[fid] = f["properties"]
+    merged: list[dict] = []
+    for fid, group in by_id.items():
+        if len(group) == 1:
+            merged.append(group[0])
+        else:
+            geoms = [shape(f["geometry"]) for f in group]
+            unified = unary_union(geoms)
+            merged.append({
+                "type": "Feature",
+                "properties": props_by_id[fid],
+                "geometry": mapping(unified),
+            })
+    return merged
+
+
 def parse_entry(raw: str) -> tuple[list[str], str, str]:
     """Split a schedule entry into member names, kind, and any trailing except."""
     match = SUFFIX.match(raw.strip())
@@ -105,8 +137,10 @@ def main() -> int:
     entries = rules["part7"]["municipalities"]
     print(f"Schedule entries: {len(entries)}")
 
-    municipalities = load(MUNI)
-    townships = load(TWP)
+    municipalities = merge_multipart(load(MUNI))
+    townships = merge_multipart(load(TWP))
+    print(f"Municipality features (after merging multi-part): {len(municipalities)}")
+    print(f"Township features (after merging multi-part): {len(townships)}")
 
     # Municipal names arrive as "Township of Armour"; index on the bare name.
     by_muni: dict[str, list[dict]] = {}
@@ -203,6 +237,17 @@ def main() -> int:
         print(f"UNMATCHED ({len(unmatched)}):")
         for item in unmatched:
             print("   ", item)
+
+    # Append the north-of-divide features produced by build_sunday_divide_on.py.
+    # These cover the area north of the French and Mattawa rivers, where
+    # O. Reg. 665/98 s. 66(1) does not prohibit Sunday gun hunting.
+    if NORTH.is_file():
+        north_data = json.loads(NORTH.read_text(encoding="utf-8"))
+        north_features = north_data.get("features", [])
+        out.extend(north_features)
+        print(f"Appended {len(north_features)} north-of-divide features")
+    else:
+        print(f"Note: {NORTH} not found; north-of-divide polygon not included")
 
     payload = {
         "type": "FeatureCollection",

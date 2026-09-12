@@ -13,6 +13,9 @@ import '../data/province_loader.dart';
 import '../offline/basemap_area_store.dart';
 import '../offline/offline_page.dart';
 import '../search/coordinate_search_sheet.dart';
+import '../settings/display_settings.dart';
+import '../settings/marker_style.dart';
+import '../settings/settings_page.dart';
 import '../tracks/follow_bar.dart';
 import '../tracks/recording_bar.dart';
 import '../tracks/track_follow.dart';
@@ -58,6 +61,7 @@ class _MapShellState extends State<MapShell> {
   final _loader = ProvinceLoader();
   final _overlays = OverlayController();
   final _waypoints = WaypointStore();
+  final _display = DisplaySettings();
 
   /// The SDF glyphs, kept so a basemap swap does not re-read fifteen assets.
   final _iconBytes = <String, Uint8List>{};
@@ -139,13 +143,32 @@ class _MapShellState extends State<MapShell> {
   @override
   void initState() {
     super.initState();
+    _display.addListener(_onDisplayChanged);
     _bootstrap();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
+    _display.removeListener(_onDisplayChanged);
+    _display.dispose();
     super.dispose();
+  }
+
+  /// Redraws the markers the moment a display setting changes.
+  ///
+  /// The settings page sits over the map the sizes are being chosen for, so the
+  /// change has to be there when the user goes back rather than after a
+  /// restart. Everything it touches is rebuilt rather than repainted: the pin
+  /// is a layer of its own, so switching the style adds or removes one and
+  /// there is no version of this that is only paint.
+  void _onDisplayChanged() {
+    if (!mounted) return;
+    setState(() {});
+    // Saved tracks come along with the waypoints; the followed one is drawn
+    // from its own source and would otherwise keep its old arrow size until
+    // following stopped.
+    _syncWaypointSource().then((_) => _syncFollowSource());
   }
 
   Future<void> _bootstrap() async {
@@ -164,6 +187,9 @@ class _MapShellState extends State<MapShell> {
       final provinces = await _loader.loadProvinces();
       await _waypoints.load();
       await _overlays.loadPreferences();
+      // Before the map is allowed to build, so the first frame draws markers
+      // at the size the user chose rather than at the default and then again.
+      await _display.loadPreferences();
       final prefs = await SharedPreferences.getInstance();
       final tipDismissed = prefs.getBool(_landInfoTipDismissedKey) ?? false;
       // Both fall back rather than validating, because a province can be
@@ -229,6 +255,13 @@ class _MapShellState extends State<MapShell> {
       setState(() => _error = 'Could not load $id data: $error');
     }
   }
+
+  /// Nothing to do on the way back: the map is already listening to the
+  /// settings, so it has redrawn behind the page while it was open.
+  Future<void> _openSettings() => Navigator.push<void>(
+    context,
+    MaterialPageRoute(builder: (_) => SettingsPage(settings: _display)),
+  );
 
   Future<void> _openOfflinePacks() async {
     final shown = await Navigator.push<OfflineAreaReveal>(
@@ -494,10 +527,32 @@ class _MapShellState extends State<MapShell> {
             icon: const Icon(Icons.location_on_outlined),
             onPressed: _showWaypoints,
           ),
-          IconButton(
-            tooltip: 'Offline packs',
-            icon: const Icon(Icons.offline_bolt_outlined),
-            onPressed: _openOfflinePacks,
+          // Offline packs moves in beside Settings rather than keeping a button
+          // of its own. The bar is the tightest space in the app — five
+          // buttons, the province chip and the PREVIEW badge already do not fit
+          // a 360 dp phone — and these two are the screens you leave the map
+          // for, not controls for the map you are looking at.
+          PopupMenuButton<_MapMenuItem>(
+            tooltip: 'More',
+            position: PopupMenuPosition.under,
+            color: const Color(0xFFFFFBF0),
+            onSelected: (item) => switch (item) {
+              _MapMenuItem.offlinePacks => _openOfflinePacks(),
+              _MapMenuItem.settings => _openSettings(),
+            },
+            itemBuilder: (context) => [
+              for (final item in _MapMenuItem.values)
+                PopupMenuItem(
+                  value: item,
+                  child: Row(
+                    children: [
+                      Icon(item.icon, size: 20, color: const Color(0xFF1B5E20)),
+                      const SizedBox(width: 12),
+                      Text(item.label),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -1227,6 +1282,10 @@ class _MapShellState extends State<MapShell> {
               'id': waypoint.id,
               'icon': waypoint.icon.iconImage,
               'colour': waypoint.colourHex,
+              // Only the pin style reads this, but it is written either way so
+              // that changing the style is a layer change and not a reason to
+              // re-encode every waypoint.
+              'glyph': pinGlyphHex(waypoint.displayColour),
             },
             'geometry': {
               'type': 'Point',
@@ -1238,6 +1297,7 @@ class _MapShellState extends State<MapShell> {
     await _ensureWaypointIcons();
     for (final layer in const [
       'owm-waypoint-symbols',
+      _waypointPinLayer,
       'owm-waypoint-dots',
     ]) {
       try {
@@ -1263,14 +1323,21 @@ class _MapShellState extends State<MapShell> {
     await map.addCircleLayer(
       'owm-waypoints',
       'owm-waypoint-dots',
-      const CircleLayerProperties(
-        circleRadius: 3,
-        circleColor: ['get', 'colour'],
-        circleStrokeWidth: 1.5,
+      CircleLayerProperties(
+        circleRadius: dotRadiusDp(_display.markerSize),
+        circleColor: const ['get', 'colour'],
+        circleStrokeWidth: dotStrokeDp(_display.markerSize),
         circleStrokeColor: '#FFFFFF',
       ),
     );
     try {
+      // Under the glyph, and only when asked for. Two layers over one source
+      // rather than one image, because an SDF image is tinted once for the
+      // whole layer: a coloured pin holding a light glyph is two tints and
+      // therefore two layers, whatever else changes.
+      if (_display.markerStyle == WaypointMarkerStyle.pin) {
+        await _addWaypointPinLayer(map);
+      }
       await _addWaypointSymbolLayer(map);
     } catch (error) {
       // The dots above are already drawn, so a throw here leaves the waypoints
@@ -1281,26 +1348,64 @@ class _MapShellState extends State<MapShell> {
     await _syncSavedTrackSource();
   }
 
-  Future<void> _addWaypointSymbolLayer(MapLibreMapController map) =>
+  static const _waypointPinLayer = 'owm-waypoint-pins';
+
+  /// The pin the glyph sits inside, tinted with the waypoint's own colour.
+  ///
+  /// No `icon-anchor`: the image is centred on the coordinate by default, and
+  /// [pinImageOffset] lifts it until its point rather than its centre is on the
+  /// spot. Doing it with the anchor instead would leave the pin hanging six
+  /// pixels high, because the point sits inside the canvas rather than on its
+  /// bottom edge — the distance field needs the margin.
+  Future<void> _addWaypointPinLayer(MapLibreMapController map) =>
       map.addSymbolLayer(
         'owm-waypoints',
-        'owm-waypoint-symbols',
+        _waypointPinLayer,
         SymbolLayerProperties(
-          iconImage: const ['get', 'icon'],
+          iconImage: pinBackdropImage,
           iconColor: const ['get', 'colour'],
-          iconSize: _waypointIconSize,
-          // Waypoints cluster where the hunting is good, and a symbol layer
-          // drops colliding icons by default. Losing the one you are looking
-          // for because it sits near another is worse than a little overlap.
+          iconSize: _iconSizeFor(pinCanvasDp(_display.markerSize)),
+          iconOffset: pinImageOffset,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
-          // Only SDF images can take a halo, and the halo is what keeps a dark
-          // glyph readable on a satellite basemap and a light one on snow.
+          // A pin in one of the darker colours on satellite imagery is a dark
+          // shape on dark ground, and its outline is the whole reason for
+          // drawing it at all.
           iconHaloColor: '#FFFFFF',
-          iconHaloWidth: 1.0,
-          iconHaloBlur: 0.2,
+          iconHaloWidth: 1.2,
         ),
       );
+
+  Future<void> _addWaypointSymbolLayer(MapLibreMapController map) {
+    final inPin = _display.markerStyle == WaypointMarkerStyle.pin;
+    return map.addSymbolLayer(
+      'owm-waypoints',
+      'owm-waypoint-symbols',
+      SymbolLayerProperties(
+        iconImage: const ['get', 'icon'],
+        // Inside a pin the waypoint's colour has gone to the pin, and the glyph
+        // takes whichever of white and near-black reads against it.
+        iconColor: inPin ? const ['get', 'glyph'] : const ['get', 'colour'],
+        iconSize: _iconSizeFor(glyphCanvasDp(_display.markerSize)),
+        iconOffset: glyphImageOffset(_display.markerStyle),
+        // Waypoints cluster where the hunting is good, and a symbol layer
+        // drops colliding icons by default. Losing the one you are looking
+        // for because it sits near another is worse than a little overlap —
+        // and it is what makes a larger size setting safe: scaling up crowds
+        // the map instead of thinning it.
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        // Only SDF images can take a halo, and the halo is what keeps a dark
+        // glyph readable on a satellite basemap and a light one on snow. Inside
+        // a pin there is nothing left for it to do: the backdrop is known and
+        // the glyph's colour was picked against it, while a white halo under a
+        // white glyph only thickens the strokes into each other.
+        iconHaloColor: '#FFFFFF',
+        iconHaloWidth: inPin ? 0.0 : 1.0,
+        iconHaloBlur: inPin ? 0.0 : 0.2,
+      ),
+    );
+  }
 
   /// `icon-size` that draws a 64 px source image at [logicalPixels] on screen.
   ///
@@ -1311,9 +1416,6 @@ class _MapShellState extends State<MapShell> {
   /// correction, which is untested here because this project has no Mac.
   double _iconSizeFor(double logicalPixels) =>
       logicalPixels * MediaQuery.devicePixelRatioOf(context) / 64;
-
-  /// Waypoint glyphs are meant to read at 24 dp.
-  double get _waypointIconSize => _iconSizeFor(24);
 
   /// Puts the waypoint glyphs into the current style, once per style.
   ///
@@ -1334,6 +1436,9 @@ class _MapShellState extends State<MapShell> {
       for (final icon in WaypointIcon.values)
         icon.iconImage: 'assets/waypoint_icons/${icon.id}.png',
       for (final marker in TrackMarker.drawn) marker.image: marker.asset!,
+      // Registered whatever the marker style is. It is one small image, and the
+      // alternative puts an asset read on the path that toggles the setting.
+      pinBackdropImage: pinBackdropAsset,
     };
     final failures = <String>[];
     for (final entry in wanted.entries) {
@@ -1446,7 +1551,7 @@ class _MapShellState extends State<MapShell> {
           // symbol's horizontal axis is aligned with the direction the
           // coordinates run, and ours run start to finish.
           symbolPlacement: 'line',
-          symbolSpacing: trackMarkerSpacing,
+          symbolSpacing: trackMarkerSpacingFor(_display.markerSize),
           // Rotate with the map rather than the screen. Without this the markers
           // stay upright as the map turns and stop agreeing with the line.
           iconRotationAlignment: 'map',
@@ -1459,8 +1564,8 @@ class _MapShellState extends State<MapShell> {
           // Halo in the track's own colour, so each marker reads as a hole
           // punched in the line rather than a separate mark beside it.
           iconHaloColor: const ['get', 'colour'],
-          iconHaloWidth: trackMarkerHaloWidth,
-          iconSize: _iconSizeFor(trackMarkerSizeDp),
+          iconHaloWidth: trackMarkerHaloFor(_display.markerSize),
+          iconSize: _iconSizeFor(trackMarkerSizeFor(_display.markerSize)),
           // Kept rather than thinned. Collision culling makes markers come and
           // go as the camera moves, which reads as a rendering fault on a
           // feature whose only job is to be legible.
@@ -1817,6 +1922,9 @@ class _MapShellState extends State<MapShell> {
   ) async {
     for (final layerId in [
       'owm-waypoint-symbols',
+      // The pin is by far the biggest target on the map, so it has to be
+      // tappable and not just decoration under the glyph.
+      _waypointPinLayer,
       'owm-waypoint-dots',
       'owm-follow-markers',
       'owm-follow-line',
@@ -2084,4 +2192,15 @@ class _MapShellState extends State<MapShell> {
       ),
     );
   }
+}
+
+/// The screens reached from the map's overflow menu rather than from a button.
+enum _MapMenuItem {
+  offlinePacks(label: 'Offline packs', icon: Icons.offline_bolt_outlined),
+  settings(label: 'Settings', icon: Icons.tune);
+
+  const _MapMenuItem({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
 }

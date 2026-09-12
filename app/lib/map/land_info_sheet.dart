@@ -668,6 +668,83 @@ class _FeatureReport extends StatelessWidget {
 /// where it is permitted, but not the river line itself, so outside a polygon
 /// the honest answer depends on which side of those rivers the user is on and
 /// the card says so rather than guessing.
+/// The four things this app can honestly say about hunting with a gun on a
+/// Sunday, and which one a point earns.
+class SundayGunVerdict {
+  const SundayGunVerdict({
+    required this.headline,
+    required this.body,
+    required this.colour,
+    required this.icon,
+  });
+
+  final String headline;
+  final String body;
+  final Color colour;
+  final IconData icon;
+}
+
+/// Reads the verdict off the covering feature, or off its absence.
+///
+/// A top-level function so the wording can be tested, for the same reason
+/// [huntingVerdict] is one: it decides whether someone fires a rifle.
+///
+/// The prohibition is O. Reg. 665/98 s. 66 (1), and it only reaches south of the
+/// French and Mattawa rivers. So three of these four states are a yes, and the
+/// interesting one is the band along the rivers themselves. There, the honest
+/// answer is that we cannot tell which bank you are on — our line is a
+/// digitised centreline and the regulation means the water. It must not lead
+/// with the word permitted: a hunter within half a kilometre of the Mattawa who
+/// reads "permitted" and is actually on the south bank in an unlisted township
+/// has been handed an offence by this app.
+SundayGunVerdict sundayGunVerdict(LandFeature? feature) {
+  const permitted = Color(0xFF1B5E20);
+  const uncertain = Color(0xFF8D6E00);
+  const prohibited = Color(0xFFB3261E);
+
+  if (feature == null) {
+    return const SundayGunVerdict(
+      headline: 'Not permitted here on Sundays',
+      body: 'This point is south of the French and Mattawa rivers and is not '
+          'in a municipality the regulation lists. Hunting on a Sunday here '
+          'with anything other than a bow or crossbow is an offence.',
+      colour: prohibited,
+      icon: Icons.block_outlined,
+    );
+  }
+  if (feature.basis == 'reg663_part7') {
+    final listedAs = feature.properties['listed_as']?.toString();
+    return SundayGunVerdict(
+      headline: 'Permitted here during open seasons',
+      body: 'This point is inside ${listedAs ?? 'a listed municipality'}, '
+          'which is scheduled for Sunday gun hunting.',
+      colour: permitted,
+      icon: Icons.check_circle_outline,
+    );
+  }
+  if (feature.properties['near_divide'] == true) {
+    return const SundayGunVerdict(
+      headline: 'Too close to the rivers to say',
+      body: 'The prohibition applies only south of the French and Mattawa '
+          'rivers, and this point is within about half a kilometre of that '
+          'line — the wrong side of which is an offence. The line here is a '
+          'digitised channel, not the water itself, so this map cannot tell '
+          'you which bank you are on. Work it out on the ground before '
+          'hunting, or check whether the municipality you are in is listed.',
+      colour: uncertain,
+      icon: Icons.help_outline,
+    );
+  }
+  return const SundayGunVerdict(
+    headline: 'Permitted here during open seasons',
+    body: 'This point is north of the French and Mattawa rivers. The Sunday '
+        'prohibition reaches only south of them, so no municipal listing is '
+        'needed here.',
+    colour: permitted,
+    icon: Icons.check_circle_outline,
+  );
+}
+
 class _SundayGun extends StatelessWidget {
   const _SundayGun({required this.feature, required this.layer});
 
@@ -676,11 +753,7 @@ class _SundayGun extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final permitted = feature != null;
-    final colour =
-        permitted ? const Color(0xFF1B5E20) : const Color(0xFF8D6E00);
-    final listedAs = feature?.properties['listed_as']?.toString();
-    final exception = feature?.properties['exception']?.toString();
+    final verdict = sundayGunVerdict(feature);
 
     return _Section(
       title: 'SUNDAY GUN HUNTING',
@@ -688,36 +761,25 @@ class _SundayGun extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              permitted ? Icons.check_circle_outline : Icons.help_outline,
-              size: 20,
-              color: colour,
-            ),
+            Icon(verdict.icon, size: 20, color: verdict.colour),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                permitted
-                    ? 'Permitted here during open seasons'
-                    : 'Depends which side of the French and Mattawa rivers '
-                        'you are on',
-                style: TextStyle(color: colour, fontWeight: FontWeight.w700),
+                verdict.headline,
+                style: TextStyle(
+                  color: verdict.colour,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          permitted
-              ? 'This point is inside ${listedAs ?? 'a listed municipality'}, '
-                  'which is scheduled for Sunday gun hunting.'
-              : 'North of those rivers Sunday gun hunting is permitted. South '
-                  'of them it is permitted only in the municipalities listed in '
-                  'the regulation, and this point is not in one — so if you are '
-                  'south of those rivers, hunting with a gun on Sunday here is '
-                  'an offence.',
-          style: const TextStyle(height: 1.35),
-        ),
-        if (exception != null) ...[
+        Text(verdict.body, style: const TextStyle(height: 1.35)),
+        // A carve-out such as "except that part in The Archipelago" decides
+        // legality on the ground, so it survives the verdict wording and stays
+        // in the schedule's own words.
+        if (feature?.properties['exception']?.toString() case final exception?) ...[
           const SizedBox(height: 8),
           _Warning('The schedule lists this area $exception.'),
         ],

@@ -86,8 +86,26 @@ class LandInfo {
   /// rather than missing: south of the French and Mattawa rivers an unlisted
   /// municipality is a prohibition, which is why the UI cannot simply stay quiet
   /// when this is null.
-  LandFeature? get sundayGun =>
-      hits.firstWhereOrNull((feature) => feature.layerId == 'sunday_gun');
+  ///
+  /// Several features can cover one point, so the most certain one has to win.
+  /// A municipality straddling the French River is both listed in the schedule
+  /// and inside the north polygon, and the uncertainty band along the divide
+  /// overlaps municipalities on both banks. Being named in the schedule settles
+  /// the question whichever bank you are on, so it outranks geography, and
+  /// geography outranks the band that only says we cannot tell.
+  LandFeature? get sundayGun {
+    final covering =
+        hits.where((feature) => feature.layerId == 'sunday_gun').toList();
+    if (covering.isEmpty) return null;
+    covering.sort((a, b) => _sundayCertainty(a).compareTo(_sundayCertainty(b)));
+    return covering.first;
+  }
+
+  static int _sundayCertainty(LandFeature feature) => switch (feature) {
+        _ when feature.basis == 'reg663_part7' => 0,
+        _ when feature.properties['near_divide'] != true => 1,
+        _ => 2,
+      };
 
   /// Ontario states a provincial park's hunting rule twice and the two records
   /// disagree. `crown_land` carries the Crown Land Use Policy Atlas policy for

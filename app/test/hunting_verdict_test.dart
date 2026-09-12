@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_woods_map/data/models.dart';
 import 'package:open_woods_map/map/land_info_sheet.dart';
 
 /// The one green in the palette, reserved for a source that actually permits
@@ -143,6 +144,65 @@ void main() {
       expect(quotesStatute('reg663_part3_unlisted'), isFalse);
       expect(quotesStatute('ppcra_s15_2_partial'), isFalse);
       expect(quotesStatute(null), isFalse);
+    });
+  });
+
+  group('Sunday gun hunting', () {
+    LandFeature sunday(Map<String, dynamic> properties) => LandFeature(
+          layerId: 'sunday_gun',
+          properties: properties,
+          geometry: const {},
+        );
+
+    test('a listed municipality is permitted and says which one', () {
+      final verdict = sundayGunVerdict(sunday({
+        'basis': 'reg663_part7',
+        'listed_as': 'Renfrew, County of',
+      }));
+      expect(verdict.headline, 'Permitted here during open seasons');
+      expect(verdict.body, contains('Renfrew, County of'));
+      expect(verdict.colour, permitted);
+    });
+
+    test('north of the rivers needs no municipal listing', () {
+      final verdict = sundayGunVerdict(sunday({
+        'basis': 'reg665_s66',
+        'near_divide': false,
+      }));
+      expect(verdict.headline, 'Permitted here during open seasons');
+      expect(verdict.colour, permitted);
+    });
+
+    // The band is the case that has to resist the pull toward a yes. Being on
+    // the wrong bank of the Mattawa is an offence, and our line is a digitised
+    // channel rather than the water, so the app does not know which bank this
+    // is. It must not lead with the word permitted, and it must not wear the
+    // colour reserved for a real permission.
+    group('within the uncertainty band along the rivers', () {
+      final verdict = sundayGunVerdict(sunday({
+        'basis': 'reg665_s66',
+        'near_divide': true,
+      }));
+
+      test('does not claim permission', () {
+        expect(verdict.headline, 'Too close to the rivers to say');
+        expect(verdict.headline.toLowerCase(), isNot(contains('permitted')));
+        expect(verdict.colour, isNot(permitted));
+      });
+
+      test('says why the map cannot answer, not just that it cannot', () {
+        expect(verdict.body, contains('digitised'));
+        expect(verdict.body, contains('which bank'));
+      });
+    });
+
+    // Absence is the prohibition, which is the whole reason the section cannot
+    // stay quiet when nothing covers the point.
+    test('no covering feature reads as not permitted', () {
+      final verdict = sundayGunVerdict(null);
+      expect(verdict.headline, 'Not permitted here on Sundays');
+      expect(verdict.body, contains('offence'));
+      expect(verdict.colour, isNot(permitted));
     });
   });
 }

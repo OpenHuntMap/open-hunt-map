@@ -152,12 +152,24 @@ class _RecordingBarState extends State<RecordingBar> {
   /// said out loud while there is still time to act on them: under heavy canopy
   /// they are the difference between a gap you know about and one you find out
   /// about when you get home.
+  ///
+  /// The single-point case used to read "waiting for a second fix", which blamed
+  /// the satellites for something the app was doing. Recording seeds a point
+  /// immediately and the stream then only reports a move of five metres or more,
+  /// so a stationary phone with a perfect lock sits at one point indefinitely —
+  /// verified on a phone holding thirty satellites at nine metres. Saying it is
+  /// waiting for a fix sends someone outside to look for sky they already have.
   String _status() {
-    final points = widget.points.length;
-    if (points < 2) return 'Waiting for a second fix…';
-    final counted = '$points points';
-    if (widget.rejectedFixes == 0) return counted;
-    return '$counted · ${widget.rejectedFixes} poor '
-        '${widget.rejectedFixes == 1 ? 'fix' : 'fixes'} dropped';
+    final dropped = widget.rejectedFixes;
+    final poor = '$dropped poor ${dropped == 1 ? 'fix' : 'fixes'} dropped';
+    return switch (widget.points.length) {
+      // Dropped fixes come first here because at one point they are the whole
+      // story: this is the reading that says the sky, not the walking, is the
+      // problem.
+      <= 1 when dropped > 0 => '$poor · waiting for one accurate enough',
+      <= 1 => 'Ready · the line starts once you move',
+      final points when dropped == 0 => '$points points',
+      final points => '$points points · $poor',
+    };
   }
 }
