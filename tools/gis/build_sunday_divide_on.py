@@ -51,6 +51,8 @@ from shapely.geometry import LineString, MultiLineString, mapping, shape
 from shapely.ops import linemerge, unary_union
 from shapely.validation import make_valid
 
+from geomutil import quantized_valid
+
 ROOT = Path(__file__).resolve().parents[2]
 WMU = ROOT / "data/on/overlays/wmu.geojson"
 OUT = ROOT / "data/on/overlays/sunday_gun_north.geojson"
@@ -118,27 +120,6 @@ def project_line(line, transformer):
         return MultiLineString([project_line(g, transformer) for g in line.geoms])
     coords = [transformer.transform(x, y) for x, y in line.coords]
     return LineString(coords)
-
-
-def quantize(geom, precision=COORD_PRECISION):
-    """Round coordinates to the given number of decimal places."""
-    factor = 10 ** precision
-
-    def _round_coords(coords):
-        return tuple(
-            (round(x * factor) / factor, round(y * factor) / factor)
-            for x, y in coords
-        )
-
-    if geom.geom_type == "Polygon":
-        from shapely.geometry import Polygon
-        exterior = _round_coords(geom.exterior.coords)
-        interiors = [_round_coords(ring.coords) for ring in geom.interiors]
-        return Polygon(exterior, interiors)
-    elif geom.geom_type == "MultiPolygon":
-        from shapely.geometry import MultiPolygon
-        return MultiPolygon([quantize(p, precision) for p in geom.geoms])
-    return geom
 
 
 def main() -> int:
@@ -239,34 +220,64 @@ def main() -> int:
     band_wgs = make_valid(band_wgs)
     print(f"  Band polygon: {band_wgs.geom_type}")
 
-    # ── cut the band out of the north polygon ────────────────────────────
+    # ── simplify, then cut, in that order ────────────────────────────────
+    # Order matters more than it looks. Cutting first and simplifying the two
+    # pieces afterwards moves their shared edge by different amounts — the coast
+    # tolerance on one side, the divide tolerance on the other — and the pieces
+    # stop meeting. That left 1,015 slivers along the divide covered by neither
+    # feature, and the card reads no covering feature as a prohibition, so each
+    # sliver was a false "not permitted" in country where hunting is legal.
+    # Simplifying first and cutting second makes the two pieces tile the north
+    # exactly, because their shared edge is the band's edge by construction.
+    coast_tol_deg = COAST_SIMPLIFY_M / 111_000  # rough metres-to-degrees
+
+    north_s = make_valid(north_union.simplify(coast_tol_deg))
+    south_s = make_valid(south_union.simplify(coast_tol_deg))
+    # The band is simplified before the cut for the same reason: thinning it
+    # afterwards would move the edge it shares with the north polygon. A round
+    # buffer of a 402-vertex line carries far more detail than a 500 m band can
+    # mean, and thinning it here rather than later costs nothing in fidelity.
+    band_wgs = make_valid(band_wgs.simplify(DIVIDE_SIMPLIFY_M / 111_000))
+
+    # Only the coast is coarsened by that tolerance. The divide-side edge is
+    # discarded in the cut below and replaced by the band's, whose fidelity
+    # comes from DIVIDE_SIMPLIFY_M instead. Coarsening the coast can still drag
+    # the divide-side boundary by up to COAST_SIMPLIFY_M before the cut, which
+    # is why the band's half-width has to stay the larger of the two: a strip
+    # displaced by 200 m is still inside a 500 m band, so it is reported as
+    # unknown rather than as one side or the other.
+    if COAST_SIMPLIFY_M >= BAND_HALF_M:
+        print(
+            f"ERROR: coast tolerance {COAST_SIMPLIFY_M} m is not inside the "
+            f"{BAND_HALF_M} m band, so simplification can move ground across "
+            "the divide without the band admitting it",
+            file=sys.stderr,
+        )
+        return 1
+
     print("Cutting near-divide band from north polygon...", flush=True)
-    north_clear = make_valid(north_union.difference(band_wgs))
-    near_divide = make_valid(north_union.intersection(band_wgs))
+    north_clear = make_valid(north_s.difference(band_wgs))
+    near_divide = make_valid(north_s.intersection(band_wgs))
 
     # Also capture the south side of the band — a point south of our line but
     # within 500 m might actually be north of the real river.
-    south_band = make_valid(south_union.intersection(band_wgs))
+    south_band = make_valid(south_s.intersection(band_wgs))
     if not south_band.is_empty:
         near_divide = make_valid(unary_union([near_divide, south_band]))
 
     print(f"  north_clear: {north_clear.geom_type}")
     print(f"  near_divide: {near_divide.geom_type}")
 
-    # ── simplify ─────────────────────────────────────────────────────────
-    # The divide itself is simplified at higher fidelity than the coast.
-    # Since we already cut the band from the north polygon, the band boundary
-    # near the divide IS the divide (offset by 500 m).  The rest of the north
-    # polygon boundary is coast, which can be simplified more.
-    #
-    # For pack size, simplify the full geometry uniformly at the coast
-    # tolerance, which is the dominant edge.  The divide's accuracy is
-    # set by the band width (500 m), not by vertex density.
-    coast_tol_deg = COAST_SIMPLIFY_M / 111_000  # rough metres-to-degrees
-    divide_tol_deg = DIVIDE_SIMPLIFY_M / 111_000
-
-    north_clear_s = quantize(make_valid(north_clear.simplify(coast_tol_deg)))
-    near_divide_s = quantize(make_valid(near_divide.simplify(divide_tol_deg)))
+    # Validity is checked after rounding rather than before it, because rounding
+    # is what breaks these rings: both features came out invalid when the
+    # rounding ran last, one with a self-intersection and one with a collapsed
+    # ring, and a renderer fills an invalid ring with a hole or an inversion.
+    north_geometry = quantized_valid(
+        north_clear, COORD_PRECISION, label="north of the divide"
+    )
+    band_geometry = quantized_valid(
+        near_divide, COORD_PRECISION, label="near-divide band"
+    )
 
     def count_verts(geom):
         if geom.geom_type == "Polygon":
@@ -275,8 +286,8 @@ def main() -> int:
             return sum(count_verts(p) for p in geom.geoms)
         return 0
 
-    print(f"  north_clear simplified: {count_verts(north_clear_s)} vertices")
-    print(f"  near_divide simplified: {count_verts(near_divide_s)} vertices")
+    print(f"  north_clear simplified: {count_verts(shape(north_geometry))} vertices")
+    print(f"  near_divide simplified: {count_verts(shape(band_geometry))} vertices")
 
     # ── assemble output ──────────────────────────────────────────────────
     citation = (
@@ -294,7 +305,7 @@ def main() -> int:
                 "boundary_accuracy": "mapped",
                 "near_divide": False,
             },
-            "geometry": mapping(north_clear_s),
+            "geometry": north_geometry,
         },
         {
             "type": "Feature",
@@ -307,7 +318,7 @@ def main() -> int:
                 "near_divide": True,
                 "band_half_m": BAND_HALF_M,
             },
-            "geometry": mapping(near_divide_s),
+            "geometry": band_geometry,
         },
     ]
 

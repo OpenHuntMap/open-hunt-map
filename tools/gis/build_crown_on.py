@@ -37,6 +37,8 @@ from shapely.ops import transform
 from shapely.strtree import STRtree
 from shapely.validation import make_valid
 
+from geomutil import polygonal
+
 csv.field_size_limit(10_000_000)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -100,8 +102,7 @@ def quantize(geom, decimals: int):
             return (round(x, decimals), round(y, decimals))
         return (round(x, decimals), round(y, decimals), z)
 
-    out = transform(_round, geom)
-    return valid(out)
+    return polygonal(valid(transform(_round, geom)))
 
 
 def read_csv_rows(path: Path):
@@ -161,7 +162,19 @@ def clupa_hunting_by_ident() -> dict[str, object]:
 
 
 def load_clupa_polygons():
-    """Return (tree, records) of CLUPA primary policy polygons."""
+    """Return (tree, records) of CLUPA primary policy polygons.
+
+    Every polygon in CLUPA_PROVINCIAL is a *primary* land use area — the province
+    keeps the overlay policies in a separate class, and all 1,261 rows here join
+    to POLICY_TYPE_FLG = 'Primary' in CLUPA_POLICY.csv. The OVERLAY_IND column
+    does not mark a polygon as an overlay; LIO's data description defines it as
+    "indicates whether a land use area **is subject to** an overlay". Reading it
+    the other way round discarded 53 primary areas covering 6.9M ha, and because
+    the areas most likely to have something overlaid on them are the big
+    district-wide General Use Areas, the loss landed exactly where hunters are:
+    all of Renfrew County (G396), the Madawaska Highlands (G408), and the 1.7M ha
+    General Mixed Use Areas (G1770). Nothing here filters on it.
+    """
     shp_path = find("CLUPA_PROVINCIAL.shp")
     if not shp_path:
         print("  (CLUPA shapefile unavailable; parcels will have no designation)")
@@ -179,14 +192,11 @@ def load_clupa_polygons():
     try:
         for sr in reader.iterShapeRecords():
             attrs = dict(zip(fields, sr.record, strict=False))
-            # Overlays are supplementary policy layers; prefer primary areas.
-            if str(attrs.get("OVERLAY") or "").strip().lower() in {"y", "yes", "1"}:
-                continue
             try:
-                geom = valid(shape(sr.shape.__geo_interface__))
+                geom = polygonal(valid(shape(sr.shape.__geo_interface__)))
             except Exception:  # noqa: BLE001
                 continue
-            if geom.is_empty:
+            if geom is None:
                 continue
             geoms.append(geom)
             records.append(
@@ -195,6 +205,7 @@ def load_clupa_polygons():
                     "name": str(attrs.get("NAME_ENG") or "").strip(),
                     "designation": str(attrs.get("DESIG_ENG") or "").strip(),
                     "category": str(attrs.get("CATEGORY_E") or "").strip(),
+                    "area_ha": float(attrs.get("SYS_AREA") or 0.0),
                 }
             )
     finally:
@@ -345,6 +356,7 @@ def main() -> int:
 
     out: list[dict] = []
     dropped_small = 0
+    dropped_invalid = 0
     matched_policy = 0
     in_park = 0
     over_water = 0
@@ -352,12 +364,14 @@ def main() -> int:
     for i, feature in enumerate(parcels, 1):
         geometry = feature.get("geometry")
         if not geometry:
+            dropped_invalid += 1
             continue
         try:
-            geom = valid(shape(geometry))
+            geom = polygonal(valid(shape(geometry)))
         except Exception:  # noqa: BLE001
-            continue
-        if geom.is_empty or geom.geom_type not in {"Polygon", "MultiPolygon"}:
+            geom = None
+        if geom is None:
+            dropped_invalid += 1
             continue
 
         # Rough hectares: 1 deg^2 ~ 111.32km x 111.32km*cos(lat)
@@ -371,10 +385,13 @@ def main() -> int:
             continue
 
         if args.simplify > 0:
-            geom = valid(geom.simplify(args.simplify, preserve_topology=True))
+            geom = polygonal(valid(geom.simplify(args.simplify, preserve_topology=True)))
+            if geom is None:
+                dropped_invalid += 1
+                continue
         geom = quantize(geom, args.precision)
-        if geom.is_empty or geom.geom_type not in {"Polygon", "MultiPolygon"}:
-            dropped_small += 1
+        if geom is None:
+            dropped_invalid += 1
             continue
 
         props = feature.get("properties") or {}
@@ -382,18 +399,25 @@ def main() -> int:
         policy_id = ""
         policy_name = ""
         if clupa_tree is not None:
-            for hit in clupa_tree.query(centroid):
-                record = clupa_records[int(hit)]
-                if clupa_geoms[int(hit)].contains(centroid):
-                    designation = record["designation"]
-                    policy_id = record["policy_id"]
-                    policy_name = record["name"]
-                    break
+            # Primary areas are all but disjoint — exactly one of the 1,208
+            # unoverlaid polygons has its own centre inside another — but where
+            # two do stack, the smaller one is the area-specific direction and
+            # the larger is the district-wide default it sits in.
+            covering = [
+                clupa_records[int(hit)]
+                for hit in clupa_tree.query(centroid)
+                if clupa_geoms[int(hit)].covers(centroid)
+            ]
+            if covering:
+                record = min(covering, key=lambda r: r["area_ha"] or float("inf"))
+                designation = record["designation"]
+                policy_id = record["policy_id"]
+                policy_name = record["name"]
 
         park_name = None
         if parks_tree is not None:
             for hit in parks_tree.query(centroid):
-                if parks_geoms[int(hit)].contains(centroid):
+                if parks_geoms[int(hit)].covers(centroid):
                     park_name = parks_names[int(hit)]
                     break
 
@@ -484,6 +508,7 @@ def main() -> int:
             "parcels_in_protected_area": in_park,
             "parcels_over_water": over_water,
             "dropped_slivers": dropped_small,
+            "dropped_invalid": dropped_invalid,
         },
         "features": out,
     }
@@ -493,7 +518,8 @@ def main() -> int:
         f"Wrote {len(out)} Crown parcels -> {args.out} "
         f"({args.out.stat().st_size / 1e6:.2f} MB); "
         f"with_policy={matched_policy} in_park={in_park} "
-        f"over_water={over_water} slivers={dropped_small}"
+        f"over_water={over_water} slivers={dropped_small} "
+        f"invalid={dropped_invalid}"
     )
     return 0
 

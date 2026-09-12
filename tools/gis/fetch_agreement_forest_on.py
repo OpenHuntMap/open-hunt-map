@@ -12,6 +12,14 @@ tract name and only clearly public owners are kept -- a private woodlot must
 never render as public land. Everything dropped is reported at the end so the
 exclusions stay reviewable.
 
+Renfrew is the one safe location-based exception. The source has 51 records
+whose LOCATION_DESCR begins "Renfrew" or its source typo "Refrew", including
+Indian River Tract, while the County's current forest page says it owns and
+manages 53 separate tracts as the Renfrew County Forest. The County's official
+2017 overview map names all 51 old-source tracts. Those independent statements
+establish the public owner without pretending the provincial record itself
+carries ownership.
+
 Provenance caveats, surfaced in the layer metadata rather than hidden:
   * Ontario has deprecated this dataset; records were verified 1997-1998.
   * Positional accuracy is mostly "Reliable (to 100m)".
@@ -46,6 +54,13 @@ SOURCE_URL = (
 SOURCE = "Ontario Agreement Forest Area (Geospatial Ontario)"
 LICENSE = "Open Government Licence – Ontario"
 LICENSE_URL = "https://www.ontario.ca/page/open-government-licence-ontario"
+RENFREW_SOURCE_URL = (
+    "https://www.countyofrenfrew.on.ca/living-here/outdoors/forests/"
+)
+RENFREW_MAP_URL = (
+    "https://media-003-ca.cdn.govstack.com/countyofrenfrew-on-ca/media/"
+    "ucklegpj/overview-county-forest-tract-map.pdf"
+)
 
 # Ordered: the first pattern that matches a tract name wins.
 OWNER_PATTERNS: list[tuple[str, str]] = [
@@ -87,6 +102,15 @@ BASIS_CODES = {
     "conservation_authority": (
         "Conservation authority forest. Hunting is commonly prohibited or "
         "permit-only on authority land - confirm with the authority first."
+    ),
+    "renfrew_county_policy": (
+        "The County of Renfrew says hunting is permitted in the Renfrew County "
+        "Forest except in active forest harvest operations. Hunters must be "
+        "licensed and follow provincial seasons and safety rules. Only portable "
+        "or temporary tree stands are permitted, and bear baiting requires a "
+        "land use agreement with the County. By-law 79-24 also prohibits "
+        "certain activities on County forests. Check current County notices "
+        "before hunting."
     ),
 }
 
@@ -142,6 +166,38 @@ def quantize(geometry: dict, digits: int = 5) -> dict:
     return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
 
 
+def quantized_valid(geometry) -> dict:
+    """Quantize, then repair, because rounding is what breaks these rings.
+
+    make_valid already runs on the source shape, but rounding to five decimals
+    afterwards pinches a narrow neck into a self-intersection: four tracts came
+    out invalid that way, Ganaraska Forest among them, and a renderer fills an
+    invalid ring with a hole or an inversion. So validity has to be checked
+    after the rounding rather than before it. The repair is only accepted when
+    it holds its area, since a shifted boundary here is a shifted parcel.
+    """
+    rounded = quantize(mapping(geometry))
+    candidate = shape(rounded)
+    if candidate.is_valid:
+        return rounded
+    repaired = shape(quantize(mapping(candidate.buffer(0))))
+    if (
+        repaired.is_valid
+        and not repaired.is_empty
+        and repaired.geom_type in {"Polygon", "MultiPolygon"}
+        # Area, relative to the parcel's own size. What a parcel is, is the
+        # ground it covers, so a repair that holds its area has not moved the
+        # boundary that matters. Measuring how far the outline moved instead
+        # rejects the good repairs: rounding also leaves zero-width spikes,
+        # which buffer(0) rightly deletes, and deleting a spike moves the
+        # outline by the spike's whole length while changing the area by
+        # nothing. Ganaraska Forest is that case.
+        and abs(repaired.area - candidate.area) <= candidate.area * 1e-3
+    ):
+        return quantize(mapping(repaired))
+    return rounded
+
+
 def main() -> int:
     archive = zipfile.ZipFile(io.BytesIO(download()))
     reader = shapefile.Reader(
@@ -154,14 +210,21 @@ def main() -> int:
     kept_area: defaultdict[str, float] = defaultdict(float)
     dropped: defaultdict[str, list[float]] = defaultdict(lambda: [0, 0.0])
     huntable = 0
+    renfrew = 0
 
     for index, record in enumerate(reader.iterShapeRecords(), 1):
         attributes = record.record.as_dict()
         raw_name = (attributes.get("OFFICIAL_N") or "").strip().upper()
         raw_name = NAME_FIXES.get(raw_name, raw_name)
+        location = (attributes.get("LOCATION_D") or "").strip()
         area_ha = float(attributes.get("SYSTEM_CAL") or 0) / 10_000.0
 
-        kind = owner_type(raw_name)
+        # Two records say "Refrew"; both names appear on the County's official
+        # overview map, so correcting this exact source typo is evidence-based.
+        is_renfrew = bool(re.match(
+            r"^(?:RENFREW|REFREW)(?:\s*,|\b)", location, re.IGNORECASE
+        ))
+        kind = "county" if is_renfrew else owner_type(raw_name)
         if kind is None:
             entry = dropped[raw_name]
             entry[0] += 1
@@ -181,8 +244,12 @@ def main() -> int:
         }:
             continue
 
-        if any(token in raw_name for token in OTTAWA_HUNTABLE):
-            hunting: bool | None = True
+        if is_renfrew:
+            hunting: bool | str | None = "conditional"
+            basis = "renfrew_county_policy"
+            renfrew += 1
+        elif any(token in raw_name for token in OTTAWA_HUNTABLE):
+            hunting = True
             basis = "ottawa_forestry_bylaw"
             huntable += 1
         elif kind == "conservation_authority":
@@ -199,11 +266,13 @@ def main() -> int:
             "basis": basis,
             "area_ha": round(area_ha, 1),
         }
+        if is_renfrew:
+            properties["managing_body"] = "County of Renfrew"
         if hunting is not None:
             properties["hunting_allowed"] = hunting
         # Kept in the source's upper case: these are legal lot-and-concession
         # descriptions, and title-casing mangles the Roman numerals.
-        lot = (attributes.get("LOCATION_D") or "").strip()
+        lot = location
         if lot:
             properties["lot"] = lot
 
@@ -211,7 +280,7 @@ def main() -> int:
             {
                 "type": "Feature",
                 "properties": properties,
-                "geometry": quantize(mapping(geometry)),
+                "geometry": quantized_valid(geometry),
             }
         )
         kept_area[raw_name] += area_ha
@@ -245,6 +314,26 @@ def main() -> int:
             "source_url": (
                 "https://data.ontario.ca/dataset/agreement-forest-area"
             ),
+            "supplemental_sources": [
+                {
+                    "source": "County of Renfrew — Forests",
+                    "source_url": RENFREW_SOURCE_URL,
+                    "use": (
+                        "Establishes County ownership and management of the "
+                        "Renfrew County Forest, and its conditional hunting "
+                        "policy. No County GIS geometry is redistributed."
+                    ),
+                },
+                {
+                    "source": "County of Renfrew — County Forest Tracts",
+                    "source_url": RENFREW_MAP_URL,
+                    "use": (
+                        "Corroborates the names of the 51 historical Renfrew "
+                        "tracts. The map is evidence only; its geometry is not "
+                        "copied."
+                    ),
+                }
+            ],
             "note": (
                 "Tracts whose owner could not be established from the record "
                 "are excluded, so this layer under-reports rather than showing "
@@ -263,6 +352,10 @@ def main() -> int:
         f"({OUT.stat().st_size / 1e6:.2f} MB)"
     )
     print(f"  flagged huntable (Ottawa by-law): {huntable} parcels")
+    print(
+        f"  included {renfrew} historical Renfrew County Forest parcels "
+        "under the County's current ownership and hunting guidance"
+    )
     print(
         f"  excluded {sum(int(e[0]) for e in dropped.values())} parcels across "
         f"{len(dropped)} tracts (~{total_dropped:,.0f} ha) with no "

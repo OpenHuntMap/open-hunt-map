@@ -25,9 +25,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from shapely.geometry import mapping, shape
+from shapely.geometry import shape
 
-from geomutil import thin, usable, valid
+from geomutil import quantized_valid, thin, usable, valid
 
 ROOT = Path(__file__).resolve().parents[2]
 RULES = ROOT / "data/on/rules/ppcra.json"
@@ -105,18 +105,6 @@ def fetch_all() -> list[dict]:
     return features
 
 
-def quantize(geometry: dict, digits: int = 5) -> dict:
-    """Round coordinates to ~1 m. The regulated boundary is nowhere near that
-    precise, and the tolerance above is what sets the detail."""
-
-    def walk(value):
-        if isinstance(value, (int, float)):
-            return round(float(value), digits)
-        return [walk(item) for item in value]
-
-    return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
-
-
 def load_statute() -> tuple[str, str, str]:
     """The subsection, its verbatim text, and the consolidation date.
 
@@ -181,11 +169,12 @@ def main() -> int:
             properties["regulation"] = f"O. Reg. {props['REGULATION_NUMBER']}"
         if props.get("REGULATED_AREA"):
             properties["area_ha"] = round(float(props["REGULATED_AREA"]), 1)
+        output_geometry = quantized_valid(geometry, label=name)
         out.append(
             {
                 "type": "Feature",
                 "properties": properties,
-                "geometry": quantize(mapping(geometry)),
+                "geometry": output_geometry,
             }
         )
 

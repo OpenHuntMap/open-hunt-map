@@ -6,15 +6,15 @@ Pipeline goal: GeoJSON/PMTiles with **hunting-relevant attributes** for the offl
 
 | Layer | Source | Notes |
 |-------|--------|-------|
-| Crown land parcels | [MNR unpatented land](https://data.ontario.ca/dataset/crown-land-ministry-unpatented-land) attributed with [CLUPA](https://www.ontario.ca/page/crown-land-use-policy-atlas) and measured against [OHN 500K Waterbody](https://geohub.lio.gov.on.ca/datasets/lio::ontario-hydro-network-ohn-waterbody) | 42,713 of the source's 62,685 parcel-level tenure polygons (`fetch_unpatented_on.py` + `build_crown_on.py`); sub-half-hectare allowances are excluded, see below. The overlay means Crown **tenure**, not permission to hunt. 4,243 parcels are lake or river bed and say so — see below |
+| Crown land parcels | [MNR unpatented land](https://data.ontario.ca/dataset/crown-land-ministry-unpatented-land) attributed with [CLUPA](https://www.ontario.ca/page/crown-land-use-policy-atlas) and measured against [OHN 500K Waterbody](https://geohub.lio.gov.on.ca/datasets/lio::ontario-hydro-network-ohn-waterbody) | 43,058 of the source's 62,719 parcel-level tenure polygons (`fetch_unpatented_on.py` + `build_crown_on.py`); sub-half-hectare allowances are excluded, see below. The overlay means Crown **tenure**, not permission to hunt. 4,288 parcels are lake or river bed and say so — see below |
 | Leased & occupied Crown land | [Crown Land – MNR Non-Freehold Dispositions](https://geohub.lio.gov.on.ca/datasets/lio::crown-land-mnr-non-freehold-dispositions) (LIO) | 33,167 leases, land use permits and licences of occupation via `fetch_dispositions_on.py`. **Not a closure** — the Crown still owns it, but the holder may refuse entry. Easements excluded, see below |
 | Policy documents | CLUPAPRO policy + permitted-use tables | `build_policies_on.py` writes one markdown file per policy id, including the official Hunting permitted-use row, plus a deep link to the live report |
 | WMUs | Ontario MNRF open data | Wildlife Management Units |
 | Seasons (ON) | [Ontario Hunting Regulations Summary](https://www.ontario.ca/document/ontario-hunting-regulations-summary) | `scrape_seasons_on.py` parses the open-season table in every species chapter into `data/on/seasons/YYYY.json`. 21 species, 150 WMUs. Migratory birds are federal and excluded |
 | Provincial parks | [Provincial Park Regulated](https://data.ontario.ca/dataset/provincial-park-regulated) (LIO) + [O. Reg. 663/98](https://www.ontario.ca/laws/regulation/980663) Part 3 + [PPCRA](https://www.ontario.ca/laws/statute/06p12) s. 15 (2) | 347 regulated parks. LIO publishes the boundary; the **permission** comes from the regulation, since no Ontario GIS layer carries it. Algonquin also carries the one opening written into the Act rather than the regulation — see below |
 | Conservation reserves | [Conservation Reserve Regulated](https://geohub.lio.gov.on.ca/datasets/lio::conservation-reserve-regulated) (LIO) + [PPCRA](https://www.ontario.ca/laws/statute/06p12) ss. 15 (3), 12 (3) | 306 regulated reserves via `fetch_conservation_reserve_on.py`. The **opposite** of a park: the Act permits hunting unless a regulation closes it — see below |
-| Sunday gun hunting | [O. Reg. 663/98](https://www.ontario.ca/laws/regulation/980663) Part 7, Schedule 1 | 193 scheduled jurisdictions joined by name to municipal and survey township boundaries (`build_sunday_gun_on.py`). Ontario publishes the list and a picture of the map, but no geometry |
-| Municipal & county forests | [Agreement Forest Area](https://data.ontario.ca/en/dataset/agreement-forest-area) | 2,274 **parcel-level** tracts (~74.6k ha) via `fetch_agreement_forest_on.py`. This is the public land people hunt in southern Ontario, where there is almost no Crown land. Gaps between tracts are private |
+| Sunday gun hunting | [O. Reg. 665/98](https://www.ontario.ca/laws/regulation/980665) s. 66(1) + [O. Reg. 663/98](https://www.ontario.ca/laws/regulation/980663) Part 7, Schedule 1 + WMU boundary fabric | 193 scheduled southern jurisdictions (`build_sunday_gun_on.py`) plus a north-of-divide polygon and near-divide band derived from the WMU boundary fabric (`build_sunday_divide_on.py`). The WMU boundary traces the French and Mattawa rivers per O. Reg. 663/98 Part 6, so it IS the ministry's own digitisation of the divide |
+| Municipal & county forests | [Agreement Forest Area](https://data.ontario.ca/en/dataset/agreement-forest-area) + [County of Renfrew forest guidance](https://www.countyofrenfrew.on.ca/living-here/outdoors/forests/) | 2,325 **parcel-level** tracts (~81.1k ha) via `fetch_agreement_forest_on.py`. This is the public land people hunt in southern Ontario, where there is almost no Crown land. Gaps between tracts are private |
 | Crown game preserves | [Crown Game Preserve](https://data.ontario.ca/dataset/crown-game-preserves) (LIO) | 15 polygons via `fetch_game_preserve_on.py`. Hunting and trapping prohibited under **FWCA s. 9** regardless of underlying tenure |
 | Conservation authority land | [CPCAD](https://www.canada.ca/en/environment-climate-change/services/national-wildlife-areas/protected-conserved-areas-database.html) (ECCC) | 409 properties across 28 authorities via `fetch_cpcad_on.py`. **Permit-only, not public.** Knowingly incomplete — see below |
 | Wildlife areas & bird sanctuaries | CPCAD (ECCC) + [C.R.C. c. 1609](https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._1609/) and [c. 1036](https://laws-lois.justice.gc.ca/eng/regulations/C.R.C.,_c._1036/) | 13 NWAs and 11 sanctuary polygons. ECCC draws the boundary; the prohibition comes from the regulation via `parse_federal_wildlife_regs.py` |
@@ -351,9 +351,37 @@ which explanation the card shows.
 ### Sunday gun hunting is a prohibition almost everywhere in the south
 
 Sunday gun hunting is permitted everywhere north of the French and Mattawa
-rivers. South of them it is permitted **only** in the 193 jurisdictions
+rivers (O. Reg. 665/98, s. 66(1) — the prohibition applies only south of the
+rivers). South of them it is permitted **only** in the 193 jurisdictions
 scheduled in O. Reg. 663/98 Part 7, so a southern municipality absent from that
-schedule is a prohibition rather than a gap. Nothing in the app said so before.
+schedule is a prohibition rather than a gap.
+
+The north-of-divide polygon is derived from the WMU boundary fabric: the shared
+boundary between northern and southern WMUs follows the French and Mattawa
+rivers as described in O. Reg. 663/98 Part 6, including the Lake Nipissing
+crossing. This is the ministry's own digitisation of the regulatory line.
+A 500 m near-divide band (each side of the line) carries `boundary_accuracy:
+"approximate"` and `near_divide: true` so the card can warn that any point
+that close to the river is genuinely uncertain — the regulation means the
+actual river, not a digitised centreline. Within the band the card refuses to
+lead with the word permitted, because the wrong bank in an unlisted township is
+an offence and this layer does not know which bank it is looking at.
+
+The band is cut out of the north polygon, and the build simplifies **before**
+cutting rather than after. Simplifying the two pieces separately afterwards moves
+their shared edge by different amounts — the coast tolerance on one side, the
+divide tolerance on the other — and they stop meeting: that left 1,015 slivers
+along the divide covered by neither feature, each one a false "not permitted" in
+country where hunting is legal, since the card reads a missing feature as a
+prohibition. For the same reason the coast tolerance has to stay smaller than the
+band's half-width, and the build refuses to run if it is not: ground dragged
+across the line by simplification is then still inside the band, and is reported
+as unknown rather than as one side or the other.
+
+`build_sunday_divide_on.py` runs before `build_sunday_gun_on.py`, which appends
+its output and now fails rather than warns when it is missing. The layer builds
+perfectly well without it and looks complete, while everything north of the
+rivers has quietly lost its answer.
 
 The schedule names three kinds of area and each resolves differently: lower and
 single tier municipalities, whole upper-tier counties, and grouped geographic
@@ -366,9 +394,9 @@ rename of the same area; none is a judgement about which areas are scheduled. Al
 193 entries currently resolve, and `build_sunday_gun_on.py` records any that do
 not in `unmatched_entries`.
 
-Because only the permitted side is drawn, the card is explicit that outside a
-polygon the answer depends on which side of those rivers the user is on. We do
-not carry the river line, and inventing it would be worse than saying so.
+Because only the permitted side is drawn, the absence of a polygon south of the
+rivers is a prohibition, not a gap. North of the rivers, the north-of-divide
+polygon answers the question that previously required a hedge.
 
 ### Crown game preserves override tenure
 
@@ -445,11 +473,30 @@ property — an explicit null stays null, because in `crown_land` a null
 
 ### Parcels with no policy default to Ontario's general rule
 
-CLUPA covers the planning area, not the province. 11,756 of the 42,713 parcels
-carry no `policy_id`, and by area that is the larger half — 46.1 M ha against
-41.8 M ha — because most of the Far North sits outside the planning area
-entirely. These are not slivers: 20% exceed 1,000 ha and the largest is
-703,000 ha.
+CLUPA covers the planning area, not the province. 3,342 of the 43,058 parcels
+carry no `policy_id`, and by area that is still the larger half — 44.2 M ha
+against 40.4 M ha — because most of the Far North sits outside the planning area
+entirely. These are not slivers: the largest is 970,000 ha.
+
+Where the planning area stops is measurable in the atlas's own
+`AOU_DESIGNATION` column, which records whether an area is inside the Area of the
+Undertaking, north of it, or south of it:
+
+| AOU_DESIGNATION | Polygons | Area |
+|-----------------|----------|------|
+| Inside the AOU | 463 | 41.97 M ha |
+| North of the AOU | 9 | 1.38 M ha |
+| South of the AOU | 32 | 2,223 ha |
+| Not stated (parks, reserves, wilderness and forest reserves, which come from other classes) | 757 | 11.00 M ha |
+
+Two very different silences follow, and they must not be worded the same way.
+**South of the AOU** the atlas holds 32 polygons totalling 2,223 ha — effectively
+nothing — but there is almost no Crown land down there either, and what public
+land exists is carried by the municipal forest, conservation authority and
+conservation reserve layers instead. **North of it** the silence is the one that
+matters: 2,571 of the 3,342 policy-free parcels sit above 51°N, and they hold
+most of that 44.2 M ha. That is the case the `land_use_plan` layer and the
+`tenure_only` basis note already exist to answer, and both still read correctly.
 
 That is an absence of an *area-specific* policy, not an absence of a rule.
 Ontario's own [recreational activities on Crown
@@ -504,19 +551,99 @@ The dataset is the only open, parcel-level source for county/regional/municipal 
 
 - Ontario has **deprecated** it; records were verified in **1997–1998**, so some tracts have changed hands.
 - Positional accuracy is mostly *"Reliable (to 100 m)"* — good enough to separate a public tract from the lot beside it, not a survey line.
-- It carries **no ownership attribute**, so ownership is inferred from the tract name and only clearly public owners are kept. 567 parcels (~22.1k ha) with no establishable public owner are dropped, including corporate holdings (Domtar, CSLA) and federal NCC land. The layer under-reports rather than painting private woodlots green.
-- Public ownership is **not** permission to hunt. Only the four City of Ottawa forestry tracts named in the firearms by-law (Marlborough, Carp Hills, Pinery-Long Swamp, Corkery) are flagged huntable; every other tract is left "confirm with the municipality", since many county forests and most conservation authority land are permit-only or closed.
+- It carries **no ownership attribute**, so ownership is inferred from the tract name and only clearly public owners are kept. 516 parcels (~15.6k ha) with no establishable public owner are dropped, including corporate holdings (Domtar, CSLA) and federal NCC land. The layer under-reports rather than painting private woodlots green.
+- Renfrew's 51 historical records use generic names such as *Indian River Tract*, so the name filter used to drop all of them. Their `LOCATION_DESCR` begins `Renfrew`, except Centennial Lake and Carswells Mountain where the source misspells it `Refrew`. The County's current page independently says it owns and manages 53 separate tracts as the Renfrew County Forest, and its official 2017 overview map names the 51 historical tracts. Those records are now classified as County forest. The count difference is left as a current-inventory gap rather than assuming which properties were acquired, disposed of, split or combined since 1998. The geometry is still Ontario's OGL-licensed Agreement Forest geometry. No data is copied from the County GIS, whose terms prohibit redistribution.
+- The area corroborates the classification independently of the names: the County says the forest is "53 separate forested areas" covering "over 6,500 hectares", and the 51 records total 6,466 ha. A location filter that had swept in private woodlots would not land inside half a percent of the owner's own figure.
+- Public ownership is **not** permission to hunt. The four City of Ottawa forestry tracts named in the firearms by-law (Marlborough, Carp Hills, Pinery-Long Swamp, Corkery) are flagged huntable. Renfrew's official page says hunting is permitted throughout the Renfrew County Forest except in active harvest operations, so its 51 mapped records are marked `conditional`, not given an unqualified green verdict; only portable or temporary stands are allowed, bear baiting needs a County land use agreement, and By-law 79-24 prohibits further activities. Every other tract is left "confirm with the municipality", since many county forests and most conservation authority land are permit-only or closed.
+- This layer is where the quantize-then-validate rule was first needed; it is shared logic now, described under [Rounding a parcel must not be allowed to delete it](#rounding-a-parcel-must-not-be-allowed-to-delete-it).
 
-### Crown parcel count: 42,713 of the province's 62,685
+### Crown parcel count: 43,058 of the province's 62,719
 
-The provincial layer holds 62,685 unpatented parcels and we carry 42,713, which
+The provincial layer holds 62,719 unpatented parcels and we carry 43,058, which
 is a discrepancy worth explaining rather than leaving to be discovered. The build
 drops parcels under half a hectare. To check that this was not quietly deleting
 usable ground, 300 of the excluded parcels were re-requested from the source at
 full resolution: **96% are genuinely under half a hectare**, the largest was
 0.8 ha, and nothing above 5 ha appeared at all. They are road and shore
 allowances and survey remnants — smaller than the outline the map would draw for
-them. The remaining ~170 parcels are lost to invalid source geometry.
+them.
+
+A further 413 never reach the build at all. The service generalises geometry to
+about 20 m on the way out, and these collapse to a line at that tolerance. All
+413 were re-requested at full resolution: the largest is **0.050 ha** and the
+median is effectively zero, so every one of them would have failed the
+half-hectare test anyway. `fetch_unpatented_on.py` counts them rather than
+writing the collapsed remains out as degenerate features, which is what it used
+to do.
+
+Paging is ordered by `OGF_ID` and deduplicated by it, and the fetch fails if the
+distinct count comes in under the layer's own `returnCountOnly`. ArcGIS only
+guarantees a stable window across `resultOffset` requests when the query is
+ordered, and a tenure layer that silently stops early does not look broken — it
+looks like there is no Crown land there.
+
+### Rounding a parcel must not be allowed to delete it
+
+Quantizing coordinates to five decimals is what keeps this layer to a shippable
+size, but a multipart parcel usually has at least one hair-thin part — a shore
+allowance, a road strip — that rounding collapses to zero width. `make_valid`
+then hands back a `GeometryCollection` of the surviving polygons *plus* those
+dead rings as `LineString`s, and the build's type check threw the whole feature
+away and counted it as a sliver.
+
+That silently deleted **190 parcels covering 2.46M ha**, including a 970,410 ha
+block, and it is how a user standing on a 190 ha Crown parcel in Fraser Township,
+Renfrew County was shown no land tenure at all while iHunter showed Crown land.
+`geomutil.polygonal()` now unpacks the collection instead of rejecting it: the
+polygons are the ground the province mapped, and the linework is an artefact of
+our own arithmetic. The build's `dropped_slivers` counter no longer absorbs the
+difference — anything genuinely unusable is counted separately as
+`dropped_invalid`, which is currently zero.
+
+Rounding also breaks rings outright, by pinching a narrow neck into a
+self-intersection, and a renderer fills an invalid ring with a hole or an
+inversion. That is why `geomutil.quantized_valid()` checks validity **after**
+rounding rather than before it, which is the order the layers originally used —
+3,478 invalid polygons across seven Ontario layers came from getting it the wrong
+way round. A repair is accepted only when it holds the feature's area to within
+0.1%. Area is the right test and outline distance is not: rounding leaves
+zero-width digitising spikes, `buffer(0)` rightly deletes them, and deleting one
+moves the outline by the spike's whole length while changing the area by nothing.
+Where the target grid cannot hold a parcel at all, a finer one is tried before
+rounding is abandoned — the parcels that fail have a neck narrower than the grid,
+so a finer grid answers them directly, and the alternative is shipping float64 in
+full for sub-micron precision on a boundary the province surveyed to metres.
+
+### CLUPA's `OVERLAY_IND` means the opposite of what it reads like
+
+The build used to skip every CLUPA polygon with `OVERLAY_IND = Yes`, on the
+assumption that those were supplementary overlay policies and the primary areas
+were the ones to keep. LIO's own [data
+description](https://www.publicdocs.mnr.gov.on.ca/mirb/CLUPA%20Provincial%20-%20Data%20Description.pdf)
+defines the column the other way round: it "indicates whether a land use area
+**is subject to** an overlay". Overlay policies live in a separate class
+(`LIO_Open06/4`); every one of the 1,261 rows in `CLUPA_PROVINCIAL` joins to
+`POLICY_TYPE_FLG = 'Primary'` in the province's own `CLUPA_POLICY.csv`.
+
+So the filter was discarding 53 primary land use areas covering **6.94M ha**, and
+it discarded them non-randomly: the areas most likely to have something overlaid
+on them are the big district-wide General Use Areas, which is where people hunt.
+The largest losses were General Mixed Use Areas (G1770, 1.72M ha), Resource
+Utilization Area (G1729, 1.31M ha), Multiple Natural Resource Use (G396,
+596k ha — the whole Pembroke District, and therefore all of Renfrew County) and
+the Madawaska Highlands General Resource Area (G408, 78k ha).
+
+Nothing filters on the column now. Restoring those 53 areas took the parcels
+carrying a `policy_id` from 30,957 to 39,759 and dropped the ones left on the
+`tenure_only` fallback from 11,756 to 3,342, and the bundled
+policy markdown they point at was already shipping — `data/on/policies/G396.md`
+has existed all along with its Hunting row and its Conroy Marsh game preserve
+carve-out, unreachable because no feature referenced it.
+
+Primary areas are all but disjoint, so this creates almost no ambiguity: exactly
+one of the 1,208 unoverlaid polygons has its own centre inside another. Where two
+do stack the build takes the smaller, since that is the area-specific direction
+and the larger is the district-wide default it sits inside.
 
 ### Known gaps, in rough order of how much they matter
 
@@ -721,6 +848,16 @@ Flutter SDK, and converts each to a signed distance field so MapLibre can tint i
 per waypoint with `icon-color` instead of us shipping one PNG per colour. Source
 and licence are recorded in `app/assets/waypoint_icons/manifest.json`, which ships
 with the images.
+
+One image is not the glyph as the font has it. The optional pin marker style needs a
+solid backdrop for a light glyph to read against, and Material Icons has no solid
+pin: `place` is a teardrop with a circular counter punched out of exactly the part
+the glyph has to sit on. The generator closes that counter — a deterministic hole
+fill of the same Material outline, not new artwork — and records where the pin's
+point and the centre of its head land in the image, because the app needs both to
+keep a waypoint drawn on the coordinate it was saved at. A Dart test reads those
+measurements back out of the manifest, so regenerating the pin cannot quietly move
+every waypoint on the map.
 
 Chosen over the CC0 outdoor sets (Temaki, Maki, Osmic) because it is already in the
 dependency tree, so it adds no download and no licence to audit. Swapping one glyph

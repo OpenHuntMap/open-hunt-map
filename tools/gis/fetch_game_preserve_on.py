@@ -28,6 +28,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from shapely.geometry import shape
+
+from geomutil import quantized_valid
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data/on/overlays/game_preserve.geojson"
 
@@ -72,17 +76,6 @@ def fetch() -> dict:
         return json.load(response)
 
 
-def quantize(geometry: dict, digits: int = 5) -> dict:
-    """Round coordinates to ~1 m; the source is accurate to 10-100 m."""
-
-    def walk(value):
-        if isinstance(value, (int, float)):
-            return round(float(value), digits)
-        return [walk(item) for item in value]
-
-    return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
-
-
 def main() -> int:
     payload = fetch()
     raw = payload.get("features") or []
@@ -106,6 +99,7 @@ def main() -> int:
         if not confirmed:
             unconfirmed.append(name)
 
+        output_geometry = quantized_valid(shape(geometry), label=name)
         features.append(
             {
                 "type": "Feature",
@@ -115,7 +109,7 @@ def main() -> int:
                     "hunting_allowed": False,
                     "basis": "fwca_s9" if confirmed else "fwca_s9_unconfirmed",
                 },
-                "geometry": quantize(geometry),
+                "geometry": output_geometry,
             }
         )
 

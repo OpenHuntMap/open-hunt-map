@@ -48,9 +48,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from shapely.geometry import mapping, shape
+from shapely.geometry import shape
 
-from geomutil import thin, usable, valid
+from geomutil import quantized_valid, thin, usable, valid
 
 ROOT = Path(__file__).resolve().parents[2]
 RULES = ROOT / "data/on/rules/federal_wildlife.json"
@@ -198,15 +198,6 @@ def is_authority(name: str) -> bool:
     )
 
 
-def quantize(geometry: dict, digits: int = 5) -> dict:
-    def walk(value):
-        if isinstance(value, (int, float)):
-            return round(float(value), digits)
-        return [walk(item) for item in value]
-
-    return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
-
-
 def prepare(raw: list[dict], tolerance: float, min_part: float) -> list[dict]:
     out, dropped = [], 0
     for feature in raw:
@@ -222,7 +213,11 @@ def prepare(raw: list[dict], tolerance: float, min_part: float) -> list[dict]:
         if not usable(thinned):
             dropped += 1
             continue
-        out.append({**feature, "geometry": quantize(mapping(thinned))})
+        props = feature.get("properties") or {}
+        output_geometry = quantized_valid(
+            thinned, label=props.get("NAME_E") or "unnamed CPCAD feature"
+        )
+        out.append({**feature, "geometry": output_geometry})
     if dropped:
         print(f"  WARNING: dropped {dropped} unusable geometries", file=sys.stderr)
     return out

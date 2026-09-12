@@ -14,6 +14,7 @@ permission unknown rather than guessed.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -23,7 +24,7 @@ from pathlib import Path
 
 from shapely.geometry import mapping, shape
 
-from geomutil import thin, usable, valid
+from geomutil import quantized_valid, thin, usable, valid
 
 ROOT = Path(__file__).resolve().parents[2]
 RULES = ROOT / "data/on/rules/reg663.json"
@@ -298,11 +299,14 @@ def write_parks(features: list[dict]) -> None:
                 properties["hunting_extent"] = "part"
                 counts["closed"] -= 1
                 counts["part"] += 1
+        output_geometry = quantized_valid(
+            shape(feature["geometry"]), label=name
+        )
         out_features.append(
             {
                 "type": "Feature",
                 "properties": properties,
-                "geometry": feature["geometry"],
+                "geometry": output_geometry,
             }
         )
 
@@ -366,25 +370,30 @@ def write_parks(features: list[dict]) -> None:
 
 
 def main() -> int:
-    print("Fetching WMUs...")
-    wmu = simplify_features(
-        fetch_all(WMU_URL, "OFFICIAL_NAME", WMU_SIMPLIFY), WMU_SIMPLIFY
-    )
-    write_wmu(wmu)
-    print("Fetching parks...")
-    raw = fetch_all(
-        PARK_URL,
-        "PROTECTED_AREA_NAME_ENG,PROVINCIAL_PARK_CLASS_ENG",
-        PARK_SIMPLIFY,
-    )
-    parks = simplify_features(raw, PARK_SIMPLIFY)
-    if len(parks) != len(raw):
-        print(
-            f"  WARNING: {len(raw) - len(parks)} of {len(raw)} parks lost; "
-            "a park that disappears is somewhere the app cannot report a closure",
-            file=sys.stderr,
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", choices=("wmu", "parks"))
+    args = parser.parse_args()
+    if args.only != "parks":
+        print("Fetching WMUs...")
+        wmu = simplify_features(
+            fetch_all(WMU_URL, "OFFICIAL_NAME", WMU_SIMPLIFY), WMU_SIMPLIFY
         )
-    write_parks(parks)
+        write_wmu(wmu)
+    if args.only != "wmu":
+        print("Fetching parks...")
+        raw = fetch_all(
+            PARK_URL,
+            "PROTECTED_AREA_NAME_ENG,PROVINCIAL_PARK_CLASS_ENG",
+            PARK_SIMPLIFY,
+        )
+        parks = simplify_features(raw, PARK_SIMPLIFY)
+        if len(parks) != len(raw):
+            print(
+                f"  WARNING: {len(raw) - len(parks)} of {len(raw)} parks lost; "
+                "a park that disappears is somewhere the app cannot report a closure",
+                file=sys.stderr,
+            )
+        write_parks(parks)
     return 0
 
 

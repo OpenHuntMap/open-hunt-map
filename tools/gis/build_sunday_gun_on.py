@@ -241,13 +241,20 @@ def main() -> int:
     # Append the north-of-divide features produced by build_sunday_divide_on.py.
     # These cover the area north of the French and Mattawa rivers, where
     # O. Reg. 665/98 s. 66(1) does not prohibit Sunday gun hunting.
-    if NORTH.is_file():
-        north_data = json.loads(NORTH.read_text(encoding="utf-8"))
-        north_features = north_data.get("features", [])
-        out.extend(north_features)
-        print(f"Appended {len(north_features)} north-of-divide features")
-    else:
-        print(f"Note: {NORTH} not found; north-of-divide polygon not included")
+    # A missing divide is a build failure rather than a note. The layer would
+    # still assemble and still look complete, while every point north of the
+    # rivers lost its covering feature — and the card reads that absence as a
+    # prohibition, so a silent skip here turns permitted country into an offence.
+    if not NORTH.is_file():
+        raise SystemExit(
+            f"Missing {NORTH}. Run build_sunday_divide_on.py first: without it "
+            "everything north of the French and Mattawa rivers would be "
+            "reported as prohibited."
+        )
+    north_data = json.loads(NORTH.read_text(encoding="utf-8"))
+    north_features = north_data.get("features", [])
+    out.extend(north_features)
+    print(f"Appended {len(north_features)} north-of-divide features")
 
     payload = {
         "type": "FeatureCollection",

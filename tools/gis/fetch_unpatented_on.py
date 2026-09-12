@@ -18,7 +18,8 @@ import urllib.request
 from pathlib import Path
 
 from shapely.geometry import mapping, shape
-from shapely.validation import make_valid
+
+from geomutil import polygonal, valid
 
 OUT_DIR = Path(__file__).resolve().parent / "_tmp_patent"
 OUT = OUT_DIR / "unpatented_crown.geojson"
@@ -37,8 +38,21 @@ def query(params: dict) -> dict:
     return json.loads(text)
 
 
+def expected_count() -> int:
+    return int(query({"where": "1=1", "returnCountOnly": "true", "f": "json"})["count"])
+
+
 def fetch_all(*, page_size: int, simplify_tol: float) -> list[dict]:
-    features: list[dict] = []
+    """Page the whole layer, keyed by OGF_ID so a repeated page cannot hide a gap.
+
+    ArcGIS only guarantees a stable window across `resultOffset` requests when the
+    query is ordered, so the sort is explicit rather than left to the server's
+    default. The count check at the end is what makes a silent short read fail the
+    build: a tenure layer that stops early paints Crown land as nothing at all.
+    """
+    expected = expected_count()
+    print(f"  upstream reports {expected} parcels", flush=True)
+    by_id: dict[object, dict] = {}
     offset = 0
     while True:
         params = {
@@ -46,6 +60,7 @@ def fetch_all(*, page_size: int, simplify_tol: float) -> list[dict]:
             "outFields": (
                 "OGF_ID,OBJECTID,SURVEY_LOCATION_IDENT,AREA_IN_HA,LOCATION_DESCR"
             ),
+            "orderByFields": "OGF_ID",
             "returnGeometry": "true",
             "outSR": "4326",
             "f": "geojson",
@@ -55,12 +70,19 @@ def fetch_all(*, page_size: int, simplify_tol: float) -> list[dict]:
         }
         page = query(params)
         batch = page.get("features") or []
-        features.extend(batch)
-        print(f"  unpatented offset={offset} total={len(features)}", flush=True)
+        for feature in batch:
+            props = feature.get("properties") or {}
+            by_id[props.get("OGF_ID") or props.get("OBJECTID") or len(by_id)] = feature
+        print(f"  unpatented offset={offset} distinct={len(by_id)}", flush=True)
         if len(batch) < page_size:
             break
         offset += page_size
-    return features
+
+    if len(by_id) < expected:
+        raise RuntimeError(
+            f"Short read: {len(by_id)} distinct parcels against {expected} upstream"
+        )
+    return list(by_id.values())
 
 
 def simplify_features(raw: list[dict], tol: float) -> list[dict]:
@@ -72,12 +94,13 @@ def simplify_features(raw: list[dict], tol: float) -> list[dict]:
             skipped += 1
             continue
         try:
-            g = shape(geom)
-            if not g.is_valid:
-                g = make_valid(g)
+            g = polygonal(valid(shape(geom)))
+            if g is None:
+                skipped += 1
+                continue
             if tol > 0:
-                g = g.simplify(tol, preserve_topology=True)
-            if g.is_empty or g.geom_type == "GeometryCollection":
+                g = polygonal(valid(g.simplify(tol, preserve_topology=True)))
+            if g is None:
                 skipped += 1
                 continue
             props = feature.get("properties") or {}

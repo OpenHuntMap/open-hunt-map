@@ -18,11 +18,13 @@ import urllib.request
 from pathlib import Path
 
 try:
-    from shapely.geometry import MultiPolygon, Polygon, mapping, shape
+    from shapely.geometry import MultiPolygon, Polygon, shape
     from shapely.validation import make_valid
 except ImportError:
     print("pip install -r requirements.txt", file=sys.stderr)
     raise
+
+from geomutil import polygonal, quantized_valid, usable, valid
 
 LAYER_URL = (
     "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/"
@@ -203,9 +205,11 @@ def thin(geometry, tolerance: float):
         largest = max(parts, key=lambda part: part.area)
         thinned = largest.simplify(tolerance, preserve_topology=True)
         return largest if thinned.is_empty else thinned
-    return kept[0] if len(kept) == 1 else MultiPolygon(
+    combined = kept[0] if len(kept) == 1 else MultiPolygon(
         [p for k in kept for p in getattr(k, "geoms", [k])]
     )
+    repaired = polygonal(valid(combined))
+    return repaired if usable(repaired) else geometry
 
 
 def normalize(features: list[dict], simplify: float) -> list[dict]:
@@ -231,6 +235,7 @@ def normalize(features: list[dict], simplify: float) -> list[dict]:
             print(f"skip {i}: {exc}", file=sys.stderr)
             continue
         name = display_name(props)
+        output_geometry = quantized_valid(geometry, label=name)
         out.append(
             {
                 "type": "Feature",
@@ -243,7 +248,7 @@ def normalize(features: list[dict], simplify: float) -> list[dict]:
                     "province": "ON",
                     "source": "Ontario LIO — Municipal Boundary Lower and Single Tier",
                 },
-                "geometry": mapping(geometry),
+                "geometry": output_geometry,
             }
         )
     return out

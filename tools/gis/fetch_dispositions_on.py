@@ -39,6 +39,10 @@ import urllib.request
 from collections import Counter
 from pathlib import Path
 
+from shapely.geometry import shape
+
+from geomutil import polygonal, quantized_valid, usable, valid
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data/on/overlays/crown_disposition.geojson"
 
@@ -144,15 +148,26 @@ def fetch_page(offset: int) -> dict:
         return json.load(response)
 
 
-def quantize(geometry: dict, digits: int = PRECISION) -> dict:
-    """Round coordinates to a fixed number of decimals."""
-
-    def walk(value):
-        if isinstance(value, (int, float)):
-            return round(float(value), digits)
-        return [walk(item) for item in value]
-
-    return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
+def fetch_full_geometry(identifier: object) -> dict | None:
+    """Re-fetch a parcel that server-side simplification collapsed to linework."""
+    query = urllib.parse.urlencode(
+        {
+            "where": f"OGF_ID = {int(identifier)}",
+            "outFields": "OGF_ID",
+            "outSR": "4326",
+            "returnGeometry": "true",
+            "resultRecordCount": 1,
+            "f": "geojson",
+        }
+    )
+    request = urllib.request.Request(
+        f"{SERVICE}/query?{query}",
+        headers={"User-Agent": "OpenWoodsMap/0.1"},
+    )
+    with urllib.request.urlopen(request, timeout=300) as response:
+        payload = json.load(response)
+    features = payload.get("features") or []
+    return features[0].get("geometry") if features else None
 
 
 def accuracy_metres(text: str | None) -> int | None:
@@ -178,9 +193,10 @@ def simplify_for(geometry: dict, metres: int | None) -> dict:
             (metres or 0) * SIMPLIFY_FRACTION_OF_ACCURACY * DEGREES_PER_METRE,
         ),
     )
-    geom = shape(geometry).simplify(tolerance, preserve_topology=True)
-    if geom.is_empty or geom.geom_type not in {"Polygon", "MultiPolygon"}:
+    geom = polygonal(valid(shape(geometry)))
+    if not usable(geom):
         return geometry
+    geom = geom.simplify(tolerance, preserve_topology=True)
     return mapping(geom)
 
 
@@ -211,6 +227,22 @@ def main() -> int:
             if not geometry or geometry.get("type") not in {"Polygon", "MultiPolygon"}:
                 continue
             attributes = feature.get("properties") or {}
+            identifier = attributes.get("OGF_ID")
+            parsed = polygonal(valid(shape(geometry)))
+            if not usable(parsed) and identifier is not None:
+                try:
+                    recovered = fetch_full_geometry(identifier)
+                except Exception as error:  # noqa: BLE001
+                    recovered = None
+                    print(f"  WARNING: OGF_ID {identifier} recovery failed: {error}")
+                if recovered:
+                    geometry = recovered
+                    parsed = polygonal(valid(shape(geometry)))
+                    if usable(parsed):
+                        print(
+                            f"  recovered OGF_ID {identifier} at full resolution",
+                            flush=True,
+                        )
 
             subtype = clean(attributes.get("CLASS_SUBTYPE")) or ""
             kind = KIND_LABELS.get(subtype, subtype or "Crown disposition")
@@ -254,11 +286,16 @@ def main() -> int:
             if isinstance(area, (int, float)) and area > 0:
                 properties["area_ha"] = round(float(area), 2)
 
+            output_geometry = quantized_valid(
+                shape(simplify_for(geometry, metres)),
+                PRECISION,
+                label=f"{properties['id']} ({properties.get('name', kind)})",
+            )
             features.append(
                 {
                     "type": "Feature",
                     "properties": properties,
-                    "geometry": quantize(simplify_for(geometry, metres)),
+                    "geometry": output_geometry,
                 }
             )
 

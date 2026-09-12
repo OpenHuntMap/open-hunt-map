@@ -123,6 +123,14 @@
           "download": "https://data.ontario.ca/dataset/03700c14-5e9a-449e-a8f9-7ac3315bea91/resource/13f40cdc-db28-4fbe-b0be-ef3dda955690/download/agreefor_shp.zip",
           "format": "shapefile",
           "notes": "Parcel-level county/regional/municipal forest tracts; the only open source for southern Ontario public forest. Deprecated by Ontario, verified 1997-1998, positional accuracy ~100 m, and carries no ownership attribute - fetch_agreement_forest_on.py infers owner from the tract name and keeps only clearly public ones."
+        },
+        {
+          "name": "Renfrew County Forest ownership and hunting guidance",
+          "portal": "County of Renfrew",
+          "url": "https://www.countyofrenfrew.on.ca/living-here/outdoors/forests/",
+          "download": "https://www.countyofrenfrew.on.ca/living-here/outdoors/forests/",
+          "format": "html",
+          "notes": "Official County page says the County owns and manages 53 Renfrew County Forest tracts and permits hunting except during active forest harvest operations. The County's official 2017 overview map corroborates the names of the 51 historical Agreement Forest records whose LOCATION_DESCR starts with Renfrew or the source typo Refrew. Used to classify those records and mark their hunting status conditional. This is ownership and policy evidence, not a geometry source; County GIS terms prohibit redistribution, so no County GIS data is copied."
         }
       ],
       "required_properties": ["name", "owner_type", "basis", "area_ha"]

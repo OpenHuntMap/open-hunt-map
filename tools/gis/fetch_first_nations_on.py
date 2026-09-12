@@ -30,9 +30,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from shapely.geometry import mapping, shape
+from shapely.geometry import shape
 
-from geomutil import thin, usable, valid
+from geomutil import quantized_valid, thin, usable, valid
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data/on/overlays/first_nations.geojson"
@@ -103,15 +103,6 @@ def fetch(where: str) -> list[dict]:
         offset += PAGE_SIZE
 
 
-def quantize(geometry: dict, digits: int = 5) -> dict:
-    def walk(value):
-        if isinstance(value, (int, float)):
-            return round(float(value), digits)
-        return [walk(item) for item in value]
-
-    return {"type": geometry["type"], "coordinates": walk(geometry["coordinates"])}
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=OUT)
@@ -158,9 +149,12 @@ def main() -> int:
             properties["survey_accuracy"] = accuracy
         if props.get("adminAreaNameAlt1"):
             properties["other_name"] = props["adminAreaNameAlt1"]
+        output_geometry = quantized_valid(
+            thinned, label=f"{properties['id']} ({properties['name']})"
+        )
         features.append(
             {"type": "Feature", "properties": properties,
-             "geometry": quantize(mapping(thinned))}
+             "geometry": output_geometry}
         )
 
     if dropped:

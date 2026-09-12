@@ -104,6 +104,11 @@ def rebuild_on(*, skip_clupa_download: bool) -> None:
     run("fetch_municipalities_on.py")
     # Needs municipalities and townships, so it runs after both
     run("fetch_townships_on.py")
+    # The divide has to exist before the schedule is assembled, because the
+    # Sunday gun layer appends it. Without it the layer still builds and still
+    # looks right, but every point north of the French and Mattawa rivers loses
+    # its answer and reads as a prohibition.
+    run("build_sunday_divide_on.py")
     run("build_sunday_gun_on.py")
     # Public forest tracts (county/regional/municipal) at parcel level
     run("fetch_agreement_forest_on.py")
