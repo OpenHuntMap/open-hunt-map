@@ -129,12 +129,16 @@ def rebuild_on(*, skip_clupa_download: bool) -> None:
     run("fetch_dispositions_on.py")
     # Official policy text keyed by the policy_id carried on those parcels
     run("build_policies_on.py")
+    # Point data rather than geometry, but it is a per-province source fetch and
+    # the pack is incomplete without it
+    run("fetch_cgndb.py", "--province", "on")
     stamp_manifest("on")
 
 
 def rebuild_qc() -> None:
     run("fetch_qc_real.py")
     run("fetch_municipalities_qc.py")
+    run("fetch_cgndb.py", "--province", "qc")
     stamp_manifest("qc")
 
 

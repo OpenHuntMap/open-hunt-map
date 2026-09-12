@@ -24,6 +24,7 @@ final class Coordinate extends CoordinateResult {
     required this.longitude,
     required this.format,
     this.note,
+    this.placeName,
   });
 
   final double latitude;
@@ -35,13 +36,28 @@ final class Coordinate extends CoordinateResult {
 
   /// What was assumed rather than read, or null when nothing was.
   final String? note;
+
+  /// The gazetteer name this point came from, where the user picked a place
+  /// instead of typing numbers. Null for everything [parseCoordinate] reads,
+  /// which is every coordinate notation: nothing in this file invents a name.
+  final String? placeName;
 }
 
 final class CoordinateError extends CoordinateResult {
-  const CoordinateError(this.message);
+  const CoordinateError(this.message, {this.isName = false});
 
   /// Written to be shown as-is. The caller has no better idea why this failed.
   final String message;
+
+  /// True where the input carries no coordinate notation at all, as against
+  /// carrying some and getting it wrong.
+  ///
+  /// The two need different answers. "45.0, 200.0" is a coordinate with a
+  /// mistake in it and the user has to hear which mistake; "Mud Lake" is not an
+  /// attempt at a coordinate, and telling somebody who typed a place name that
+  /// it is not a coordinate is noise. A caller with a gazetteer searches these
+  /// instead; a caller without one shows [message].
+  final bool isName;
 }
 
 /// Google's own share sheet produces these, and they carry no coordinate at all
@@ -101,8 +117,9 @@ CoordinateResult? parseCoordinate(String input) {
   }
   if (!_looksNumeric.hasMatch(extracted ?? normalised)) {
     return const CoordinateError(
-      'That does not look like a coordinate. Searching by place name is not in '
-      'this build yet, so for now paste coordinates or a Google Maps link.',
+      'That does not look like a coordinate, so it is looked up as a place '
+      'name instead.',
+      isName: true,
     );
   }
 

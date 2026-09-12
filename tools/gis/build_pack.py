@@ -58,6 +58,11 @@ def build_pack(province_id: str) -> Path:
     seasons = source / "seasons"
     if seasons.is_dir():
         files.extend(path for path in seasons.rglob("*.json") if path.is_file())
+    # Absent until fetch_cgndb.py has run. A pack without it still installs and
+    # still draws the province; the app reports that it carries no place names.
+    gazetteer = source / "gazetteer"
+    if gazetteer.is_dir():
+        files.extend(path for path in gazetteer.rglob("*.json") if path.is_file())
 
     output = REPOSITORY_ROOT / "packs" / f"{province_id}-overlays.zip"
     output.parent.mkdir(parents=True, exist_ok=True)

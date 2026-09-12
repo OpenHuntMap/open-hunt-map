@@ -101,7 +101,8 @@ Future<String> installOfflinePack(
     if (name == 'manifest.json' ||
         name.startsWith('overlays/') ||
         name.startsWith('policies/') ||
-        name.startsWith('seasons/')) {
+        name.startsWith('seasons/') ||
+        name.startsWith('gazetteer/')) {
       files[name] = entry;
     }
   }
@@ -128,6 +129,12 @@ Future<String> installOfflinePack(
       throw FormatException('The pack is missing overlay "$layerPath".');
     }
   }
+
+  // A declared-but-absent gazetteer is deliberately not checked. A missing
+  // overlay means the map cannot draw the province and the install is
+  // worthless, but a missing place-name index costs only place-name search, and
+  // rejecting the whole pack over it would take the map away to protect a
+  // search box. ProvinceLoader.loadGazetteer reports the gap instead.
 
   final root = await _packRoot();
   await root.create(recursive: true);

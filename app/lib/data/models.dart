@@ -61,6 +61,47 @@ class LayerManifest {
       );
 }
 
+/// The place-name index a pack declares, if it declares one.
+///
+/// A separate entry rather than a [LayerManifest] because it is not drawn: the
+/// gazetteer has no geometry MapLibre can render and no overlay toggle. It
+/// carries its own `source`, `license` and `license_url` for the same reason
+/// every layer does — the pack has to say where its data came from, and a
+/// gazetteer under a different licence from the rest of the province is exactly
+/// the case here.
+class GazetteerManifest {
+  const GazetteerManifest({
+    required this.path,
+    required this.label,
+    required this.recordCount,
+    required this.source,
+    required this.license,
+    required this.licenseUrl,
+    required this.attribution,
+  });
+
+  final String path;
+  final String label;
+  final int recordCount;
+  final String source;
+  final String license;
+  final String licenseUrl;
+
+  /// The credit line the licence requires be shown wherever the data is.
+  final String attribution;
+
+  factory GazetteerManifest.fromJson(Map<String, dynamic> json) =>
+      GazetteerManifest(
+        path: json['path'] as String? ?? '',
+        label: json['label'] as String? ?? 'Place names',
+        recordCount: (json['record_count'] as num?)?.toInt() ?? 0,
+        source: json['source'] as String? ?? '',
+        license: json['license'] as String? ?? '',
+        licenseUrl: json['license_url'] as String? ?? '',
+        attribution: json['attribution'] as String? ?? '',
+      );
+}
+
 class ProvinceManifest {
   const ProvinceManifest({
     required this.id,
@@ -69,6 +110,7 @@ class ProvinceManifest {
     required this.license,
     required this.licenseUrl,
     required this.layers,
+    this.gazetteer,
     this.policyReportUrlTemplate,
     this.policyAtlasUrlTemplate,
     this.policyAtlasAcceptsCentre = false,
@@ -80,6 +122,11 @@ class ProvinceManifest {
   final String license;
   final String licenseUrl;
   final List<LayerManifest> layers;
+
+  /// Null on a pack built before place-name search, which is what the search
+  /// sheet reports as "this pack carries no place names" rather than as a
+  /// failure.
+  final GazetteerManifest? gazetteer;
 
   /// Template for the province's authoritative policy report, with `{id}`
   /// standing in for the policy identifier. Lets the app link to the live
@@ -138,6 +185,11 @@ class ProvinceManifest {
         policyAtlasUrlTemplate: json['policy_atlas_url'] as String?,
         policyAtlasAcceptsCentre:
             json['policy_atlas_accepts_centre'] as bool? ?? false,
+        gazetteer: switch (json['gazetteer']) {
+          final Map<String, dynamic> entry =>
+            GazetteerManifest.fromJson(entry),
+          _ => null,
+        },
         layers: (json['layers'] as List<dynamic>? ?? const [])
             .map((item) =>
                 LayerManifest.fromJson(item as Map<String, dynamic>))

@@ -8,12 +8,13 @@ class _Harness {
   Coordinate? accepted;
 }
 
-Future<_Harness> _pump(WidgetTester tester) async {
+Future<_Harness> _pump(WidgetTester tester, {PlaceSearchContext? places}) async {
   final harness = _Harness();
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: CoordinateSearchPanel(
+          places: places,
           onAccept: (coordinate) => harness.accepted = coordinate,
         ),
       ),

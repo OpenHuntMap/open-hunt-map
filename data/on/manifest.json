@@ -175,5 +175,15 @@
       "boundary_accuracy": "mapped",
       "note": "Available for locate/Land Info; not drawn as a default map layer."
     }
-  ]
+  ],
+  "gazetteer": {
+    "label": "Place names",
+    "path": "gazetteer/places.json",
+    "record_count": 57769,
+    "source": "Canadian Geographical Names Database (Natural Resources Canada)",
+    "source_url": "https://ftp.maps.canada.ca/pub/nrcan_rncan/vector/geobase_cgn_toponyme/prov_csv_eng/cgn_on_csv_eng.zip",
+    "license": "Open Government Licence – Canada",
+    "license_url": "https://open.canada.ca/en/open-government-licence-canada",
+    "attribution": "Contains information licensed under the Open Government Licence – Canada."
+  }
 }

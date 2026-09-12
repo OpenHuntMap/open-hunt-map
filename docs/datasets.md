@@ -553,6 +553,91 @@ PREVIEW badge in the app bar and a plain-language note behind it. The green
 overlay is managed territory, not walk-on public land, and there are no seasons
 or policy documents yet. Drop the flag when those land.
 
+## Place names
+
+| Layer | Source | Notes |
+|-------|--------|-------|
+| Gazetteer | [Canadian Geographical Names Database](https://natural-resources.canada.ca/maps-tools-and-publications/geographic-names) (NRCan) | 57,769 Ontario and 122,802 Quebec names via `fetch_cgndb.py`, written to `data/{cc}/gazetteer/places.json`. Curated by feature type, see below |
+
+**License:** [OGL–Canada](https://open.canada.ca/en/open-government-licence-canada).
+The credit line in the search sheet is a condition of it, so it stays.
+
+This is what makes the search field accept "Mud Lake" as well as a coordinate.
+It answers one question — where is the place with this name — and it is the only
+dataset here that carries no legal weight at all: a gazetteer point is a label,
+not a boundary, and tapping a result moves the map and nothing else. The Land
+Info card still decides what the rules are at wherever you land.
+
+### It is not a road network, and the UI must never suggest it is
+
+CGNDB does contain named roads and trails. It contains them the way a lost and
+found contains umbrellas: whatever happened to be filed. Across both provinces
+the `ROAD` concise code holds 2,022 bridges, 577 trails, 518 portages and 373
+hills that were misfiled, and almost no actual road names. There is no coverage
+guarantee of any kind.
+
+So the whole `ROAD` code is dropped, including the trails and portages that a
+hunter would genuinely want. Carrying 577 trails out of the province's many
+thousands would advertise a search the pack cannot do, and someone who found
+one trail by name would reasonably conclude the rest were missing from the
+world rather than from our file. The empty state in the sheet names what the
+index does hold and says plainly that roads and trails are not in it.
+
+Road names would need Statistics Canada's Road Network File, which is a
+different dataset, a different size class and a different build. Nothing in the
+app should imply it is there until it is.
+
+### What is kept, and what is dropped
+
+The filter is on CGNDB's `Concise Code`, 35 of the 292 codes present:
+
+| Kept | Codes |
+|------|-------|
+| Water | `LAKE` `RIV` `BAY` `CHAN` `FALL` `RAP` `RIVF` `SPRG` `SEAU` |
+| Land form | `ISL` `CAPE` `SHL` `MTN` `BCH` `VALL` `CLF` `PLN` `CRAT` `CAVE` `UNP` |
+| Populated | `TOWN` `CITY` `VILG` `HAM` |
+| Administrative | `GEOG` `MUN1` `MUN2` `IR` `PROV` `PARK` |
+| Vegetation and use | `VEGL` `FOR` `MAR` `MIL` `CAMP` |
+
+`MAR` is kept for boat launches, docks, locks and lighthouses; `MIL` for the
+ranges and bases the app already warns about; `RIVF` for the named pools and
+fishing holes on a river. Dropped, with the reason:
+
+| Dropped | Why |
+|---------|-----|
+| `ROAD` | Bridges, trails and portages with no coverage guarantee. See above |
+| `HYDR` | Dams, drains and pumping stations — infrastructure, not a destination |
+| `SITE` | Monuments, plaques and parking lots |
+| `RECR` | Libraries, arenas and community centres |
+| `RES` | Quarries and mine sites |
+| `AIR` | Airports |
+
+Those six are urban and municipal furniture that would swell the index and the
+result list without helping anyone find a lake. Ontario loses 541 records to
+the filter and Quebec 8,429, which is the difference between 131,231 raw Quebec
+rows and the 122,802 indexed.
+
+### Duplicate names are the design problem
+
+Ontario has 75 lakes called Mud Lake. Quebec has 168 called Lac Long. The point
+of the index is therefore not finding a name — it is ordering the places that
+share one, which is why each record carries its county or equivalent and the
+sheet ranks by distance from the current map centre. 386 of Quebec's 1,397
+county values and 186 of 292 feature types survive the filter and appear.
+
+### Format
+
+One JSON file per province, column-major rather than a list of objects, with
+feature types and county names interned into lookup tables and referenced by
+index. Ontario is **2.17 MB** and Quebec **5.10 MB** on disk; the same data as
+one object per record is roughly three times that. Coordinates are stored as
+integers scaled by 100,000 — about 1 m — so the file format itself cannot carry
+a sixth decimal place it has no right to.
+
+The index is read only when the user opens search, never at startup, and parsed
+off the main isolate. `app/lib/data/gazetteer.dart` documents the search itself,
+including why the folded names are held as bytes.
+
 ## Weather and conditions
 
 | Source | Used for | License |
@@ -631,7 +716,7 @@ numbers.
 ## Waypoint glyphs: Material Icons, Apache 2.0
 
 The only artwork the app bundles. `tools/icons/build_waypoint_icons.py` renders one
-glyph per waypoint category out of the Material Icons font that ships with the
+glyph per `WaypointIcon` out of the Material Icons font that ships with the
 Flutter SDK, and converts each to a signed distance field so MapLibre can tint it
 per waypoint with `icon-color` instead of us shipping one PNG per colour. Source
 and licence are recorded in `app/assets/waypoint_icons/manifest.json`, which ships
@@ -641,24 +726,38 @@ Chosen over the CC0 outdoor sets (Temaki, Maki, Osmic) because it is already in 
 dependency tree, so it adds no download and no licence to audit. Swapping one glyph
 for another Material glyph is a codepoint here and a codepoint in the generator.
 Swapping one for an SVG from another set is not: the generator rasterises by
-codepoint through PIL, which cannot read SVG, and `WaypointCategory.icon` is an
+codepoint through PIL, which cannot read SVG, and `WaypointIcon.icon` is an
 `IconData` that the list rows, the editor chips and the map all read from, so a
 single non-font icon would need an SVG rasteriser in the build, `flutter_svg` in the
 app, a branch at every draw site, and an exemption from the test that stops the list
 glyph and the map glyph diverging. Worth it for a whole set, not for one icon.
 
-One of the fifteen is a compromise worth knowing about: Material has no ground
-blind, so `blind` borrows a shelter — a house with a bed, which reads more like a
-hostel than a hide. Every Material alternative trades that wrong reading for
-another one (`festival` is a tent, but with a pennant, and it collides with Camp),
-so it stays until the whole set is reconsidered. `stand` uses a plain chair, which
-is not a tree stand either but is at least unambiguously a seat.
+Some of the set are compromises worth knowing about. Material has no ground blind,
+so `blind` borrows a shelter — a house with a bed, which reads more like a hostel
+than a hide — and `stand` uses a plain chair, which is not a tree stand either but
+is at least unambiguously a seat. `firepit` is labelled "Fire or grill" because the
+glyph is plainly a kettle grill, and `foraging` is a leaf standing in for both
+mushrooms and berries, neither of which Material has. A gate, a bridge, a bench and
+a water spring have no honest glyph at all, so they are absent rather than
+represented by something that means another thing.
 
-Where the category goes when a waypoint leaves the app is a separate question from
-what it looks like here — see the export notes in `app/lib/waypoints/import_export.dart`.
+The glyph is a picture and carries no classification: what a waypoint *is* lives in
+its tags. It does carry a default colour, and for the twenty glyphs that used to be
+categories those are the exact colours those categories had, so a waypoint saved
+before the split draws in the colour it always drew in. Changing one repaints
+waypoints already on someone's phone, which is why a test pins them.
+
+Where the glyph goes when a waypoint leaves the app is a separate question from what
+it looks like here — see the export notes in `app/lib/waypoints/import_export.dart`.
 GPX `<sym>` values are the display names from GPSBabel's `garmin_icon_tables.h`,
 which is the reference the GPX ecosystem shares, and are omitted rather than
-guessed where Garmin has no matching symbol.
+guessed where Garmin has no matching symbol; every glyph added since the icon
+stopped being a category omits it, because guessing at a plausible Garmin name
+would be inventing a fact about someone else's device. Tags travel in GPX `<type>`
+comma separated and in `<cmt>` as `#hashtags`, since different tools drop different
+fields, and import takes the union. KML folders mean the glyph rather than tags: a
+KML folder has one parent, so a two-tag waypoint would be written twice, and since
+KML carries no id, re-importing would duplicate it.
 
 ## Pack layout
 
@@ -671,6 +770,7 @@ data/{cc}/
   overlays/          # .geojson / .pmtiles per layer
   seasons/           # YYYY.json (Ontario)
   policies/          # generated markdown, one per policy id
+  gazetteer/         # places.json, the place-name search index
 ```
 
 ## Attributes (Land Info minimum)

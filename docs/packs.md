@@ -11,6 +11,20 @@ Outputs:
 - `packs/on-overlays.zip`
 - `packs/qc-overlays.zip`
 
+A pack holds `manifest.json`, `overlays/`, `policies/`, `seasons/` and
+`gazetteer/`. The installer whitelists exactly those prefixes, so a new pack
+directory needs adding to `offline_pack_store_io.dart` as well as to
+`build_pack.py` or it will be silently skipped on install.
+
+`gazetteer/places.json` is the place-name search index, built by
+`fetch_cgndb.py` — 2.17 MB for Ontario and 5.10 MB for Quebec. It is the one
+pack file the installer does **not** validate. Overlays are parsed and a bad one
+fails the install, because a map drawn from half a file is worse than no map;
+rejecting a whole pack over a damaged search index would take the map away to
+protect a search box. A corrupt or absent index instead makes the sheet say so
+and fall back to coordinates only, and older packs that predate it behave the
+same way.
+
 ## App install (Android / iOS)
 
 1. **Import ZIP:** Offline packs → Import ZIP → select `packs/on-overlays.zip` on a device/emulator build.
@@ -116,8 +130,13 @@ cd tools\gis
 python convert_municlow.py          # needs _tmp_municlow shapefile extract
 python fetch_wmu_parks_on.py
 python convert_clupapro.py          # needs CLUPAPRO.zip extract under _tmp_clupapro
+python fetch_cgndb.py --province on # place-name index; downloads ~9 MB
 python build_pack.py on
 ```
+
+`fetch_cgndb.py` caches the download under `_tmp_cgndb/` and re-uses it; pass
+`--force` to fetch again. It writes the index and adds the `gazetteer` entry
+to `data/{cc}/manifest.json`, carrying the source, licence and record count.
 
 Then sync into the Flutter app:
 

@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../offline/offline_pack_store.dart';
+import 'gazetteer.dart';
 import 'geojson_header.dart';
 import 'models.dart';
 import 'seasons.dart';
@@ -30,8 +32,24 @@ class PackNotInstalled implements Exception {
   String toString() => 'No offline pack installed for $provinceId.';
 }
 
+/// Parses an index off the main isolate.
+///
+/// Top-level because [compute] needs it to be. Ontario is 2.2 MB of JSON and
+/// Quebec 5.1 MB, and folding every name for search on top of decoding that is
+/// well past a frame's budget.
+GazetteerIndex _parseGazetteer(String jsonText) =>
+    GazetteerIndex.parse(jsonText);
+
 class ProvinceLoader {
   static const assetRoot = 'assets/data';
+
+  /// One parsed index per province, keyed by what the pack says it is.
+  ///
+  /// Parsing costs too much to repeat every time the search sheet opens, and
+  /// the index outlives the sheet. The key carries the pack version and record
+  /// count so re-importing a pack mid-session is picked up rather than served
+  /// from a cache of the pack that was replaced.
+  final Map<String, ({String key, GazetteerResult result})> _gazetteers = {};
 
   Future<List<Province>> loadProvinces() async {
     final json = await _loadAssetJson('$assetRoot/provinces.json');
@@ -98,6 +116,63 @@ class ProvinceLoader {
       }
     }
     return null;
+  }
+
+  /// Loads the place-name index for [provinceId], or says why it cannot.
+  ///
+  /// Never called from startup. The index is only needed once the user opens
+  /// search, and reading a few megabytes to decide whether the map can draw
+  /// would be a cost paid by everyone who never searches.
+  ///
+  /// Every failure here is a reportable state rather than an exception,
+  /// because none of them should cost the user coordinate search: no pack
+  /// installed is the first-run state, a pack that declares no index is simply
+  /// an older pack, and a declared index that will not parse is a bad build
+  /// that the sheet has to survive.
+  Future<GazetteerResult> loadGazetteer(String provinceId) async {
+    final id = provinceId.toLowerCase();
+    if (!await hasOfflinePack(id)) {
+      return const GazetteerResult(GazetteerAvailability.noPack);
+    }
+
+    final GazetteerManifest? declared;
+    try {
+      declared =
+          ProvinceManifest.fromJson(await _loadPackJson(id, 'manifest.json'))
+              .gazetteer;
+    } catch (_) {
+      return const GazetteerResult(GazetteerAvailability.unreadable);
+    }
+    if (declared == null || declared.path.isEmpty) {
+      return const GazetteerResult(GazetteerAvailability.notInPack);
+    }
+
+    final key = '${declared.path}|${declared.recordCount}';
+    if (_gazetteers[id] case (key: final cached, result: final result)
+        when cached == key) {
+      return result;
+    }
+
+    final text = await readOfflinePackText(id, declared.path);
+    final result = switch (text) {
+      // Declared but absent is a damaged pack, not an old one. Saying "built
+      // before this search existed" here would be inventing a reason.
+      null => const GazetteerResult(GazetteerAvailability.unreadable),
+      final json => await _parse(json),
+    };
+    _gazetteers[id] = (key: key, result: result);
+    return result;
+  }
+
+  Future<GazetteerResult> _parse(String json) async {
+    try {
+      return GazetteerResult(
+        GazetteerAvailability.ready,
+        index: await compute(_parseGazetteer, json),
+      );
+    } catch (_) {
+      return const GazetteerResult(GazetteerAvailability.unreadable);
+    }
   }
 
   Future<String?> loadPolicy(String provinceId, String policyId) =>

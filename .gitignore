@@ -49,6 +49,12 @@ data/on/overlays/crown_disposition.geojson
 data/on/overlays/municipalities.geojson
 data/qc/overlays/municipalities.geojson
 
+# Generated place-name indexes. Same reasoning: 2 MB of Ontario and 5 MB of
+# Quebec minified JSON has no reviewable diff. Rebuild them with
+# tools/gis/fetch_cgndb.py; consume them from the published pack.
+data/on/gazetteer/places.json
+data/qc/gazetteer/places.json
+
 # Local large packs (keep samples only in git)
 *.pmtiles
 !app/assets/**/*.pmtiles
