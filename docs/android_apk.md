@@ -114,14 +114,21 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 cd app
 flutter build apk --release
 & "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.0.0\apksigner.bat" `
-  verify --print-certs build\app\outputs\flutter-apk\app-release.apk
+  verify -v --print-certs build\app\outputs\flutter-apk\app-release.apk
 ```
 
-You want a line beginning `Verified using` and a `Signer #1` name that is yours.
-If it says `CN=Android Debug`, `key.properties` was not picked up. If `apksigner`
-complains about `JAVA_HOME`, set it as above — and note that an erroring
-`apksigner` proves nothing either way, which is why the workflow asserts on
-`Verified using` rather than merely on the absence of the debug name.
+You want a bare `Verifies` line and a `Signer #1` whose name is yours. If it says
+`CN=Android Debug`, `key.properties` was not picked up. The `-v` matters: without
+it apksigner prints the certificates and no verdict at all, which reads like
+success and proves nothing.
+
+That distinction is the whole reason the workflow's check is shaped the way it
+is. An erroring `apksigner` also lacks the debug name, so testing only for the
+absence of `CN=Android Debug` passes when nothing was checked. The workflow
+therefore requires the `Verifies` line, and then pins the certificate's SHA-256
+digest, so a wrong keystore in the secrets fails as loudly as no keystore at all.
+Replace the key and that pin has to change with it — see `EXPECTED` in
+`.github/workflows/release-apk.yml`.
 
 ## 3. One-time: add the GitHub secrets
 

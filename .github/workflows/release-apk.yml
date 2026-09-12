@@ -131,7 +131,7 @@ jobs:
         working-directory: app
         run: flutter build apk --release
 
-      - name: Verify it is not debug-signed
+      - name: Verify it is signed with the release key
         # The one check worth having here. Gradle silently falls back to the debug
         # key when key.properties is missing or malformed, so a typo in a secret
         # would otherwise publish an APK that anyone can forge an update for.
@@ -139,6 +139,12 @@ jobs:
         run: |
           set -euo pipefail
           APK=app/build/app/outputs/flutter-apk/app-release.apk
+          # The release certificate's SHA-256 digest. Public information — Play
+          # Console displays these — and pinning it turns this step from "not the
+          # debug key" into "the key users already have installed". Worth failing
+          # on, because Android refuses an update signed by a different key: a
+          # release under the wrong one strands every existing install.
+          EXPECTED=c6ad21bd99b9ab52b40cf26a1299498a94b02baf0697eba9ba140a14c62c5db0
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           SIGNER="$(find "$SDK" -name apksigner -type f 2>/dev/null | sort -V | tail -1)"
           if [ -z "$SIGNER" ]; then
@@ -150,12 +156,14 @@ jobs:
           # Not written to the log: the certificate is public information, but
           # there is no reason to print it and every reason to keep this output
           # boring.
-          "$SIGNER" verify --print-certs "$APK" > certs.txt
-          # Assert the verifier ran before trusting what it did not say. Testing
-          # only for the absence of the debug DN is satisfied just as well by an
-          # error message as by a correctly signed APK, and apksigner exits
-          # non-zero for its own reasons — a missing JDK, for one.
-          if ! grep -q "Verified using" certs.txt; then
+          # -v because the summary this asserts on is verbose-only; plain
+          # --print-certs emits the certificates and nothing else.
+          "$SIGNER" verify -v --print-certs "$APK" > certs.txt
+          # Assert what the verifier said, not merely what it failed to say. An
+          # absence test for the debug DN is satisfied just as well by an error
+          # message as by a good signature. A bare "Verifies" line appears only
+          # when verification actually succeeded.
+          if ! grep -qx "Verifies" certs.txt; then
             echo "::error::apksigner did not report a successful verification, so" \
                  "nothing here has been checked. Treat this as a failed signature." >&2
             exit 1
@@ -165,7 +173,14 @@ jobs:
                  "password is public. Refusing to publish it." >&2
             exit 1
           fi
-          echo "Verified, and the signing certificate is not the debug key."
+          if ! grep -qi "SHA-256 digest: ${EXPECTED}" certs.txt; then
+            echo "::error::The signing certificate is not the expected release" \
+                 "key. Check ANDROID_KEYSTORE_BASE64 and ANDROID_KEY_ALIAS. If the" \
+                 "key was replaced deliberately, update EXPECTED in this workflow," \
+                 "and know that existing installs cannot update across it." >&2
+            exit 1
+          fi
+          echo "Signed with the expected release key."
 
       - name: Name it for the version
         id: rename
