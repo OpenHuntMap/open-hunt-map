@@ -102,8 +102,12 @@ python tools\gis\audit_overlays.py
 # Package a province pack for release
 python tools\gis\build_pack.py
 
-# Release APKs, one per ABI; BlueStacks wants x86_64
-cd app; flutter build apk --release --split-per-abi
+# Local release build. Published releases are one universal APK, built by the
+# release-apk workflow on a v* tag and signed from repository secrets; see
+# docs/android_apk.md. --split-per-abi is smaller but is not published, because
+# Flutter offsets the version code per ABI and mixing the two variants strands
+# people on a refused downgrade.
+cd app; flutter build apk --release
 ```
 
 ## Conventions

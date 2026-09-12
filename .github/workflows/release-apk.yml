@@ -1,0 +1,209 @@
+# Build and publish the Android APK.
+#
+# Deliberately separate from the geometry packs workflow, because the two want
+# opposite things from a release. `packs-latest` is a rolling tag whose assets are
+# clobbered every month on purpose; an app build has to be immutable and
+# versioned, so that "which version are you on?" has an answer when somebody
+# reports a wrong answer on the map, and so an old build stays downloadable to
+# roll back to. You never want last month's pack. You often want last month's APK.
+#
+# Publish:  git tag v0.1.0 && git push origin v0.1.0
+# Dry run:  Actions -> Release APK -> Run workflow (builds and uploads an
+#           artifact, publishes nothing)
+#
+# One APK, not one per ABI. A universal build runs on every phone and on x86_64
+# emulators like BlueStacks, so there is no wrong choice to make — and Flutter
+# offsets the version code per ABI when splitting, which means a per-ABI APK
+# (arm64 -> 1002) and a universal one (1) are an upgrade in one direction and a
+# refused downgrade in the other. Publishing both invites people to get stuck.
+# `flutter build apk --split-per-abi` is still there for a smaller local install.
+#
+# Secrets required, see docs/android_apk.md for how to produce them:
+#   ANDROID_KEYSTORE_BASE64  base64 of the .jks
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      - name: Sync the bundled asset
+        # provinces.json is the only data file in the binary and it is gitignored,
+        # generated from data/provinces.json. pubspec.yaml names that exact path,
+        # so forgetting this fails the build rather than shipping an app that
+        # cannot list a province — but it does have to happen.
+        run: |
+          set -euo pipefail
+          mkdir -p app/assets/data
+          cp data/provinces.json app/assets/data/provinces.json
+
+      - name: Check the tag agrees with pubspec
+        if: ${{ github.event_name == 'push' }}
+        # The tag names the release and pubspec decides what the app reports about
+        # itself in Settings and in a bug report. If they disagree, every report
+        # from this build cites a version that does not match what people
+        # downloaded, which is the sort of thing you discover months later.
+        run: |
+          set -euo pipefail
+          PUBSPEC="$(grep '^version:' app/pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$PUBSPEC" != "$TAG" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pubspec version" \
+                 "${PUBSPEC}. Bump version: in app/pubspec.yaml, or retag." >&2
+            exit 1
+          fi
+          echo "Tag and pubspec agree on ${PUBSPEC}."
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      # Gates before signing, so a tag can never publish a build that would have
+      # failed review on the way in.
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Write the signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Refusing to build:" \
+                 "without it Gradle falls back to the debug key, whose password is" \
+                 "public, and a debug-signed APK must never be published." >&2
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > app/android/owm-release.jks
+          # Written line by line rather than with a heredoc: a heredoc would
+          # re-interpret a password containing $ or a backslash. Note that Java's
+          # Properties format has its own escaping rules on top of this, which is
+          # why docs/android_apk.md asks for an alphanumeric password.
+          {
+            echo "storeFile=owm-release.jks"
+            echo "storePassword=${KEYSTORE_PASSWORD}"
+            echo "keyAlias=${KEY_ALIAS}"
+            echo "keyPassword=${KEY_PASSWORD}"
+          } > app/android/key.properties
+
+      - name: Build the APK
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Verify it is not debug-signed
+        # The one check worth having here. Gradle silently falls back to the debug
+        # key when key.properties is missing or malformed, so a typo in a secret
+        # would otherwise publish an APK that anyone can forge an update for.
+        # Asserting on the built artifact catches every way that can happen.
+        run: |
+          set -euo pipefail
+          APK=app/build/app/outputs/flutter-apk/app-release.apk
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          SIGNER="$(find "$SDK" -name apksigner -type f 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$SIGNER" ]; then
+            echo "::error::apksigner not found under '$SDK'. This check is the only" \
+                 "thing standing between a mistyped secret and a debug-signed" \
+                 "release, so it fails the build rather than being skipped." >&2
+            exit 1
+          fi
+          # Not written to the log: the certificate is public information, but
+          # there is no reason to print it and every reason to keep this output
+          # boring.
+          "$SIGNER" verify --print-certs "$APK" > certs.txt
+          # Assert the verifier ran before trusting what it did not say. Testing
+          # only for the absence of the debug DN is satisfied just as well by an
+          # error message as by a correctly signed APK, and apksigner exits
+          # non-zero for its own reasons — a missing JDK, for one.
+          if ! grep -q "Verified using" certs.txt; then
+            echo "::error::apksigner did not report a successful verification, so" \
+                 "nothing here has been checked. Treat this as a failed signature." >&2
+            exit 1
+          fi
+          if grep -q "CN=Android Debug" certs.txt; then
+            echo "::error::The APK is signed with the Android debug key, whose" \
+                 "password is public. Refusing to publish it." >&2
+            exit 1
+          fi
+          echo "Verified, and the signing certificate is not the debug key."
+
+      - name: Name it for the version
+        id: rename
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" != "push" ]; then
+            VERSION="$(grep '^version:' app/pubspec.yaml | awk '{print $2}')-dev"
+          fi
+          mkdir -p dist
+          cp app/build/app/outputs/flutter-apk/app-release.apk \
+             "dist/openwoodsmap-${VERSION}.apk"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          ls -l dist
+
+      - name: Upload the artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwoodsmap-apk
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish the release
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOTES="$(printf '%s\n' \
+            "Install on Android by downloading the APK and opening it; you will have to allow installs from unknown sources." \
+            "" \
+            "For automatic updates, add this repository to [Obtainium](https://github.com/ImranR98/Obtainium) rather than checking back here." \
+            "" \
+            "Map data is not in the APK. The app downloads a province pack on first run, and those refresh independently of app releases." \
+            "" \
+            "- Commit: ${GITHUB_SHA}" \
+            "- Built: $(date -u +%Y-%m-%dT%H:%MZ)")"
+          gh release create "${GITHUB_REF_NAME}" dist/*.apk \
+            --title "OpenWoodsMap ${GITHUB_REF_NAME}" \
+            --notes "$NOTES"

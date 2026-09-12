@@ -63,6 +63,16 @@ data/qc/gazetteer/places.json
 .env
 .env.*
 
+# Android release signing. The keystore is the one secret in this project that
+# cannot be rotated cheaply: Android identifies an app by its signing key, so
+# replacing it forces every user to uninstall and reinstall, which deletes their
+# saved waypoints. Keep it outside the repo entirely; these patterns are the
+# backstop for the day someone drops a copy in by accident.
+*.jks
+*.keystore
+*.p12
+key.properties
+
 # Screenshots and logcat from tools/devtest. Evidence from a test run, not
 # repo content: regenerate them rather than commit them.
 .artifacts/
