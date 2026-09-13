@@ -18,6 +18,22 @@ A pack holds `manifest.json`, `overlays/`, `policies/`, `seasons/` and
 directory needs adding to `offline_pack_store_io.dart` as well as to
 `build_pack.py` or it will be silently skipped on install.
 
+**Overlays ship because the manifest names them, not because the file exists.**
+The manifest is where a layer's source and licence are recorded, so it is where
+the layer is vetted; packing whatever `data/{cc}/overlays/` happens to contain
+instead ships anything that was ever fetched. That is how Quebec's unlicensed
+hunting zones reached a published pack. It also swept up build intermediates the
+app can never draw: `on/overlays/sunday_gun_north.geojson` is the corridor
+`build_sunday_gun_on.py` assembles the Sunday gun layer from, and
+`qc/overlays/townships.geojson` is an empty placeholder recording the decision
+not to ship survey cantons. `build_pack.py` prints any overlay it leaves out, so
+a layer genuinely forgotten from the manifest is visible in the build log.
+
+`policies/`, `seasons/` and `gazetteer/` stay directory-driven, because nothing
+enumerates them: policies are looked up by the `policy_id` on a feature, and
+seasons by regulation year, which is why the manifest names a directory and one
+current file rather than a list.
+
 `gazetteer/places.json` is the place-name search index, built by
 `fetch_cgndb.py` — 2.17 MB for Ontario and 5.10 MB for Quebec. It is the one
 pack file the installer does **not** validate. Overlays are parsed and a bad one

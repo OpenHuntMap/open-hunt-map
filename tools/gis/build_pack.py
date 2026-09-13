@@ -75,11 +75,30 @@ def build_pack(province_id: str) -> dict[str, object]:
         )
 
     files = [manifest]
-    files.extend(
-        path
+    # Exactly the overlays the manifest names, rather than everything sitting in
+    # the directory. The manifest is where a layer's source and licence are
+    # recorded and therefore where it is vetted, so the manifest is what decides
+    # whether it ships. A glob decides on the basis of a file having been written,
+    # which is how Quebec's unlicensed hunting zones once reached a published
+    # pack, and it also carries build intermediates the app can never draw.
+    packed_overlays = {(source / layer["path"]).resolve() for layer in layers}
+    files.extend(sorted(packed_overlays))
+    skipped = sorted(
+        path.relative_to(source).as_posix()
         for path in overlays.rglob("*.geojson")
-        if path.is_file() and ".clupa_full." not in path.name
+        if path.is_file() and path.resolve() not in packed_overlays
     )
+    if skipped:
+        # Printed rather than warned about: some of these are meant to be here.
+        # Ontario's sunday_gun_north is the corridor the Sunday gun layer is
+        # assembled from, and Quebec's townships is an empty placeholder that
+        # records a decision not to ship survey cantons.
+        print(f"  not in the manifest, not packed: {', '.join(skipped)}")
+
+    # These three stay directory-driven, because unlike layers they are not
+    # enumerated anywhere. Policies are looked up by the policy_id on a feature,
+    # and seasons by regulation year, so the manifest names the directory and one
+    # current file rather than the full contents.
     policies = source / "policies"
     if policies.is_dir():
         files.extend(path for path in policies.rglob("*") if path.is_file())
