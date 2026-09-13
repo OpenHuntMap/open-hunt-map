@@ -27,7 +27,7 @@ refuses to publish.
 | Reserves | [Canada Lands Survey System](https://www.nrcan.gc.ca/maps-tools-publications/maps/canada-lands-survey-system) (NRCan) | 203 Ontario reserves via `fetch_first_nations_on.py`. **Permission required, not prohibited** — see below |
 | Defence property | [DFRP](https://www.tbs-sct.canada.ca/dfrp-rbif/home-accueil-eng.aspx) (Treasury Board) | 140 Ontario National Defence properties, 51,309 ha, via `fetch_defence_land_on.py`. Closed to public hunting |
 | Far North & community land use plans | [Land Use Plan Area, MNR](https://www.ontario.ca/page/land-use-planning-process-far-north) (LIO) | The Far North boundary plus 4 approved community plans (3.0M ha) via `fetch_land_use_plan_on.py`. Context, not tenure — see below |
-| Geographic townships | LIO Geographic Township Improved | `fetch_townships_on.py` (pack asset; not a default drawn layer yet) |
+| Geographic townships | LIO Geographic Township Improved | `fetch_townships_on.py`. A build input, not shipped: `build_sunday_gun_on.py` resolves the schedule's "Geographic Townships of" entries against it. Nothing can draw it, so it is not in the manifest and does not download |
 | Municipalities | LIO MUNICLOW | Lower/single-tier bylaw jurisdiction |
 
 **License:** Ontario [Open Government Licence](https://www.ontario.ca/page/open-government-licence-ontario),

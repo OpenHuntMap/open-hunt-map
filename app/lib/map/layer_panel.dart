@@ -63,21 +63,28 @@ class LayerPanel extends StatelessWidget {
                   shrinkWrap: true,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
-                    ...OverlayController.layerOrder.map(
-                      (id) => CheckboxListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: Text(labels[id] ?? id),
-                        value: controller.visibility[id] ?? false,
-                        onChanged: (value) =>
-                            controller.setVisible(id, value ?? false),
-                        secondary: _Swatch(
-                          color: controller.colorFor(id),
-                          customised: controller.isCustomColor(id),
-                          onTap: () => _pickColor(context, id),
-                        ),
+                    if (controller.availableLayerIds.isEmpty)
+                      const Text(
+                        'No province pack is installed, so there are no '
+                        'layers to draw. Download one from Offline packs.',
                       ),
+                    ...controller.availableLayerIds.map(
+                      (id) => controller.carriesNoFeatures(id)
+                          ? _UnavailableLayer(label: labels[id] ?? id)
+                          : CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(labels[id] ?? id),
+                              value: controller.visibility[id] ?? false,
+                              onChanged: (value) =>
+                                  controller.setVisible(id, value ?? false),
+                              secondary: _Swatch(
+                                color: controller.colorFor(id),
+                                customised: controller.isCustomColor(id),
+                                onTap: () => _pickColor(context, id),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -103,6 +110,33 @@ class LayerPanel extends StatelessWidget {
     // An empty string is the dialog's way of saying "back to default", which is
     // distinct from null meaning the user dismissed without choosing.
     await controller.setColor(id, selected.isEmpty ? null : selected);
+  }
+}
+
+/// A layer the pack declares but has no features for.
+///
+/// Shown rather than hidden, because the pack says this province is meant to
+/// have the layer and silence would read as "there are none here". Disabled
+/// rather than toggleable, because there is nothing for a toggle to reveal.
+class _UnavailableLayer extends StatelessWidget {
+  const _UnavailableLayer({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).disabledColor;
+    return ListTile(
+      dense: true,
+      enabled: false,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(Icons.remove_circle_outline, size: 20, color: muted),
+      title: Text(label, style: TextStyle(color: muted)),
+      subtitle: Text(
+        'No data in this pack yet, which is not the same as none existing.',
+        style: TextStyle(fontSize: 12, color: muted),
+      ),
+    );
   }
 }
 

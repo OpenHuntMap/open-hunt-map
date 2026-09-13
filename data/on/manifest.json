@@ -163,17 +163,6 @@
       "crs": "EPSG:4326",
       "coverage": "Ontario lower/single-tier municipalities (full)",
       "boundary_accuracy": "mapped"
-    },
-    {
-      "id": "townships",
-      "label": "Geographic townships",
-      "path": "overlays/townships.geojson",
-      "format": "geojson",
-      "feature_count": 2521,
-      "crs": "EPSG:4326",
-      "coverage": "LIO Geographic Township Improved",
-      "boundary_accuracy": "mapped",
-      "note": "Available for locate/Land Info; not drawn as a default map layer."
     }
   ],
   "gazetteer": {

@@ -50,6 +50,26 @@ class OverlayController extends ChangeNotifier {
 
   Map<String, LoadedLayer> get layers => _layers;
 
+  /// The layers the installed pack actually carries, in draw order.
+  ///
+  /// [layerOrder] is what this app knows how to draw, not what a province has.
+  /// Offering all of it meant a Quebec pack of four layers still presented
+  /// fourteen toggles, ten of which controlled nothing: someone who switched on
+  /// "Sunday gun hunting", saw no change, and concluded Quebec has no such rule
+  /// was misled by a control the app had no data behind. Both conditions matter,
+  /// so a layer in the pack that this app cannot draw stays out too.
+  List<String> get availableLayerIds =>
+      layerOrder.where(_layers.containsKey).toList(growable: false);
+
+  /// Whether [id] is in the pack but has nothing in it to draw.
+  ///
+  /// Quebec's `municipal_forest` is a genuine manifest entry with zero features,
+  /// because no province-wide source exists to fill it yet. That is a gap in the
+  /// data and not an answer about the ground, so it is worth showing and worth
+  /// distinguishing from a layer that simply is not here.
+  bool carriesNoFeatures(String id) =>
+      (_layers[id]?.manifest.featureCount ?? 0) < 1;
+
   /// Colours the user can pick from. Deliberately saturated mid-tones: they have
   /// to stay legible both on the pale offline basemap and on satellite imagery,
   /// where dark greens and blues disappear into forest and water.
