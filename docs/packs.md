@@ -10,6 +10,8 @@ python build_pack.py on qc
 Outputs:
 - `packs/on-overlays.zip`
 - `packs/qc-overlays.zip`
+- `packs/packs.json` — what is in each pack, so the app can tell whether it has
+  the current data without downloading tens of megabytes to find out
 
 A pack holds `manifest.json`, `overlays/`, `policies/`, `seasons/` and
 `gazetteer/`. The installer whitelists exactly those prefixes, so a new pack
@@ -25,6 +27,38 @@ protect a search box. A corrupt or absent index instead makes the sheet say so
 and fall back to coordinates only, and older packs that predate it behave the
 same way.
 
+## Knowing whether a pack is current
+
+`build_pack.py` stamps two fields into the manifest **inside the zip** —
+`built`, an ISO-8601 UTC timestamp, and `content_id`, a digest of every file the
+pack holds. They go into the packed copy only; writing them back to
+`data/{cc}/manifest.json` would put a new timestamp in a tracked file on every
+build, so a rebuild that changed nothing would still show a diff.
+
+The app compares `content_id`, not `built`. A scheduled rebuild of unchanged
+sources produces a later timestamp and byte-identical data, and offering everyone
+an update in that case would be a new date dressed up as new data — which is the
+bug this replaced, where the button said *Update* purely because a pack was
+installed. `built` is only ever shown, never compared.
+
+The digest covers the manifest as it exists in `data/{cc}/`, not as it is written
+into the zip, because the packed copy carries the digest and cannot contain a
+hash of itself. Hashing the source keeps manifest-only edits, such as a dropped
+layer or a changed note, inside the comparison.
+
+`packs/packs.json` republishes those two fields per province plus the byte size,
+and `data/provinces.json` points the app at it via `packIndexUrl`. Entries are
+merged rather than overwritten, so building Ontario alone does not erase what is
+published for Quebec. Upload it with the zips:
+
+```powershell
+gh release upload packs-latest packs/packs.json --clobber
+```
+
+If it is missing, unreachable, or served as a captive-portal login page, the
+Offline packs screen says it could not check and describes what is on disk. That
+is the expected state in the bush and is not treated as an error.
+
 ## App install (Android / iOS)
 
 1. **Import ZIP:** Offline packs → Import ZIP → select `packs/on-overlays.zip` on a device/emulator build.
@@ -37,8 +71,13 @@ Publishing an updated pack means overwriting the assets on that tag rather than
 cutting a new one, so shipped builds pick the pack up without an app update:
 
 ```powershell
-gh release upload packs-latest packs/on-overlays.zip packs/qc-overlays.zip --clobber
+gh release upload packs-latest packs/on-overlays.zip packs/qc-overlays.zip `
+  packs/packs.json --clobber
 ```
+
+Upload `packs.json` in the same command as the zips it describes. Published on
+its own it would announce data nobody can download; left behind it would leave
+every install told its current pack is stale.
 
 **The repository must be public for this to work.** GitHub serves release assets
 from a private repository only to authenticated callers, and the app sends no

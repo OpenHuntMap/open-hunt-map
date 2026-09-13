@@ -1,4 +1,5 @@
 {
+  "packIndexUrl": "https://github.com/OpenWoodsMap/open-woods-map/releases/download/packs-latest/packs.json",
   "provinces": [
     {
       "id": "on",

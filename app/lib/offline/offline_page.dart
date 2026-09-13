@@ -10,6 +10,7 @@ import 'area_picker_page.dart';
 import 'basemap_area_store.dart';
 import 'offline_pack_store.dart';
 import 'pack_freshness.dart';
+import 'pack_index.dart';
 import 'pack_installer.dart';
 import 'tile_math.dart';
 
@@ -48,6 +49,11 @@ class _OfflinePageState extends State<OfflinePage> {
   // What each installed pack says about itself. Absent for a province with no
   // pack, and present-but-null where the manifest would not parse.
   final Map<String, ProvinceManifest?> _installedManifests = {};
+  // What is published, and how far the attempt to find out got. Starts as
+  // notChecked and stays there if the asset names no index, because a check that
+  // was never possible is not a check that failed.
+  PackIndex? _publishedIndex;
+  var _publishedCheck = PackCheck.notChecked;
   final Map<String, double?> _downloadProgress = {};
   final Set<String> _busy = {};
   var _loading = true;
@@ -92,7 +98,22 @@ class _OfflinePageState extends State<OfflinePage> {
         ..addAll(manifests);
       _loading = false;
     });
+    // Deliberately not awaited. The page is complete and correct without it, and
+    // the whole point of the pack is that this screen works with no signal, so a
+    // network call must never be between the user and a spinner disappearing.
+    _checkPublished();
     await _loadAreas();
+  }
+
+  Future<void> _checkPublished() async {
+    final url = await _loader.loadPackIndexUrl();
+    if (url == null || !mounted) return;
+    final index = await fetchPackIndex(url);
+    if (!mounted) return;
+    setState(() {
+      _publishedIndex = index;
+      _publishedCheck = index == null ? PackCheck.failed : PackCheck.checked;
+    });
   }
 
   Future<void> _loadAreas() async {
@@ -552,6 +573,9 @@ class _OfflinePageState extends State<OfflinePage> {
     final described = describeInstalledPack(
       installed: installed,
       built: _installedManifests[id]?.built,
+      contentId: _installedManifests[id]?.contentId,
+      check: _publishedCheck,
+      published: _publishedIndex?[id],
     );
     return Card(
       child: Padding(
@@ -571,7 +595,17 @@ class _OfflinePageState extends State<OfflinePage> {
                         province.name,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      Text(described.status),
+                      Text(
+                        described.status,
+                        // Coloured only where an update was actually found, so
+                        // the emphasis means something the plain states do not.
+                        style: described.isUpdate
+                            ? TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              )
+                            : null,
+                      ),
                     ],
                   ),
                 ),
@@ -598,7 +632,11 @@ class _OfflinePageState extends State<OfflinePage> {
                           province.packUrl == null
                       ? null
                       : () => _download(province),
-                  icon: Icon(installed ? Icons.refresh : Icons.download),
+                  icon: Icon(
+                    installed && !described.isUpdate
+                        ? Icons.refresh
+                        : Icons.download,
+                  ),
                   label: Text(described.action),
                 ),
                 OutlinedButton.icon(

@@ -49,7 +49,7 @@ def content_id(files: list[Path], source: Path, manifest_bytes: bytes) -> str:
     return digest.hexdigest()[:16]
 
 
-def build_pack(province_id: str) -> Path:
+def build_pack(province_id: str) -> dict[str, object]:
     province_id = province_id.strip().lower()
     source = REPOSITORY_ROOT / "data" / province_id
     manifest = source / "manifest.json"
@@ -119,15 +119,49 @@ def build_pack(province_id: str) -> Path:
         f"Built {output.relative_to(REPOSITORY_ROOT)} "
         f"({format_size(output.stat().st_size)}, content {stamped['content_id']})"
     )
-    return output
+    return {
+        "id": province_id,
+        "file": output.name,
+        "bytes": output.stat().st_size,
+        "built": stamped["built"],
+        "content_id": stamped["content_id"],
+        "version": stamped.get("version", "unknown"),
+    }
+
+
+def write_index(entries: list[dict[str, object]]) -> Path:
+    """Publish what is in each pack, small enough for a phone to read on a whim.
+
+    The app has to answer "is there newer data than mine" without downloading
+    tens of megabytes to find out, so the answer lives in its own file next to
+    the packs. Existing entries are merged rather than replaced: building one
+    province must not erase what is published for another, which is easy to do
+    because provinces are usually rebuilt one at a time.
+    """
+    index_path = REPOSITORY_ROOT / "packs" / "packs.json"
+    packs: dict[str, object] = {}
+    if index_path.is_file():
+        try:
+            packs = json.loads(index_path.read_text(encoding="utf-8")).get("packs") or {}
+        except json.JSONDecodeError:
+            # A corrupt index is worth losing rather than propagating; the next
+            # build of each province restores its entry.
+            packs = {}
+    for entry in entries:
+        packs[str(entry["id"])] = {k: v for k, v in entry.items() if k != "id"}
+    index_path.write_text(
+        json.dumps({"packs": packs}, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Wrote {index_path.relative_to(REPOSITORY_ROOT)} ({', '.join(sorted(packs))})")
+    return index_path
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("province", nargs="+", help="Province IDs, for example: on qc")
     args = parser.parse_args()
-    for province_id in args.province:
-        build_pack(province_id)
+    write_index([build_pack(province_id) for province_id in args.province])
 
 
 if __name__ == "__main__":

@@ -59,6 +59,19 @@ class ProvinceLoader {
         .toList();
   }
 
+  /// Where the list of published packs lives, or null if the asset omits it.
+  ///
+  /// Alongside the pack URLs rather than compiled in, so the index can move
+  /// without an app update. Null is a supported answer: the Offline packs screen
+  /// then behaves exactly as it does with no signal.
+  Future<String?> loadPackIndexUrl() async {
+    final json = await _loadAssetJson('$assetRoot/provinces.json');
+    return switch (json['packIndexUrl']) {
+      final String url when url.trim().isNotEmpty => url.trim(),
+      _ => null,
+    };
+  }
+
   /// Loads the installed pack for [provinceId].
   ///
   /// Throws [PackNotInstalled] when nothing has been downloaded yet; callers
