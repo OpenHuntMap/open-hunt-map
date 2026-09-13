@@ -95,16 +95,6 @@ jobs:
         working-directory: app
         run: flutter pub get
 
-      # Gates before signing, so a tag can never publish a build that would have
-      # failed review on the way in.
-      - name: Analyze
-        working-directory: app
-        run: flutter analyze
-
-      - name: Test
-        working-directory: app
-        run: flutter test
-
       - name: Write the signing config
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -165,6 +155,18 @@ jobs:
             exit 1
           fi
           echo "Keystore opens, alias exists, and both passwords work."
+
+      # Still gates before anything is published, but after the keystore check
+      # rather than before it: these take a couple of minutes and a wrong secret
+      # takes a second to find, so checking them in this order means a mistyped
+      # password is not discovered on the far side of the test suite.
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
 
       - name: Build the APK
         working-directory: app
