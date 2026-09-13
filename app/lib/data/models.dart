@@ -114,6 +114,8 @@ class ProvinceManifest {
     this.policyReportUrlTemplate,
     this.policyAtlasUrlTemplate,
     this.policyAtlasAcceptsCentre = false,
+    this.built,
+    this.contentId,
   });
 
   final String id;
@@ -122,6 +124,19 @@ class ProvinceManifest {
   final String license;
   final String licenseUrl;
   final List<LayerManifest> layers;
+
+  /// When this pack was packaged, stamped by `build_pack.py`. Null on a pack
+  /// built before the stamp existed, which the Offline packs screen reports as
+  /// an unknown build date rather than guessing one.
+  final DateTime? built;
+
+  /// A digest of the pack's contents, stamped alongside [built].
+  ///
+  /// This, and not [built], decides whether newer data exists. A scheduled
+  /// rebuild of unchanged sources produces a later [built] and the same
+  /// [contentId], and offering an update in that case would be a new date
+  /// dressed up as new data.
+  final String? contentId;
 
   /// Null on a pack built before place-name search, which is what the search
   /// sheet reports as "this pack carries no place names" rather than as a
@@ -185,6 +200,17 @@ class ProvinceManifest {
         policyAtlasUrlTemplate: json['policy_atlas_url'] as String?,
         policyAtlasAcceptsCentre:
             json['policy_atlas_accepts_centre'] as bool? ?? false,
+        // tryParse rather than parse: an unreadable stamp is an older or
+        // hand-edited pack, and the screen already has honest wording for not
+        // knowing. Refusing to load the province over it would take the map away.
+        built: switch (json['built']) {
+          final String text => DateTime.tryParse(text)?.toUtc(),
+          _ => null,
+        },
+        contentId: switch (json['content_id']) {
+          final String text when text.trim().isNotEmpty => text.trim(),
+          _ => null,
+        },
         gazetteer: switch (json['gazetteer']) {
           final Map<String, dynamic> entry =>
             GazetteerManifest.fromJson(entry),

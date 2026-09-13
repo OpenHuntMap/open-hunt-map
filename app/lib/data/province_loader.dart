@@ -175,6 +175,24 @@ class ProvinceLoader {
     }
   }
 
+  /// The installed pack's manifest on its own, or null when there is none.
+  ///
+  /// Separate from [loadProvince] because the Offline packs screen only wants
+  /// what the pack says about itself. [loadProvince] resolves a file path and
+  /// reads a header for every layer, which is work worth doing to draw a map and
+  /// not to print a build date. Returns null rather than throwing on an
+  /// unreadable manifest: the screen's job is to offer a download, and it can
+  /// still do that for a pack it cannot describe.
+  Future<ProvinceManifest?> loadInstalledManifest(String provinceId) async {
+    final id = provinceId.toLowerCase();
+    if (!await hasOfflinePack(id)) return null;
+    try {
+      return ProvinceManifest.fromJson(await _loadPackJson(id, 'manifest.json'));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> loadPolicy(String provinceId, String policyId) =>
       readOfflinePackText(provinceId.toLowerCase(), 'policies/$policyId.md');
 

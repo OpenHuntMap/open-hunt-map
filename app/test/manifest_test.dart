@@ -49,4 +49,37 @@ void main() {
       expect(manifest.policyAtlasAt(46.8, -71.2), isNull);
     });
   });
+
+  group('build stamp', () {
+    test('reads the pair build_pack.py writes', () {
+      final manifest = manifestFrom({
+        'built': '2026-09-13T01:51:55Z',
+        'content_id': '67665dcf783e5c00',
+      });
+      expect(manifest.built, DateTime.utc(2026, 9, 13, 1, 51, 55));
+      expect(manifest.contentId, '67665dcf783e5c00');
+    });
+
+    test('an offset stamp is normalised to UTC', () {
+      final manifest = manifestFrom({'built': '2026-09-13T02:00:00+05:00'});
+      expect(manifest.built, DateTime.utc(2026, 9, 12, 21));
+      expect(manifest.built!.isUtc, isTrue);
+    });
+
+    // A pack from before the stamp existed. The province still has to load, so
+    // these stay null rather than throwing; the Offline packs screen has wording
+    // for not knowing.
+    test('an older pack without a stamp loads with both null', () {
+      final manifest = manifestFrom(const {});
+      expect(manifest.built, isNull);
+      expect(manifest.contentId, isNull);
+    });
+
+    test('an unparseable date does not take the province down', () {
+      final manifest = manifestFrom({'built': 'last Tuesday', 'content_id': '  '});
+      expect(manifest.built, isNull);
+      expect(manifest.contentId, isNull);
+      expect(manifest.name, 'Ontario');
+    });
+  });
 }

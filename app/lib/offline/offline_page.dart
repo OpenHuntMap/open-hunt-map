@@ -9,6 +9,7 @@ import '../map/basemap.dart';
 import 'area_picker_page.dart';
 import 'basemap_area_store.dart';
 import 'offline_pack_store.dart';
+import 'pack_freshness.dart';
 import 'pack_installer.dart';
 import 'tile_math.dart';
 
@@ -44,6 +45,9 @@ class _OfflinePageState extends State<OfflinePage> {
   StreamSubscription<AreaDownloadProgress?>? _areaProgressSub;
   List<Province> _provinces = const [];
   Set<String> _installed = {};
+  // What each installed pack says about itself. Absent for a province with no
+  // pack, and present-but-null where the manifest would not parse.
+  final Map<String, ProvinceManifest?> _installedManifests = {};
   final Map<String, double?> _downloadProgress = {};
   final Set<String> _busy = {};
   var _loading = true;
@@ -76,10 +80,16 @@ class _OfflinePageState extends State<OfflinePage> {
   Future<void> _load() async {
     final provinces = await _loader.loadProvinces();
     final installed = await installedOfflinePackIds();
+    final manifests = <String, ProvinceManifest?>{
+      for (final id in installed) id: await _loader.loadInstalledManifest(id),
+    };
     if (!mounted) return;
     setState(() {
       _provinces = provinces;
       _installed = installed;
+      _installedManifests
+        ..clear()
+        ..addAll(manifests);
       _loading = false;
     });
     await _loadAreas();
@@ -539,7 +549,10 @@ class _OfflinePageState extends State<OfflinePage> {
     final id = province.id;
     final installed = _installed.contains(id);
     final busy = _busy.contains(id);
-    final status = installed ? 'Downloaded' : 'Not downloaded';
+    final described = describeInstalledPack(
+      installed: installed,
+      built: _installedManifests[id]?.built,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -558,7 +571,7 @@ class _OfflinePageState extends State<OfflinePage> {
                         province.name,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      Text(status),
+                      Text(described.status),
                     ],
                   ),
                 ),
@@ -586,7 +599,7 @@ class _OfflinePageState extends State<OfflinePage> {
                       ? null
                       : () => _download(province),
                   icon: Icon(installed ? Icons.refresh : Icons.download),
-                  label: Text(installed ? 'Update' : 'Download'),
+                  label: Text(described.action),
                 ),
                 OutlinedButton.icon(
                   onPressed: busy || !offlinePackStorageSupported
@@ -646,6 +659,7 @@ class _OfflinePageState extends State<OfflinePage> {
       if (!mounted) return;
       setState(() {
         _installed.remove(province.id);
+        _installedManifests.remove(province.id);
         _busy.remove(province.id);
       });
       _showMessage('Local ${province.name} pack deleted.');
@@ -663,9 +677,14 @@ class _OfflinePageState extends State<OfflinePage> {
 
   Future<void> _finishInstalled(Province province, String message) async {
     final installed = await installedOfflinePackIds();
+    // Re-read the manifest rather than keeping the one from before the install:
+    // the build date on screen has to be the date of the pack now on disk, and
+    // the whole point of showing it is that people trust it.
+    final manifest = await _loader.loadInstalledManifest(province.id);
     if (!mounted) return;
     setState(() {
       _installed = installed;
+      _installedManifests[province.id] = manifest;
       _busy.remove(province.id);
       _downloadProgress.remove(province.id);
     });

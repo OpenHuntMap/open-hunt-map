@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -19,6 +21,32 @@ def format_size(size: int) -> str:
             return f"{value:.1f} {unit}"
         value /= 1024
     raise AssertionError("unreachable")
+
+
+def content_id(files: list[Path], source: Path, manifest_bytes: bytes) -> str:
+    """A digest of what the pack contains, ignoring when it was built.
+
+    The app needs to answer "is there newer data than mine", and a build
+    timestamp cannot answer it: a scheduled rebuild of unchanged sources produces
+    a new timestamp and identical data, which would offer every user an update
+    that is only a new date. Hashing the contents means "up to date" survives a
+    rebuild.
+
+    The manifest is hashed as it exists on disk rather than as it is written into
+    the pack, because the copy in the pack carries this digest and cannot
+    contain a hash of itself. Hashing the source keeps manifest-only edits, such
+    as a changed note or a dropped layer, inside the comparison.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(files):
+        relative = path.relative_to(source).as_posix()
+        blob = manifest_bytes if relative == "manifest.json" else path.read_bytes()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(blob).digest())
+    # Truncated because this is compared for equality and shown in logs, never
+    # used as a security boundary. 16 hex characters is 64 bits.
+    return digest.hexdigest()[:16]
 
 
 def build_pack(province_id: str) -> Path:
@@ -64,13 +92,33 @@ def build_pack(province_id: str) -> Path:
     if gazetteer.is_dir():
         files.extend(path for path in gazetteer.rglob("*.json") if path.is_file())
 
+    manifest_bytes = manifest.read_bytes()
+    stamped = json.loads(manifest_bytes.decode("utf-8"))
+    stamped["content_id"] = content_id(files, source, manifest_bytes)
+    # Seconds, and UTC: the app shows this as a date, and a phone in Ontario
+    # rendering a Quebec pack should not see the day shift under it.
+    stamped["built"] = (
+        datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
+
     output = REPOSITORY_ROOT / "packs" / f"{province_id}-overlays.zip"
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
         for file_path in sorted(files):
-            archive.write(file_path, file_path.relative_to(source).as_posix())
+            relative = file_path.relative_to(source).as_posix()
+            # The stamp goes into the packed copy only. Writing it back to
+            # data/{cc}/manifest.json would put a new timestamp in a tracked file
+            # on every build, so the diff of a rebuild would never be empty even
+            # when nothing about the province changed.
+            if relative == "manifest.json":
+                archive.writestr(relative, json.dumps(stamped, ensure_ascii=False, indent=2))
+            else:
+                archive.write(file_path, relative)
 
-    print(f"Built {output.relative_to(REPOSITORY_ROOT)} ({format_size(output.stat().st_size)})")
+    print(
+        f"Built {output.relative_to(REPOSITORY_ROOT)} "
+        f"({format_size(output.stat().st_size)}, content {stamped['content_id']})"
+    )
     return output
 
 
